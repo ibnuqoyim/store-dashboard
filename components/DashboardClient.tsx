@@ -291,7 +291,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
             doc.setFont('helvetica', 'normal')
             doc.text('Baarakallaahu fiikum', 12, yPos + 22)
 
-            doc.save(`Invoice-${order.invoice_number}.pdf`)
+            doc.save(`Invoice-${order.invoice_number}-${order.customer_name}.pdf`)
         } catch (error) {
             console.error('Error generating PDF:', error)
             alert('Failed to generate PDF. Please try again.')

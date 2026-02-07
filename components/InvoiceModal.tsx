@@ -81,7 +81,7 @@ export default function InvoiceModal({ isOpen, onClose, order }: InvoiceModalPro
 
         const opt = {
             margin: 10,
-            filename: `Invoice-${order.invoice_number}.pdf`,
+            filename: `Invoice-${order.invoice_number}-${order.customer_name}.pdf`,
             image: { type: 'jpeg' as const, quality: 0.98 },
             html2canvas: { scale: 2 },
             jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
@@ -123,7 +123,7 @@ export default function InvoiceModal({ isOpen, onClose, order }: InvoiceModalPro
                     console.log('Adding watermark at position:', { x, y, width: renderWidth / 1.5, height: renderHeight / 1.5 })
 
                     doc.saveGraphicsState()
-                    doc.setGState({ opacity: 0.2 })
+                    doc.setGState(new (doc as any).GState({ opacity: 0.2 }))
                     doc.addImage(logoBase64, 'PNG', x, y, renderWidth / 1.5, renderHeight / 1.5)
                     doc.restoreGraphicsState()
                     console.log('Watermark added successfully')
