@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Eye, FileText, Truck, PlusCircle, Download } from 'lucide-react'
+import { Eye, FileText, Truck, PlusCircle, Download, MessageCircle } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import InvoiceModal from '@/components/InvoiceModal'
 import { format } from 'date-fns'
@@ -298,6 +298,31 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
         }
     }
 
+    const handleShareWhatsApp = async (order: any) => {
+        try {
+            // Generate PDF first
+            await handleDownloadInvoice(order)
+
+            // Format phone number (remove non-digits, add 62 if starts with 0)
+            let phone = order.phone?.replace(/\D/g, '') || ''
+            if (phone.startsWith('0')) {
+                phone = '62' + phone.substring(1)
+            } else if (!phone.startsWith('62')) {
+                phone = '62' + phone
+            }
+
+            // Create WhatsApp message
+            const message = `Halo ${order.customer_name},\n\nBerikut adalah invoice untuk pesanan Anda:\n\nInvoice: ${order.invoice_number}\nTanggal: ${format(new Date(order.date), 'dd MMM yyyy')}\nTotal: ${formatRupiah(order.order_items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0))}\n\nTerima kasih telah berbelanja di Sourdoughmu_ya!\n\nBaarakallaahu fiikum 🥖`
+
+            // Open WhatsApp Web with message
+            const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+            window.open(whatsappUrl, '_blank')
+        } catch (error) {
+            console.error('Error sharing to WhatsApp:', error)
+            alert('Failed to share to WhatsApp. Please try again.')
+        }
+    }
+
     const handleCreateDelivery = async (order: any) => {
         // Logic to create delivery if not exists, or view it
         if (order.deliveries && order.deliveries.length > 0) {
@@ -466,6 +491,14 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                                                 title="Download PDF"
                                             >
                                                 <Download size={16} /> PDF
+                                            </button>
+
+                                            <button
+                                                onClick={() => handleShareWhatsApp(order)}
+                                                className="text-emerald-600 hover:text-emerald-900 bg-emerald-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
+                                                title="Share to WhatsApp"
+                                            >
+                                                <MessageCircle size={16} /> <span className="hidden sm:inline">WA</span>
                                             </button>
 
                                             {hasDelivery ? (
