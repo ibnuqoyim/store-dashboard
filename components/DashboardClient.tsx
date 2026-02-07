@@ -320,10 +320,10 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">📊 Dashboard Invoice Generator</h1>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">📊 Dashboard</h1>
                 <select
-                    className="border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2 text-gray-900"
+                    className="w-full sm:w-auto border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2 text-gray-900 text-sm"
                     value={selectedBatchId}
                     onChange={(e) => setSelectedBatchId(e.target.value)}
                 >
@@ -353,8 +353,8 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
             </div>
 
             {/* Product Summary Table */}
-            <h2 className="text-xl font-bold text-gray-800 mt-10 mb-4">📦 Product Summary</h2>
-            <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mt-10 mb-4">📦 Product Summary</h2>
+            <div className="bg-white rounded-lg shadow overflow-x-auto mb-8">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-indigo-500 text-white">
                         <tr>
@@ -383,8 +383,8 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
             </div>
 
             {/* Adonan Summary Table */}
-            <h2 className="text-xl font-bold text-gray-800 mt-10 mb-4">🥖 Adonan Summary</h2>
-            <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mt-10 mb-4">🥖 Adonan Summary</h2>
+            <div className="bg-white rounded-lg shadow overflow-x-auto mb-8">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-indigo-500 text-white">
                         <tr>
@@ -410,8 +410,8 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
             </div>
 
             {/* Orders Table - NEW */}
-            <h2 className="text-xl font-bold text-gray-800 mt-10 mb-4">📋 Orders</h2>
-            <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mt-10 mb-4">📋 Orders</h2>
+            <div className="bg-white rounded-lg shadow overflow-x-auto mb-8">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-indigo-500 text-white">
                         <tr>
@@ -446,33 +446,33 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-sm">
-                                        <div className="flex gap-2">
+                                        <div className="flex flex-col sm:flex-row gap-2">
                                             <button
                                                 onClick={() => handleGenerateInvoice(order)}
-                                                className="text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1 rounded flex items-center gap-1"
+                                                className="text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
                                                 title="View Invoice"
                                             >
-                                                <Eye size={16} /> Preview
+                                                <Eye size={16} /> <span className="hidden sm:inline">Preview</span><span className="sm:hidden">View</span>
                                             </button>
 
                                             <button
                                                 onClick={() => handleDownloadInvoice(order)}
-                                                className="text-green-600 hover:text-green-900 bg-green-50 px-3 py-1 rounded flex items-center gap-1"
+                                                className="text-green-600 hover:text-green-900 bg-green-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
                                                 title="Download PDF"
                                             >
                                                 <Download size={16} /> PDF
                                             </button>
 
                                             {hasDelivery ? (
-                                                <a href="/deliveries" className="text-green-600 hover:text-green-900 bg-green-50 px-3 py-1 rounded flex items-center gap-1">
-                                                    <Truck size={16} /> View
+                                                <a href="/deliveries" className="text-green-600 hover:text-green-900 bg-green-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap">
+                                                    <Truck size={16} /> <span className="hidden sm:inline">View</span>
                                                 </a>
                                             ) : (
                                                 <button
                                                     onClick={() => handleCreateDelivery(order)}
-                                                    className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded flex items-center gap-1"
+                                                    className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
                                                 >
-                                                    <PlusCircle size={16} /> Delivery
+                                                    <PlusCircle size={16} /> <span className="hidden sm:inline">Delivery</span>
                                                 </button>
                                             )}
                                         </div>

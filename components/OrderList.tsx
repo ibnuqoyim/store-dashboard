@@ -343,7 +343,7 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
                 </Link>
             </div>
 
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
@@ -394,26 +394,28 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
                                         ) : '-'}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button
-                                            onClick={() => handleViewInvoice(order)}
-                                            className="text-gray-500 hover:text-gray-700 mr-3 inline-block"
-                                            title="View Invoice"
-                                        >
-                                            <Eye size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDownloadInvoice(order)}
-                                            className="text-green-600 hover:text-green-800 mr-3 inline-block"
-                                            title="Download PDF"
-                                        >
-                                            <Download size={18} />
-                                        </button>
-                                        <Link href={`/orders/${order.id}`} className="text-blue-600 hover:text-blue-900 mr-3 inline-block">
-                                            <Pencil size={18} />
-                                        </Link>
-                                        <button onClick={() => handleDelete(order.id)} className="text-red-600 hover:text-red-900 inline-block">
-                                            <Trash2 size={18} />
-                                        </button>
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                onClick={() => handleViewInvoice(order)}
+                                                className="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded"
+                                                title="View Invoice"
+                                            >
+                                                <Eye size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDownloadInvoice(order)}
+                                                className="text-green-600 hover:text-green-800 p-2 hover:bg-green-50 rounded"
+                                                title="Download PDF"
+                                            >
+                                                <Download size={18} />
+                                            </button>
+                                            <Link href={`/orders/${order.id}`} className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded inline-block">
+                                                <Pencil size={18} />
+                                            </Link>
+                                            <button onClick={() => handleDelete(order.id)} className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded">
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             )

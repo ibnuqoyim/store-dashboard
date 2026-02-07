@@ -149,27 +149,27 @@ export default function InvoiceModal({ isOpen, onClose, order }: InvoiceModalPro
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto print:p-0 print:bg-white print:static print:block">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl m-4 relative print:shadow-none print:w-full print:max-w-none print:m-0 print:absolute print:top-0 print:left-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto p-0 sm:p-4 print:p-0 print:bg-white print:static print:block">
+            <div className="bg-white rounded-none sm:rounded-lg shadow-xl w-full h-full sm:h-auto sm:max-w-3xl sm:m-4 relative overflow-y-auto print:shadow-none print:w-full print:max-w-none print:m-0 print:absolute print:top-0 print:left-0">
 
                 {/* Actions Header - Hidden on Print */}
-                <div className="flex justify-between items-center p-4 border-b print:hidden">
-                    <h2 className="text-xl font-bold text-gray-800">Preview Invoice</h2>
-                    <div className="flex gap-2">
-                        <button onClick={handlePrint} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 p-4 border-b print:hidden">
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-800">Preview Invoice</h2>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        <button onClick={handlePrint} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
                             <Printer size={18} /> Print
                         </button>
-                        <button onClick={handleDownloadPdf} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                        <button onClick={handleDownloadPdf} className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm">
                             <Download size={18} /> Download PDF
                         </button>
-                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 p-2">
-                            <X size={24} />
+                        <button onClick={onClose} className="flex items-center justify-center text-gray-500 hover:text-gray-700 p-2 border border-gray-300 rounded sm:border-0">
+                            <X size={24} /> <span className="sm:hidden ml-2">Close</span>
                         </button>
                     </div>
                 </div>
 
                 {/* Invoice Content */}
-                <div id="invoice-content" className="p-10 bg-white text-gray-800 font-sans" ref={contentRef}>
+                <div id="invoice-content" className="p-4 sm:p-10 bg-white text-gray-800 font-sans" ref={contentRef}>
 
                     {/* Header */}
                     <div className="text-right mb-10">

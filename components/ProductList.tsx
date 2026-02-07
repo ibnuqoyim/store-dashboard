@@ -107,17 +107,17 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">Products</h1>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Products</h1>
                 <button
                     onClick={() => openModal()}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-blue-700 transition"
+                    className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-md flex items-center justify-center gap-2 hover:bg-blue-700 transition"
                 >
                     <Plus size={18} /> Add Product
                 </button>
             </div>
 
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
@@ -136,12 +136,14 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.adonan?.name || '-'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.weight || '-'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button onClick={() => openModal(product)} className="text-blue-600 hover:text-blue-900 mr-4">
-                                        <Pencil size={18} />
-                                    </button>
-                                    <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-900">
-                                        <Trash2 size={18} />
-                                    </button>
+                                    <div className="flex justify-end gap-2">
+                                        <button onClick={() => openModal(product)} className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded">
+                                            <Pencil size={18} />
+                                        </button>
+                                        <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded">
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -156,8 +158,8 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg w-full max-w-md p-6">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg w-full max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
                             <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-700">
