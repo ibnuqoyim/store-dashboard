@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Lock, Mail } from 'lucide-react'
+import Image from 'next/image'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
@@ -58,8 +59,17 @@ export default function LoginPage() {
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
             <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md">
                 <div className="text-center mb-8">
-                    <h1 className="text-2xl font-bold text-gray-800">Sourdough Store</h1>
-                    <p className="text-gray-600">Sign in to manage your orders</p>
+                    <div className="flex justify-center mb-4">
+                        <Image
+                            src="/logo.png"
+                            alt="Sourdoughmu_ya Logo"
+                            width={80}
+                            height={80}
+                            className="rounded-lg"
+                        />
+                    </div>
+                    <h1 className="text-2xl font-bold text-gray-800">Sourdoughmu_ya</h1>
+                    <p className="text-gray-600">Dashboard - Sign in to manage your orders</p>
                 </div>
 
                 {error && (

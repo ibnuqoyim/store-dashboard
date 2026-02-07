@@ -126,6 +126,7 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
 
             // Add watermark first if available
             if (logoBase64 && logoDims) {
+                console.log('Attempting to add watermark to PDF...')
                 try {
                     // Convert PNG to canvas to strip metadata
                     const canvas = document.createElement('canvas')
@@ -169,14 +170,19 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
                     const x = (pageWidth - renderWidth / 1.5) / 2
                     const y = (pageHeight - renderHeight / 1.5) / 2
 
+                    console.log('Adding watermark at:', { x, y, width: renderWidth / 1.5, height: renderHeight / 1.5 })
                     doc.saveGraphicsState()
-                    doc.setGState({ opacity: 0.2 })
+                    // @ts-ignore - jsPDF GState type issue
+                    doc.setGState(new (doc as any).GState({ opacity: 0.2 }))
                     doc.addImage(cleanImageData, 'PNG', x, y, renderWidth / 1.5, renderHeight / 1.5)
                     doc.restoreGraphicsState()
+                    console.log('Watermark added successfully')
                 } catch (error) {
                     console.error('Error adding watermark:', error)
                     // Continue without watermark if it fails
                 }
+            } else {
+                console.log('Skipping watermark - logoBase64:', !!logoBase64, 'logoDims:', !!logoDims)
             }
 
             // Invoice Header

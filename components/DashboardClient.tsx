@@ -148,6 +148,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
 
             // Add watermark first if available
             if (logoBase64 && logoDims) {
+                console.log('Attempting to add watermark to PDF...')
                 try {
                     const canvas = document.createElement('canvas')
                     const ctx = canvas.getContext('2d')
@@ -184,14 +185,18 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                     const x = (pageWidth - renderWidth / 1.5) / 2
                     const y = (pageHeight - renderHeight / 1.5) / 2
 
+                    console.log('Adding watermark at:', { x, y, width: renderWidth / 1.5, height: renderHeight / 1.5 })
                     doc.saveGraphicsState()
                     // @ts-ignore - jsPDF GState type issue
-                    doc.setGState({ opacity: 0.2 })
+                    doc.setGState(new (doc as any).GState({ opacity: 0.2 }))
                     doc.addImage(cleanImageData, 'PNG', x, y, renderWidth / 1.5, renderHeight / 1.5)
                     doc.restoreGraphicsState()
+                    console.log('Watermark added successfully')
                 } catch (error) {
                     console.error('Error adding watermark:', error)
                 }
+            } else {
+                console.log('Skipping watermark - logoBase64:', !!logoBase64, 'logoDims:', !!logoDims)
             }
 
             // Invoice content
