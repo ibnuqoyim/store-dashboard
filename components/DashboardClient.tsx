@@ -185,7 +185,8 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                     const y = (pageHeight - renderHeight / 1.5) / 2
 
                     doc.saveGraphicsState()
-                    doc.setGState(new doc.GState({ opacity: 0.2 }))
+                    // @ts-ignore - jsPDF GState type issue
+                    doc.setGState({ opacity: 0.2 })
                     doc.addImage(cleanImageData, 'PNG', x, y, renderWidth / 1.5, renderHeight / 1.5)
                     doc.restoreGraphicsState()
                 } catch (error) {
