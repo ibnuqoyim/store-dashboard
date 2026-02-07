@@ -123,7 +123,7 @@ export default function InvoiceModal({ isOpen, onClose, order }: InvoiceModalPro
                     console.log('Adding watermark at position:', { x, y, width: renderWidth / 1.5, height: renderHeight / 1.5 })
 
                     doc.saveGraphicsState()
-                    doc.setGState(new doc.GState({ opacity: 0.2 }))
+                    doc.setGState({ opacity: 0.2 })
                     doc.addImage(logoBase64, 'PNG', x, y, renderWidth / 1.5, renderHeight / 1.5)
                     doc.restoreGraphicsState()
                     console.log('Watermark added successfully')
