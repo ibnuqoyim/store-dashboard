@@ -13,6 +13,7 @@ type Order = {
     id: string
     invoice_number: string
     date: string
+    customer_id?: string
     customer_name: string
     phone?: string
     status: string
@@ -249,7 +250,7 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
                 const shippingCost = delivery.shipping_cost || 0
                 subtotal += shippingCost
 
-                doc.text(`Shipping (${delivery.courier_name})`, 12, yPos)
+                doc.text(`Ongkir`, 12, yPos)
                 doc.text('1', 120, yPos, { align: 'center' })
                 doc.text(shippingCost > 0 ? formatRupiah(shippingCost) : '-', 155, yPos, { align: 'right' })
                 doc.text(shippingCost > 0 ? formatRupiah(shippingCost) : '-', 195, yPos, { align: 'right' })

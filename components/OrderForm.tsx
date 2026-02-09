@@ -29,12 +29,20 @@ type Delivery = {
 type OrderFormData = {
     invoice_number: string
     date: string
+    customer_id: string | null
     customer_name: string
     phone: string
     status: string
     po_id: string
     items: OrderItem[]
     delivery: Delivery | null
+}
+
+type Customer = {
+    id: string
+    name: string
+    phone: string | null
+    address: string | null
 }
 
 export default function OrderForm({
@@ -48,12 +56,14 @@ export default function OrderForm({
 }) {
     const router = useRouter()
     const supabase = createClient()
+    const [customers, setCustomers] = useState<Customer[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [hasDelivery, setHasDelivery] = useState(false)
 
     const [formData, setFormData] = useState<OrderFormData>({
         invoice_number: '',
         date: new Date().toISOString().split('T')[0],
+        customer_id: null,
         customer_name: '',
         phone: '',
         status: 'pending',
@@ -69,7 +79,14 @@ export default function OrderForm({
             const { data } = await supabase.from('shipping_rates').select('*').order('courier_name', { ascending: true })
             if (data) setShippingRates(data)
         }
+
+        const fetchCustomers = async () => {
+            const { data } = await supabase.from('customers').select('id, name, phone, address').order('name', { ascending: true })
+            if (data) setCustomers(data)
+        }
+
         fetchRates()
+        fetchCustomers()
     }, [])
 
     useEffect(() => {
@@ -77,6 +94,7 @@ export default function OrderForm({
             setFormData({
                 invoice_number: initialOrder.invoice_number,
                 date: initialOrder.date,
+                customer_id: initialOrder.customer_id || null,
                 customer_name: initialOrder.customer_name,
                 phone: initialOrder.phone || '',
                 status: initialOrder.status || 'pending',
@@ -131,12 +149,50 @@ export default function OrderForm({
     const toggleDelivery = (enable: boolean) => {
         setHasDelivery(enable)
         if (enable && !formData.delivery) {
+            // Check if customer has address/courier
+            let defaultCourier = ''
+            let defaultAddress = ''
+
+            if (formData.customer_id) {
+                const customer = customers.find(c => c.id === formData.customer_id)
+                if (customer && customer.address) defaultAddress = customer.address
+            }
+
             setFormData({
                 ...formData,
-                delivery: { courier_name: '', shipping_cost: 0, address: '', status: 'pending' }
+                delivery: { courier_name: defaultCourier, shipping_cost: 0, address: defaultAddress, status: 'pending' }
             })
         } else if (!enable) {
             setFormData({ ...formData, delivery: null })
+        }
+    }
+
+    const handleCustomerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const customerId = e.target.value
+
+        if (customerId === 'new') {
+            setFormData({
+                ...formData,
+                customer_id: null,
+                customer_name: '',
+                phone: ''
+            })
+            return
+        }
+
+        const customer = customers.find(c => c.id === customerId)
+        if (customer) {
+            setFormData({
+                ...formData,
+                customer_id: customer.id,
+                customer_name: customer.name,
+                phone: customer.phone || '',
+                // If delivery is enabled, update address
+                delivery: hasDelivery && formData.delivery ? {
+                    ...formData.delivery,
+                    address: customer.address || formData.delivery.address
+                } : formData.delivery
+            })
         }
     }
 
@@ -167,6 +223,7 @@ export default function OrderForm({
             const orderPayload = {
                 invoice_number: formData.invoice_number,
                 date: formData.date,
+                customer_id: formData.customer_id || null, // Create new customer if not exists? For now just ID
                 customer_name: formData.customer_name,
                 phone: formData.phone,
                 status: formData.status,
@@ -238,7 +295,7 @@ export default function OrderForm({
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Order Details */}
                 <div className="bg-white p-6 rounded-lg shadow">
-                    <h2 className="text-lg font-bold mb-4">Order Details</h2>
+                    <h2 className="text-lg font-bold mb-4 text-gray-900">Order Details</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
@@ -261,13 +318,25 @@ export default function OrderForm({
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+                            <select
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 mb-2"
+                                value={formData.customer_id || 'new'}
+                                onChange={handleCustomerChange}
+                            >
+                                <option value="new">-- New / Manual Input --</option>
+                                {customers.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+
                             <input
                                 type="text"
                                 required
                                 value={formData.customer_name}
                                 onChange={e => setFormData({ ...formData, customer_name: e.target.value })}
                                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+                                placeholder="Customer Name"
                             />
                         </div>
                         <div>
@@ -309,7 +378,7 @@ export default function OrderForm({
                 {/* Order Items */}
                 <div className="bg-white p-6 rounded-lg shadow">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-bold">Items</h2>
+                        <h2 className="text-lg font-bold text-gray-900">Items</h2>
                         <button type="button" onClick={addItem} className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1">
                             <Plus size={16} /> Add Item
                         </button>
@@ -372,7 +441,7 @@ export default function OrderForm({
                             onChange={e => toggleDelivery(e.target.checked)}
                             className="h-4 w-4 text-blue-600 rounded"
                         />
-                        <label htmlFor="hasDelivery" className="text-lg font-bold cursor-pointer">Include Delivery</label>
+                        <label htmlFor="hasDelivery" className="text-lg font-bold cursor-pointer text-gray-900">Include Delivery</label>
                     </div>
 
                     {hasDelivery && formData.delivery && (
@@ -451,7 +520,7 @@ export default function OrderForm({
 
                 {/* Summary Footer */}
                 <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-200 sticky bottom-0">
-                    <div className="text-xl font-bold">
+                    <div className="text-xl font-bold text-gray-900">
                         Total: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(calculateTotal())}
                     </div>
                     <button

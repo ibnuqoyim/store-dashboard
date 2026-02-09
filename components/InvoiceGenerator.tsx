@@ -75,8 +75,8 @@ export default function InvoiceGenerator({ orders, batches }: { orders: any[], b
                             </div>
                         </div>
                         <div className="mb-4 text-sm">
-                            <p className="text-gray-600">Customer:</p>
-                            <p className="font-bold text-lg">{order.customer_name}</p>
+                            <p className="text-gray-900">Customer:</p>
+                            <p className="font-bold text-lg text-gray-900">{order.customer_name}</p>
                             {order.phone && <p className="text-gray-500">{order.phone}</p>}
                         </div>
 
@@ -116,7 +116,7 @@ export default function InvoiceGenerator({ orders, batches }: { orders: any[], b
                         <div className="border-b-2 border-dashed border-gray-300 my-4"></div>
 
                         {/* Total */}
-                        <div className="flex justify-between items-center text-lg font-bold">
+                        <div className="flex justify-between items-center text-lg font-bold text-gray-900">
                             <span>Total:</span>
                             <span>{formatRupiah(calculateTotal(order))}</span>
                         </div>

@@ -10,6 +10,7 @@ export default async function OrdersPage() {
     supabase.from('orders')
       .select(`
         *,
+        customer_id,
         order_items (
           price,
           quantity,
