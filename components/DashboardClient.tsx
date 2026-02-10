@@ -17,7 +17,32 @@ type DashboardProps = {
 }
 
 export default function DashboardClient({ orders, products, adonan, batches }: DashboardProps) {
-    const [selectedBatchId, setSelectedBatchId] = useState<string>('all')
+    const defaultBatchId = useMemo(() => batches.length > 0 ? batches[batches.length - 1].id : 'all', [batches])
+    const [selectedBatchId, setSelectedBatchId] = useState<string>(defaultBatchId)
+    const [isInitialized, setIsInitialized] = useState(false)
+
+    // Load persistence
+    useEffect(() => {
+        const saved = localStorage.getItem('dashboard_selected_batch')
+        if (saved) {
+            const isValid = saved === 'all' || batches.some(b => b.id === saved)
+            if (isValid) {
+                setSelectedBatchId(saved)
+            } else {
+                setSelectedBatchId(defaultBatchId)
+            }
+        } else {
+            setSelectedBatchId(defaultBatchId)
+        }
+        setIsInitialized(true)
+    }, [batches, defaultBatchId])
+
+    // Save persistence
+    useEffect(() => {
+        if (isInitialized) {
+            localStorage.setItem('dashboard_selected_batch', selectedBatchId)
+        }
+    }, [selectedBatchId, isInitialized])
     const [selectedOrder, setSelectedOrder] = useState<any>(null)
     const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
     const [logoBase64, setLogoBase64] = useState<string | null>(null)
@@ -252,7 +277,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                 const delivery = order.deliveries[0]
                 const shippingCost = delivery.shipping_cost || 0
                 subtotal += shippingCost
-                doc.text(`Shipping (${delivery.courier_name})`, 12, yPos)
+                doc.text(`Ongkir`, 12, yPos)
                 doc.text('1', 120, yPos, { align: 'center' })
                 doc.text(shippingCost > 0 ? formatRupiah(shippingCost) : '-', 155, yPos, { align: 'right' })
                 doc.text(shippingCost > 0 ? formatRupiah(shippingCost) : '-', 195, yPos, { align: 'right' })
@@ -382,63 +407,6 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                 </div>
             </div>
 
-            {/* Product Summary Table */}
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mt-10 mb-4">📦 Product Summary</h2>
-            <div className="bg-white rounded-lg shadow overflow-x-auto mb-8">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-indigo-500 text-white">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Product Name</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Quantity</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Unit Price</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {stats.productSummary.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
-                                <td className="px-6 py-4 text-gray-500">{item.totalQuantity} unit(s)</td>
-                                <td className="px-6 py-4 text-gray-500">{formatRupiah(item.price)}</td>
-                                <td className="px-6 py-4 font-bold text-gray-900">{formatRupiah(item.totalAmount)}</td>
-                            </tr>
-                        ))}
-                        {/* Total Row */}
-                        <tr className="bg-gray-100 font-bold">
-                            <td className="px-6 py-4 text-right" colSpan={3}>TOTAL</td>
-                            <td className="px-6 py-4 text-gray-900">{formatRupiah(stats.totalRevenue)}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Adonan Summary Table */}
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mt-10 mb-4">🥖 Adonan Summary</h2>
-            <div className="bg-white rounded-lg shadow overflow-x-auto mb-8">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-indigo-500 text-white">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Adonan Name</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Quantity (Unit)</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Weight (gr)</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Weight per Batch (gr)</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Batch to Make</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {stats.adonanSummary.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
-                                <td className="px-6 py-4 text-gray-500">{item.totalQuantity}</td>
-                                <td className="px-6 py-4 text-gray-500">{item.totalWeight}</td>
-                                <td className="px-6 py-4 text-gray-500">{item.weightPerBatch}</td>
-                                <td className="px-6 py-4 font-bold text-indigo-600">{item.batchToMake}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
             {/* Orders Table - NEW */}
             <h2 className="text-lg sm:text-xl font-bold text-gray-800 mt-10 mb-4">📋 Orders</h2>
             <div className="bg-white rounded-lg shadow overflow-x-auto mb-8">
@@ -518,6 +486,63 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                                 </tr>
                             )
                         })}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Product Summary Table */}
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mt-10 mb-4">📦 Product Summary</h2>
+            <div className="bg-white rounded-lg shadow overflow-x-auto mb-8">
+                <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-indigo-500 text-white">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Product Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Quantity</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Unit Price</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                        {stats.productSummary.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
+                                <td className="px-6 py-4 text-gray-500">{item.totalQuantity} unit(s)</td>
+                                <td className="px-6 py-4 text-gray-500">{formatRupiah(item.price)}</td>
+                                <td className="px-6 py-4 font-bold text-gray-900">{formatRupiah(item.totalAmount)}</td>
+                            </tr>
+                        ))}
+                        {/* Total Row */}
+                        <tr className="bg-gray-100 font-bold">
+                            <td className="px-6 py-4 text-right" colSpan={3}>TOTAL</td>
+                            <td className="px-6 py-4 text-gray-900">{formatRupiah(stats.totalRevenue)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Adonan Summary Table */}
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mt-10 mb-4">🥖 Adonan Summary</h2>
+            <div className="bg-white rounded-lg shadow overflow-x-auto mb-8">
+                <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-indigo-500 text-white">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Adonan Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Quantity (Unit)</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Weight (gr)</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Weight per Batch (gr)</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Batch to Make</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                        {stats.adonanSummary.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
+                                <td className="px-6 py-4 text-gray-500">{item.totalQuantity}</td>
+                                <td className="px-6 py-4 text-gray-500">{item.totalWeight}</td>
+                                <td className="px-6 py-4 text-gray-500">{item.weightPerBatch}</td>
+                                <td className="px-6 py-4 font-bold text-indigo-600">{item.batchToMake}</td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
