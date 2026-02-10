@@ -104,7 +104,7 @@ export default function InvoiceGenerator({ orders, batches }: { orders: any[], b
                                 {/* Delivery */}
                                 {order.deliveries && order.deliveries.length > 0 && (
                                     <tr>
-                                        <td className="py-1">Shipping ({order.deliveries[0].courier_name})</td>
+                                        <td className="py-1">Ongkir</td>
                                         <td className="py-1 text-right">1</td>
                                         <td className="py-1 text-right">{formatRupiah(order.deliveries[0].shipping_cost)}</td>
                                         <td className="py-1 text-right font-medium">{formatRupiah(order.deliveries[0].shipping_cost)}</td>

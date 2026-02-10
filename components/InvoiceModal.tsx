@@ -222,7 +222,7 @@ export default function InvoiceModal({ isOpen, onClose, order }: InvoiceModalPro
                             ))}
                             {order.deliveries && order.deliveries.length > 0 && (
                                 <tr className="border-b border-gray-100">
-                                    <td className="p-3 text-sm">Shipping ({order.deliveries[0].courier_name})</td>
+                                    <td className="p-3 text-sm">Ongkir</td>
                                     <td className="p-3 text-center text-sm">1</td>
                                     <td className="p-3 text-right text-sm">{order.deliveries[0].shipping_cost > 0 ? formatRupiah(order.deliveries[0].shipping_cost) : '-'}</td>
                                     <td className="p-3 text-right text-sm">{order.deliveries[0].shipping_cost > 0 ? formatRupiah(order.deliveries[0].shipping_cost) : '-'}</td>
