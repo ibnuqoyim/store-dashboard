@@ -2,10 +2,11 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Eye, FileText, Truck, PlusCircle, Download, MessageCircle } from 'lucide-react'
+import { Eye, FileText, Truck, PlusCircle, Download, MessageCircle, Pencil } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import InvoiceModal from '@/components/InvoiceModal'
 import { format } from 'date-fns'
+import Link from 'next/link'
 // @ts-ignore
 import { useRouter } from 'next/navigation'
 
@@ -460,6 +461,10 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                                             >
                                                 <Download size={16} /> PDF
                                             </button>
+
+                                            <Link href={`/orders/${order.id}`} className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded inline-block">
+                                                <Pencil size={18} /> Edit
+                                            </Link>
 
                                             <button
                                                 onClick={() => handleShareWhatsApp(order)}

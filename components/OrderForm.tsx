@@ -74,6 +74,54 @@ export default function OrderForm({
 
     const [shippingRates, setShippingRates] = useState<any[]>([])
 
+    const generateInvoiceNumber = async (): Promise<string> => {
+        try {
+            // Get all orders sorted by invoice_number descending to get the latest one
+            const { data: orders, error } = await supabase
+                .from('orders')
+                .select('invoice_number')
+                .order('invoice_number', { ascending: false })
+                .limit(1)
+
+            if (error) throw error
+
+            const now = new Date()
+            const currentYYYY = String(now.getFullYear())
+            const currentMM = String(now.getMonth() + 1).padStart(2, '0')
+            const currentYYYYMM = currentYYYY + currentMM
+
+            // If no orders exist, start with YYYYMM00
+            if (!orders || orders.length === 0) {
+                return currentYYYYMM + '00'
+            }
+
+            const lastInvoiceNumber = orders[0].invoice_number
+            const lastYYYYMM = lastInvoiceNumber.slice(0, 6)
+            const lastXX = parseInt(lastInvoiceNumber.slice(6, 8), 10)
+
+            console.log('Last Invoice:', lastInvoiceNumber, 'Current YYYYMM:', currentYYYYMM)
+
+            // If YYYY``MM is the same, increment XX
+            if (lastYYYYMM === currentYYYYMM) {
+                const nextXX = lastXX + 1
+                if (nextXX > 99) {
+                    throw new Error('Invoice number counter exceeded maximum (99)')
+                }
+                return currentYYYYMM + String(nextXX).padStart(2, '0')
+            } else {
+                // If YYYYMM is different, reset to YYYYMM00
+                return currentYYYYMM + '00'
+            }
+        } catch (error) {
+            console.error('Error generating invoice number:', error)
+            // Fallback: generate based on current date
+            const now = new Date()
+            const yyyy = String(now.getFullYear())
+            const mm = String(now.getMonth() + 1).padStart(2, '0')
+            return yyyy + mm + '00'
+        }
+    }
+
     useEffect(() => {
         const fetchRates = async () => {
             const { data } = await supabase.from('shipping_rates').select('*').order('courier_name', { ascending: true })
@@ -85,8 +133,17 @@ export default function OrderForm({
             if (data) setCustomers(data)
         }
 
+        const initializeInvoiceNumber = async () => {
+            // Only generate invoice number if creating new order (not editing)
+            if (!initialOrder) {
+                const newInvoiceNumber = await generateInvoiceNumber()
+                setFormData(prev => ({ ...prev, invoice_number: newInvoiceNumber }))
+            }
+        }
+
         fetchRates()
         fetchCustomers()
+        initializeInvoiceNumber()
     }, [])
 
     useEffect(() => {
