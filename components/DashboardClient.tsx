@@ -48,6 +48,8 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
     const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
     const [logoBase64, setLogoBase64] = useState<string | null>(null)
     const [logoDims, setLogoDims] = useState<{ width: number; height: number } | null>(null)
+    const [searchQuery, setSearchQuery] = useState<string>('')
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
     const router = useRouter()
     const supabase = createClient()
 
@@ -78,9 +80,25 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
     }, [])
 
     const filteredOrders = useMemo(() => {
-        if (selectedBatchId === 'all') return orders
-        return orders.filter(o => o.po_id === selectedBatchId)
-    }, [orders, selectedBatchId])
+        let result = selectedBatchId === 'all' ? orders : orders.filter(o => o.po_id === selectedBatchId)
+        
+        // Filter by search query (customer name)
+        if (searchQuery.trim()) {
+            result = result.filter(o => 
+                o.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+        }
+        
+        // Sort by invoice number
+        result.sort((a, b) => {
+            const invoiceA = a.invoice_number || ''
+            const invoiceB = b.invoice_number || ''
+            const comparison = invoiceA.localeCompare(invoiceB)
+            return sortOrder === 'asc' ? comparison : -comparison
+        })
+        
+        return result
+    }, [orders, selectedBatchId, searchQuery, sortOrder])
 
     // Recalculate Stats based on filteredOrders
     const stats = useMemo(() => {
@@ -409,7 +427,32 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
             </div>
 
             {/* Orders Table - NEW */}
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mt-10 mb-4">📋 Orders</h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800">📋 Orders</h2>
+                <Link href="/orders/new" className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
+                    <PlusCircle size={18} /> Add New Order
+                </Link>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow p-4 mb-4">
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                    <input
+                        type="text"
+                        placeholder="Search by customer name..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 text-sm"
+                    />
+                    <button
+                        onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                        className="bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap"
+                        title="Toggle sort order"
+                    >
+                        Invoice {sortOrder === 'asc' ? '↑' : '↓'}
+                    </button>
+                </div>
+            </div>
+            
             <div className="bg-white rounded-lg shadow overflow-x-auto mb-8">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-indigo-500 text-white">
