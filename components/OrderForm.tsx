@@ -276,11 +276,41 @@ export default function OrderForm({
         setIsLoading(true)
 
         try {
-            // 1. Upsert Order
+            let customerId = formData.customer_id
+
+            // 1. Create new customer if doesn't exist
+            if (!customerId && formData.customer_name.trim()) {
+                const { data, error } = await supabase
+                    .from('customers')
+                    .insert({
+                        name: formData.customer_name,
+                        phone: formData.phone || null,
+                        address: null // Will be set during delivery if needed
+                    })
+                    .select()
+                    .single()
+
+                if (error) {
+                    // If customer already exists (unique constraint), try to find it
+                    const { data: existingCustomer, error: findError } = await supabase
+                        .from('customers')
+                        .select('id')
+                        .eq('name', formData.customer_name)
+                        .eq('phone', formData.phone || null)
+                        .single()
+
+                    if (findError) throw error
+                    customerId = existingCustomer.id
+                } else {
+                    customerId = data.id
+                }
+            }
+
+            // 2. Upsert Order
             const orderPayload = {
                 invoice_number: formData.invoice_number,
                 date: formData.date,
-                customer_id: formData.customer_id || null, // Create new customer if not exists? For now just ID
+                customer_id: customerId || null,
                 customer_name: formData.customer_name,
                 phone: formData.phone,
                 status: formData.status,
@@ -298,7 +328,7 @@ export default function OrderForm({
                 orderId = data.id
             }
 
-            // 2. Manage Items (Delete all and re-insert for simplicity)
+            // 3. Manage Items (Delete all and re-insert for simplicity)
             if (initialOrder) {
                 await supabase.from('order_items').delete().eq('order_id', orderId)
             }
@@ -314,7 +344,7 @@ export default function OrderForm({
                 if (error) throw error
             }
 
-            // 3. Manage Delivery
+            // 4. Manage Delivery
             if (initialOrder) {
                 await supabase.from('deliveries').delete().eq('order_id', orderId)
             }
