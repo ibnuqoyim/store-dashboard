@@ -147,9 +147,6 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                 }
             })
 
-            order.deliveries?.forEach((d: any) => {
-                orderRevenue += (d.shipping_cost || 0)
-            })
             totalRevenue += orderRevenue
         })
 

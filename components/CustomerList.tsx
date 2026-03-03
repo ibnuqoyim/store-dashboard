@@ -26,8 +26,101 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: C
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+    const [isRecalculating, setIsRecalculating] = useState(false)
+    const [recalculatingId, setRecalculatingId] = useState<string | null>(null)
     const router = useRouter()
     const supabase = createClient()
+
+    const handleRecalculateSingleCustomer = async (customerId: string) => {
+        setRecalculatingId(customerId)
+        try {
+            const { data: orders, error: ordersError } = await supabase
+                .from('orders')
+                .select('order_items(price, quantity)')
+                .eq('customer_id', customerId)
+
+            if (ordersError) throw ordersError
+
+            // Sum all order items
+            let totalPurchases = 0
+            orders.forEach((order: any) => {
+                if (order.order_items) {
+                    order.order_items.forEach((item: any) => {
+                        totalPurchases += (item.price || 0) * (item.quantity || 0)
+                    })
+                }
+            })
+
+            // Update customer with new total
+            const { error: updateError } = await supabase
+                .from('customers')
+                .update({ total_purchases: totalPurchases })
+                .eq('id', customerId)
+
+            if (updateError) throw updateError
+
+            // Update local state
+            setCustomers(customers.map(c => 
+                c.id === customerId ? { ...c, total_purchases: totalPurchases } : c
+            ))
+        } catch (error) {
+            console.error('Error recalculating customer total:', error)
+            alert('Failed to recalculate total purchases for this customer')
+        } finally {
+            setRecalculatingId(null)
+        }
+    }
+
+    const handleRecalculateTotalPurchases = async () => {
+        if (!confirm('This will recalculate total purchases for ALL customers (excluding shipping costs). Continue?')) return
+
+        setIsRecalculating(true)
+        try {
+            // Get all customers
+            const { data: allCustomers, error: fetchError } = await supabase
+                .from('customers')
+                .select('id')
+
+            if (fetchError) throw fetchError
+
+            // For each customer, calculate total purchases from order items
+            for (const customer of allCustomers) {
+                const { data: orders, error: ordersError } = await supabase
+                    .from('orders')
+                    .select('order_items(price, quantity)')
+                    .eq('customer_id', customer.id)
+
+                if (ordersError) throw ordersError
+
+                // Sum all order items
+                let totalPurchases = 0
+                orders.forEach((order: any) => {
+                    if (order.order_items) {
+                        order.order_items.forEach((item: any) => {
+                            totalPurchases += (item.price || 0) * (item.quantity || 0)
+                        })
+                    }
+                })
+
+                // Update customer with new total
+                const { error: updateError } = await supabase
+                    .from('customers')
+                    .update({ total_purchases: totalPurchases })
+                    .eq('id', customer.id)
+
+                if (updateError) throw updateError
+            }
+
+            // Refresh the page to show updated values
+            router.refresh()
+            alert('Total purchases recalculated successfully for all customers!')
+        } catch (error) {
+            console.error('Error recalculating total purchases:', error)
+            alert('Failed to recalculate total purchases')
+        } finally {
+            setIsRecalculating(false)
+        }
+    }
 
     const filteredCustomers = useMemo(() => {
         return customers
@@ -109,16 +202,25 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: C
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <button
-                    onClick={() => {
-                        setEditingCustomer(null)
-                        setIsModalOpen(true)
-                    }}
-                    className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                    <Plus size={20} />
-                    <span>Add Customer</span>
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <button
+                        onClick={handleRecalculateTotalPurchases}
+                        disabled={isRecalculating}
+                        className="flex items-center justify-center space-x-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <span>{isRecalculating ? 'Recalculating...' : 'Recalculate All'}</span>
+                    </button>
+                    <button
+                        onClick={() => {
+                            setEditingCustomer(null)
+                            setIsModalOpen(true)
+                        }}
+                        className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        <Plus size={20} />
+                        <span>Add Customer</span>
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -185,7 +287,15 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: C
                                             {formatRupiah(customer.total_purchases)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <div className="flex justify-end space-x-2">
+                                            <div className="flex justify-end space-x-1">
+                                                <button
+                                                    onClick={() => handleRecalculateSingleCustomer(customer.id)}
+                                                    disabled={recalculatingId === customer.id}
+                                                    className="text-amber-600 hover:text-amber-900 p-1 rounded hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    title="Recalculate total purchases"
+                                                >
+                                                    <span className="text-xs font-semibold">↻</span>
+                                                </button>
                                                 <button
                                                     onClick={() => {
                                                         setEditingCustomer(customer)

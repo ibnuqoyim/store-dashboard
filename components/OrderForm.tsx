@@ -203,6 +203,37 @@ export default function OrderForm({
         setFormData({ ...formData, items: newItems })
     }
 
+    const recalculateCustomerTotalPurchases = async (customerId: string) => {
+        try {
+            const { data: orders, error: ordersError } = await supabase
+                .from('orders')
+                .select('order_items(price, quantity)')
+                .eq('customer_id', customerId)
+
+            if (ordersError) throw ordersError
+
+            // Sum all order items
+            let totalPurchases = 0
+            orders.forEach((order: any) => {
+                if (order.order_items) {
+                    order.order_items.forEach((item: any) => {
+                        totalPurchases += (item.price || 0) * (item.quantity || 0)
+                    })
+                }
+            })
+
+            // Update customer with new total
+            const { error: updateError } = await supabase
+                .from('customers')
+                .update({ total_purchases: totalPurchases })
+                .eq('id', customerId)
+
+            if (updateError) throw updateError
+        } catch (error) {
+            console.error('Error recalculating customer total purchases:', error)
+        }
+    }
+
     const toggleDelivery = (enable: boolean) => {
         setHasDelivery(enable)
         if (enable && !formData.delivery) {
@@ -358,6 +389,11 @@ export default function OrderForm({
                     status: formData.delivery.status
                 })
                 if (error) throw error
+            }
+
+            // 5. Recalculate customer total purchases
+            if (customerId) {
+                await recalculateCustomerTotalPurchases(customerId)
             }
 
             router.refresh()
