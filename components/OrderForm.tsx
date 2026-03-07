@@ -133,6 +133,13 @@ export default function OrderForm({
             if (data) setCustomers(data)
         }
 
+        const fetchLatestBatch = async () => {
+            const { data } = await supabase.from('batch_po').select('id').order('created_at', { ascending: false }).limit(1)
+            if (data && data.length > 0) {
+                setFormData(prev => ({ ...prev, po_id: data[0].id }))
+            }
+        }
+
         const initializeInvoiceNumber = async () => {
             // Only generate invoice number if creating new order (not editing)
             if (!initialOrder) {
@@ -143,6 +150,9 @@ export default function OrderForm({
 
         fetchRates()
         fetchCustomers()
+        if (!initialOrder) {
+            fetchLatestBatch()
+        }
         initializeInvoiceNumber()
     }, [])
 
@@ -397,7 +407,7 @@ export default function OrderForm({
             }
 
             router.refresh()
-            router.push('/orders')
+            router.push('/')
 
         } catch (error: any) {
             alert('Error saving order: ' + error.message)
