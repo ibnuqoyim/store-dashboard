@@ -486,13 +486,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                                     </td>
                                     <td className="px-6 py-4 text-sm">
                                         <div className="flex flex-col sm:flex-row gap-2">
-                                            <button
-                                                onClick={() => handleGenerateInvoice(order)}
-                                                className="text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
-                                                title="View Invoice"
-                                            >
-                                                <Eye size={16} /> <span className="hidden sm:inline">Preview</span><span className="sm:hidden">View</span>
-                                            </button>
+                                            
 
                                             <button
                                                 onClick={() => handleDownloadInvoice(order)}
@@ -506,26 +500,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                                                 <Pencil size={18} /> Edit
                                             </Link>
 
-                                            <button
-                                                onClick={() => handleShareWhatsApp(order)}
-                                                className="text-emerald-600 hover:text-emerald-900 bg-emerald-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
-                                                title="Share to WhatsApp"
-                                            >
-                                                <MessageCircle size={16} /> <span className="hidden sm:inline">WA</span>
-                                            </button>
-
-                                            {hasDelivery ? (
-                                                <a href="/deliveries" className="text-green-600 hover:text-green-900 bg-green-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap">
-                                                    <Truck size={16} /> <span className="hidden sm:inline">View</span>
-                                                </a>
-                                            ) : (
-                                                <button
-                                                    onClick={() => handleCreateDelivery(order)}
-                                                    className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
-                                                >
-                                                    <PlusCircle size={16} /> <span className="hidden sm:inline">Delivery</span>
-                                                </button>
-                                            )}
+                                            
                                         </div>
                                     </td>
                                 </tr>

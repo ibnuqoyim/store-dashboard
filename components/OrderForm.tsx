@@ -59,6 +59,10 @@ export default function OrderForm({
     const [customers, setCustomers] = useState<Customer[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [hasDelivery, setHasDelivery] = useState(false)
+    const [customerSearch, setCustomerSearch] = useState('')
+    const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false)
+    const [productSearch, setProductSearch] = useState<Record<number, string>>({})
+    const [showProductSuggestions, setShowProductSuggestions] = useState<Record<number, boolean>>({})
 
     const [formData, setFormData] = useState<OrderFormData>({
         invoice_number: '',
@@ -158,6 +162,15 @@ export default function OrderForm({
 
     useEffect(() => {
         if (initialOrder) {
+            const productSearchMap: Record<number, string> = {}
+            initialOrder.order_items.forEach((item: any, idx: number) => {
+                const product = products.find(p => p.id === item.product_id)
+                if (product) {
+                    productSearchMap[idx] = product.name
+                }
+            })
+            setProductSearch(productSearchMap)
+            
             setFormData({
                 invoice_number: initialOrder.invoice_number,
                 date: initialOrder.date,
@@ -181,8 +194,10 @@ export default function OrderForm({
             if (initialOrder.deliveries?.[0]) {
                 setHasDelivery(true)
             }
+            // Set customer search to customer name when editing
+            setCustomerSearch(initialOrder.customer_name || '')
         }
-    }, [initialOrder])
+    }, [initialOrder, products])
 
     const addItem = () => {
         setFormData({
@@ -265,33 +280,57 @@ export default function OrderForm({
         }
     }
 
-    const handleCustomerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const customerId = e.target.value
+    const handleCustomerSearch = (value: string) => {
+        setCustomerSearch(value)
+        setFormData({
+            ...formData,
+            customer_name: value,
+            customer_id: null // Clear ID when typing to allow new customers
+        })
+        setShowCustomerSuggestions(value.length > 0)
+    }
 
-        if (customerId === 'new') {
-            setFormData({
-                ...formData,
-                customer_id: null,
-                customer_name: '',
-                phone: ''
-            })
-            return
-        }
+    const handleSelectCustomer = (customer: Customer) => {
+        setCustomerSearch(customer.name)
+        setFormData({
+            ...formData,
+            customer_id: customer.id,
+            customer_name: customer.name,
+            phone: customer.phone || '',
+            // If delivery is enabled, update address
+            delivery: hasDelivery && formData.delivery ? {
+                ...formData.delivery,
+                address: customer.address || formData.delivery.address
+            } : formData.delivery
+        })
+        setShowCustomerSuggestions(false)
+    }
 
-        const customer = customers.find(c => c.id === customerId)
-        if (customer) {
-            setFormData({
-                ...formData,
-                customer_id: customer.id,
-                customer_name: customer.name,
-                phone: customer.phone || '',
-                // If delivery is enabled, update address
-                delivery: hasDelivery && formData.delivery ? {
-                    ...formData.delivery,
-                    address: customer.address || formData.delivery.address
-                } : formData.delivery
-            })
-        }
+    const filteredCustomers = customerSearch
+        ? customers.filter(c =>
+            c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+            c.phone?.includes(customerSearch)
+          )
+        : []
+
+    const handleProductSearch = (index: number, value: string) => {
+        setProductSearch(prev => ({ ...prev, [index]: value }))
+        setShowProductSuggestions(prev => ({ ...prev, [index]: value.length > 0 }))
+    }
+
+    const handleSelectProduct = (index: number, product: Product) => {
+        setProductSearch(prev => ({ ...prev, [index]: product.name }))
+        updateItem(index, 'product_id', product.id)
+        setShowProductSuggestions(prev => ({ ...prev, [index]: false }))
+    }
+
+    const getFilteredProducts = (index: number): Product[] => {
+        const search = productSearch[index] || ''
+        return search.length > 0
+            ? products.filter(p =>
+                p.name.toLowerCase().includes(search.toLowerCase())
+              )
+            : []
     }
 
     const handleCourierChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -450,27 +489,32 @@ export default function OrderForm({
                                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
                             />
                         </div>
-                        <div>
+                        <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-                            <select
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 mb-2"
-                                value={formData.customer_id || 'new'}
-                                onChange={handleCustomerChange}
-                            >
-                                <option value="new">-- New / Manual Input --</option>
-                                {customers.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-
                             <input
                                 type="text"
                                 required
-                                value={formData.customer_name}
-                                onChange={e => setFormData({ ...formData, customer_name: e.target.value })}
+                                value={customerSearch}
+                                onChange={e => handleCustomerSearch(e.target.value)}
+                                onFocus={() => customerSearch && setShowCustomerSuggestions(true)}
+                                onBlur={() => setTimeout(() => setShowCustomerSuggestions(false), 200)}
                                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                                placeholder="Customer Name"
+                                placeholder="Search customer by name or phone..."
                             />
+                            {showCustomerSuggestions && filteredCustomers.length > 0 && (
+                                <div className="absolute top-full left-0 right-0 mt-1 border border-gray-300 rounded-md bg-white shadow-lg z-10 max-h-48 overflow-y-auto">
+                                    {filteredCustomers.map(customer => (
+                                        <div
+                                            key={customer.id}
+                                            onClick={() => handleSelectCustomer(customer)}
+                                            className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
+                                        >
+                                            <div className="font-medium text-gray-900">{customer.name}</div>
+                                            <div className="text-sm text-gray-500">{customer.phone}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
@@ -520,19 +564,32 @@ export default function OrderForm({
                     <div className="space-y-4">
                         {formData.items.map((item, index) => (
                             <div key={index} className="flex gap-4 items-end border-b pb-4">
-                                <div className="flex-1">
+                                <div className="flex-1 relative">
                                     <label className="block text-xs font-medium text-gray-500 mb-1">Product</label>
-                                    <select
+                                    <input
+                                        type="text"
                                         required
-                                        value={item.product_id}
-                                        onChange={e => updateItem(index, 'product_id', e.target.value)}
+                                        value={productSearch[index] || ''}
+                                        onChange={e => handleProductSearch(index, e.target.value)}
+                                        onFocus={() => (productSearch[index] || '').length > 0 && setShowProductSuggestions(prev => ({ ...prev, [index]: true }))}
+                                        onBlur={() => setTimeout(() => setShowProductSuggestions(prev => ({ ...prev, [index]: false })), 200)}
                                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                                    >
-                                        <option value="">Select Product...</option>
-                                        {products.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name} - {p.price}</option>
-                                        ))}
-                                    </select>
+                                        placeholder="Search product..."
+                                    />
+                                    {showProductSuggestions[index] && getFilteredProducts(index).length > 0 && (
+                                        <div className="absolute top-full left-0 right-0 mt-1 border border-gray-300 rounded-md bg-white shadow-lg z-10 max-h-40 overflow-y-auto">
+                                            {getFilteredProducts(index).map(product => (
+                                                <div
+                                                    key={product.id}
+                                                    onClick={() => handleSelectProduct(index, product)}
+                                                    className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
+                                                >
+                                                    <div className="font-medium text-gray-900">{product.name}</div>
+                                                    <div className="text-sm text-gray-500">Rp {product.price.toLocaleString('id-ID')}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="w-24">
                                     <label className="block text-xs font-medium text-gray-500 mb-1">Qty</label>
