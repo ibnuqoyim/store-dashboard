@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, X, Loader2 } from 'lucide-react'
+import { CldUploadWidget } from 'next-cloudinary'
 
 type Product = {
     id: string
@@ -13,6 +14,9 @@ type Product = {
     weight: number | null
     dough_id: string | null
     adonan?: { name: string } | null
+    image_url: string | null
+    is_active: boolean
+    is_ready: boolean
 }
 
 type Dough = {
@@ -33,7 +37,10 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
         name: '',
         price: '',
         weight: '',
-        dough_id: ''
+        dough_id: '',
+        image_url: '',
+        is_active: true,
+        is_ready: false
     })
 
     const openModal = (product?: Product) => {
@@ -43,11 +50,14 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                 name: product.name,
                 price: String(product.price),
                 weight: product.weight ? String(product.weight) : '',
-                dough_id: product.dough_id || ''
+                dough_id: product.dough_id || '',
+                image_url: product.image_url || '',
+                is_active: product.is_active,
+                is_ready: product.is_ready
             })
         } else {
             setEditingProduct(null)
-            setFormData({ name: '', price: '', weight: '', dough_id: '' })
+            setFormData({ name: '', price: '', weight: '', dough_id: '', image_url: '', is_active: true, is_ready: false })
         }
         setIsModalOpen(true)
     }
@@ -74,7 +84,10 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
             name: formData.name,
             price: Number(formData.price),
             weight: formData.weight ? Number(formData.weight) : null,
-            dough_id: formData.dough_id || null
+            dough_id: formData.dough_id || null,
+            image_url: formData.image_url || null,
+            is_active: formData.is_active,
+            is_ready: formData.is_ready
         }
 
         let error
@@ -125,6 +138,9 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dough</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight (gr)</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ready</th>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
@@ -135,6 +151,15 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatRupiah(product.price)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.adonan?.name || '-'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.weight || '-'}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {product.image_url ? (
+                                        <img src={product.image_url} alt={product.name} className="h-10 w-10 object-cover rounded" />
+                                    ) : (
+                                        '-'
+                                    )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.is_active ? 'Yes' : 'No'}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.is_ready ? 'Yes' : 'No'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div className="flex justify-end gap-2">
                                         <button onClick={() => openModal(product)} className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded">
@@ -161,7 +186,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-lg w-full max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
+                            <h2 className="text-xl font-bold text-gray-500">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
                             <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-700">
                                 <X size={24} />
                             </button>
@@ -213,6 +238,70 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                                         onChange={e => setFormData({ ...formData, weight: e.target.value })}
                                         className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                                     />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Product Image</label>
+                                    <div className="space-y-2">
+                                        <div className="flex gap-2">
+                                            <CldUploadWidget
+                                                uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'products'}
+                                                onSuccess={(result: any) => {
+                                                    setFormData({ ...formData, image_url: result.info.secure_url })
+                                                }}
+                                            >
+                                                {({ open }) => (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => open()}
+                                                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm"
+                                                    >
+                                                        {formData.image_url ? 'Change Image' : 'Upload Image'}
+                                                    </button>
+                                                )}
+                                            </CldUploadWidget>
+                                            {formData.image_url && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, image_url: '' })}
+                                                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm"
+                                                >
+                                                    Remove
+                                                </button>
+                                            )}
+                                        </div>
+                                        {formData.image_url && (
+                                            <div className="mt-2">
+                                                <img 
+                                                    src={formData.image_url} 
+                                                    alt="Product Preview" 
+                                                    className="h-32 w-32 object-cover rounded border border-gray-300"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center space-x-4 mt-2">
+                                    <label className="flex items-center text-sm text-gray-700">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.is_active}
+                                            onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
+                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        />
+                                        <span className="ml-2">Active</span>
+                                    </label>
+
+                                    <label className="flex items-center text-sm text-gray-700">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.is_ready}
+                                            onChange={e => setFormData({ ...formData, is_ready: e.target.checked })}
+                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        />
+                                        <span className="ml-2">Ready</span>
+                                    </label>
                                 </div>
                             </div>
 
