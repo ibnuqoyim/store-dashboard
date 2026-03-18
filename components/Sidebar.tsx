@@ -3,7 +3,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ShoppingBag, Wheat, ClipboardList, Truck, LogOut, Menu, X, Users, FileText } from 'lucide-react'
+import { LayoutDashboard, ShoppingBag, Wheat, ClipboardList, Truck, LogOut, Menu, X, Users, FileText, MessageSquare } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import clsx from 'clsx'
@@ -19,6 +19,7 @@ const navigation = [
     { name: 'Deliveries', href: '/deliveries', icon: Truck },
     { name: 'Shipping', href: '/shipping', icon: Truck },
     { name: 'Invoices', href: '/invoices', icon: ClipboardList },
+    { name: 'Testimonials', href: '/testimonials', icon: MessageSquare },
 ]
 
 export default function Sidebar() {
