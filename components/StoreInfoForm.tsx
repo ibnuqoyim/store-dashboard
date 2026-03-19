@@ -1,0 +1,474 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
+import { Save, Loader2, Plus, Trash2 } from 'lucide-react'
+
+type StoreInfo = {
+  id: string
+  is_active: boolean
+  name: string
+  address: string
+  phone: string
+  email: string
+  opening_hours: string
+  maps_url: string | null
+  maps_embed_url: string | null
+  hero_kicker: string | null
+  hero_title: string | null
+  hero_tagline: string | null
+  hero_description: string | null
+  hero_images: string[]
+  hero_stats: Array<{ label: string; value: string }> | null
+  tagline_heading: string | null
+  tagline_subheading: string | null
+  tagline_features: Array<{ title: string; description: string }> | null
+  tagline_quote: string | null
+  contact_instagram_handle: string | null
+  contact_instagram_url: string | null
+  contact_whatsapp_number: string | null
+  contact_whatsapp_url: string | null
+  contact_email: string | null
+  created_at: string
+  updated_at: string
+}
+
+export default function StoreInfoForm() {
+  const supabase = createClient()
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null)
+  const [formData, setFormData] = useState<Partial<StoreInfo>>({})
+
+  useEffect(() => {
+    fetchStoreInfo()
+  }, [])
+
+  const fetchStoreInfo = async () => {
+    try {
+      setIsLoading(true)
+      const { data, error } = await supabase
+        .from('store_info')
+        .select('*')
+        .single()
+
+      if (error && error.code !== 'PGRST116') throw error
+      
+      if (data) {
+        setStoreInfo(data)
+        setFormData(data)
+      } else {
+        // Initialize with empty form if no record exists
+        setFormData({
+          is_active: true,
+          name: '',
+          address: '',
+          phone: '',
+          email: '',
+          opening_hours: '',
+          hero_images: [],
+          hero_stats: [],
+          tagline_features: []
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching store info:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSaving(true)
+
+    try {
+      if (storeInfo) {
+        // Update existing
+        const { error } = await supabase
+          .from('store_info')
+          .update({ ...formData, updated_at: new Date().toISOString() })
+          .eq('id', storeInfo.id)
+
+        if (error) throw error
+      } else {
+        // Create new
+        const { data, error } = await supabase
+          .from('store_info')
+          .insert([formData])
+          .select()
+          .single()
+
+        if (error) throw error
+        setStoreInfo(data)
+      }
+
+      alert('Store information saved successfully!')
+      await fetchStoreInfo()
+    } catch (error) {
+      alert('Error saving store info: ' + (error as any).message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const addHeroStat = () => {
+    setFormData({
+      ...formData,
+      hero_stats: [...(formData.hero_stats || []), { label: '', value: '' }]
+    })
+  }
+
+  const removeHeroStat = (index: number) => {
+    const stats = [...(formData.hero_stats || [])]
+    stats.splice(index, 1)
+    setFormData({ ...formData, hero_stats: stats })
+  }
+
+  const updateHeroStat = (index: number, field: string, value: string) => {
+    const stats = [...(formData.hero_stats || [])]
+    stats[index] = { ...stats[index], [field]: value }
+    setFormData({ ...formData, hero_stats: stats })
+  }
+
+  const addTaglineFeature = () => {
+    setFormData({
+      ...formData,
+      tagline_features: [...(formData.tagline_features || []), { title: '', description: '' }]
+    })
+  }
+
+  const removeTaglineFeature = (index: number) => {
+    const features = [...(formData.tagline_features || [])]
+    features.splice(index, 1)
+    setFormData({ ...formData, tagline_features: features })
+  }
+
+  const updateTaglineFeature = (index: number, field: string, value: string) => {
+    const features = [...(formData.tagline_features || [])]
+    features[index] = { ...features[index], [field]: value }
+    setFormData({ ...formData, tagline_features: features })
+  }
+
+  if (isLoading) {
+    return <div className="text-center py-12 text-gray-500">Loading store information...</div>
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Core Identity Section */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 text-gray-900">Core Identity</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Store Name*</label>
+            <input
+              type="text"
+              required
+              value={formData.name || ''}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email*</label>
+            <input
+              type="email"
+              required
+              value={formData.email || ''}
+              onChange={e => setFormData({ ...formData, email: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone*</label>
+            <input
+              type="tel"
+              required
+              value={formData.phone || ''}
+              onChange={e => setFormData({ ...formData, phone: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Opening Hours*</label>
+            <input
+              type="text"
+              required
+              value={formData.opening_hours || ''}
+              onChange={e => setFormData({ ...formData, opening_hours: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="e.g., Mon-Fri 9:00-18:00"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Address*</label>
+            <textarea
+              required
+              value={formData.address || ''}
+              onChange={e => setFormData({ ...formData, address: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              rows={3}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Maps Section */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 text-gray-900">Maps Integration</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Maps URL</label>
+            <input
+              type="url"
+              value={formData.maps_url || ''}
+              onChange={e => setFormData({ ...formData, maps_url: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="https://maps.google.com/..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Maps Embed URL</label>
+            <input
+              type="url"
+              value={formData.maps_embed_url || ''}
+              onChange={e => setFormData({ ...formData, maps_embed_url: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="https://www.google.com/maps/embed?..."
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Hero Section */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 text-gray-900">Hero Section</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Hero Kicker</label>
+            <input
+              type="text"
+              value={formData.hero_kicker || ''}
+              onChange={e => setFormData({ ...formData, hero_kicker: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="e.g., Welcome to"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Hero Title</label>
+            <input
+              type="text"
+              value={formData.hero_title || ''}
+              onChange={e => setFormData({ ...formData, hero_title: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="Main headline"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Hero Tagline</label>
+            <input
+              type="text"
+              value={formData.hero_tagline || ''}
+              onChange={e => setFormData({ ...formData, hero_tagline: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Hero Description</label>
+            <textarea
+              value={formData.hero_description || ''}
+              onChange={e => setFormData({ ...formData, hero_description: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              rows={3}
+            />
+          </div>
+
+          {/* Hero Stats */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">Hero Stats</label>
+              <button
+                type="button"
+                onClick={addHeroStat}
+                className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+              >
+                <Plus size={16} /> Add Stat
+              </button>
+            </div>
+            <div className="space-y-3">
+              {(formData.hero_stats || []).map((stat, idx) => (
+                <div key={idx} className="flex gap-2 items-end">
+                  <input
+                    type="text"
+                    placeholder="Label"
+                    value={stat.label || ''}
+                    onChange={e => updateHeroStat(idx, 'label', e.target.value)}
+                    className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Value"
+                    value={stat.value || ''}
+                    onChange={e => updateHeroStat(idx, 'value', e.target.value)}
+                    className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeHeroStat(idx)}
+                    className="text-red-600 hover:text-red-800 p-2"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tagline/Why Us Section */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 text-gray-900">Tagline / Why Us Section</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tagline Heading</label>
+            <input
+              type="text"
+              value={formData.tagline_heading || ''}
+              onChange={e => setFormData({ ...formData, tagline_heading: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tagline Subheading</label>
+            <input
+              type="text"
+              value={formData.tagline_subheading || ''}
+              onChange={e => setFormData({ ...formData, tagline_subheading: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tagline Quote</label>
+            <textarea
+              value={formData.tagline_quote || ''}
+              onChange={e => setFormData({ ...formData, tagline_quote: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              rows={2}
+            />
+          </div>
+
+          {/* Tagline Features */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">Features</label>
+              <button
+                type="button"
+                onClick={addTaglineFeature}
+                className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+              >
+                <Plus size={16} /> Add Feature
+              </button>
+            </div>
+            <div className="space-y-3">
+              {(formData.tagline_features || []).map((feature, idx) => (
+                <div key={idx} className="flex gap-2 items-end">
+                  <input
+                    type="text"
+                    placeholder="Feature title"
+                    value={feature.title || ''}
+                    onChange={e => updateTaglineFeature(idx, 'title', e.target.value)}
+                    className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+                  />
+                  <textarea
+                    placeholder="Description"
+                    value={feature.description || ''}
+                    onChange={e => updateTaglineFeature(idx, 'description', e.target.value)}
+                    className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+                    rows={1}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeTaglineFeature(idx)}
+                    className="text-red-600 hover:text-red-800 p-2"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Section */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 text-gray-900">Contact Information</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Instagram Handle</label>
+            <input
+              type="text"
+              value={formData.contact_instagram_handle || ''}
+              onChange={e => setFormData({ ...formData, contact_instagram_handle: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="@your_handle"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Instagram URL</label>
+            <input
+              type="url"
+              value={formData.contact_instagram_url || ''}
+              onChange={e => setFormData({ ...formData, contact_instagram_url: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="https://instagram.com/..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
+            <input
+              type="tel"
+              value={formData.contact_whatsapp_number || ''}
+              onChange={e => setFormData({ ...formData, contact_whatsapp_number: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="+62..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp URL</label>
+            <input
+              type="url"
+              value={formData.contact_whatsapp_url || ''}
+              onChange={e => setFormData({ ...formData, contact_whatsapp_url: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="https://wa.me/..."
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+            <input
+              type="email"
+              value={formData.contact_email || ''}
+              onChange={e => setFormData({ ...formData, contact_email: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Submit Button */}
+      <div className="flex gap-3 sticky bottom-0 bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 font-medium"
+        >
+          {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+          Save Store Information
+        </button>
+      </div>
+    </form>
+  )
+}
