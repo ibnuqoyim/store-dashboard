@@ -3,7 +3,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ShoppingBag, Wheat, ClipboardList, Truck, LogOut, Menu, X, Users, FileText, MessageSquare, Settings, DollarSign } from 'lucide-react'
+import { LayoutDashboard, ShoppingBag, Wheat, ClipboardList, Truck, LogOut, Menu, X, Users, FileText, MessageSquare, Settings, DollarSign, Package, Receipt } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import clsx from 'clsx'
@@ -17,6 +17,8 @@ const navigation = [
     { name: 'Pre-Orders', href: '/batch-po', icon: FileText },
     { name: 'Orders', href: '/orders', icon: ClipboardList },
     { name: 'Financial', href: '/financial', icon: DollarSign },
+    { name: 'Inventory', href: '/inventory', icon: Package },
+    { name: 'Expenses', href: '/expenses', icon: Receipt },
     { name: 'Deliveries', href: '/deliveries', icon: Truck },
     { name: 'Shipping', href: '/shipping', icon: Truck },
     { name: 'Invoices', href: '/invoices', icon: ClipboardList },

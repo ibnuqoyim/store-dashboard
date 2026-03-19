@@ -7,7 +7,7 @@ import { format } from 'date-fns'
 
 type FinancialTransaction = {
     id: string
-    order_id: string
+    order_id?: string
     transaction_type: 'income' | 'expense'
     amount: number
     description: string
