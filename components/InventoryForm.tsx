@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { Plus, Trash2, Save, Package, Wheat, AlertTriangle } from 'lucide-react'
+import { Plus, Trash2, Save, Package, Wheat, AlertTriangle, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 
 type InventoryItem = {
     id: string
@@ -32,6 +32,12 @@ export default function InventoryForm() {
     const [loading, setLoading] = useState(false)
     const [showAddForm, setShowAddForm] = useState(false)
     const [showTransactionForm, setShowTransactionForm] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [categoryFilter, setCategoryFilter] = useState<string>('all')
+    const [stockFilter, setStockFilter] = useState<string>('all')
+    const [costFilter, setCostFilter] = useState({ min: '', max: '' })
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage, setItemsPerPage] = useState(10)
     const supabase = createClient()
 
     const [newItem, setNewItem] = useState({
@@ -57,6 +63,59 @@ export default function InventoryForm() {
     useEffect(() => {
         fetchItems()
     }, [])
+
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [searchTerm, categoryFilter, stockFilter, costFilter])
+
+    const filteredItems = useMemo(() => {
+        let result = items
+
+        // Filter by search term
+        if (searchTerm) {
+            const lowerSearch = searchTerm.toLowerCase()
+            result = result.filter(item =>
+                item.name.toLowerCase().includes(lowerSearch) ||
+                (item.supplier && item.supplier.toLowerCase().includes(lowerSearch)) ||
+                (item.description && item.description.toLowerCase().includes(lowerSearch))
+            )
+        }
+
+        // Filter by category
+        if (categoryFilter !== 'all') {
+            result = result.filter(item => item.category === categoryFilter)
+        }
+
+        // Filter by stock status
+        if (stockFilter !== 'all') {
+            result = result.filter(item => {
+                if (stockFilter === 'low') return item.current_stock <= item.min_stock
+                if (stockFilter === 'normal') return item.current_stock > item.min_stock
+                return true
+            })
+        }
+
+        // Filter by cost range
+        if (costFilter.min) {
+            result = result.filter(item => item.unit_cost >= Number(costFilter.min))
+        }
+        if (costFilter.max) {
+            result = result.filter(item => item.unit_cost <= Number(costFilter.max))
+        }
+
+        return result
+    }, [items, searchTerm, categoryFilter, stockFilter, costFilter])
+
+    // Pagination
+    const paginatedItems = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage
+        const endIndex = startIndex + itemsPerPage
+        return filteredItems.slice(startIndex, endIndex)
+    }, [filteredItems, currentPage, itemsPerPage])
+
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage)
+    const totalItems = filteredItems.length
 
     const fetchItems = async () => {
         try {
@@ -146,33 +205,140 @@ export default function InventoryForm() {
 
     const getStockStatus = (item: InventoryItem) => {
         if (item.current_stock <= item.min_stock) {
-            return { color: 'text-red-600 bg-red-100', icon: AlertTriangle, text: 'Stok Rendah' }
+            return { text: 'Low Stock', color: 'text-red-600 bg-red-100' }
         }
-        return { color: 'text-green-600 bg-green-100', icon: Package, text: 'Stok Aman' }
+        return { text: 'In Stock', color: 'text-green-600 bg-green-100' }
     }
 
     return (
         <div className="space-y-6">
             {/* Header */}
             <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
-                    <p className="text-gray-600">Kelola bahan baku dan packaging</p>
-                </div>
+                <h1 className="text-2xl font-bold text-gray-800">Inventory Management</h1>
                 <div className="flex gap-2">
                     <button
                         onClick={() => setShowTransactionForm(true)}
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                        className="bg-green-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-green-700 transition"
                     >
-                        <Plus size={18} />
-                        Transaksi
+                        <Package size={18} /> Add Transaction
                     </button>
                     <button
                         onClick={() => setShowAddForm(true)}
-                        className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                        className="bg-blue-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-blue-700 transition"
                     >
-                        <Plus size={18} />
-                        Item Baru
+                        <Plus size={18} /> Add Item
+                    </button>
+                </div>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="bg-white p-4 rounded-lg shadow">
+                <div className="flex items-center gap-2 mb-3">
+                    <Filter size={18} className="text-gray-500" />
+                    <h3 className="font-medium text-gray-700">Search & Filters</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Search */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Item name, supplier..."
+                                className="pl-10 w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2 text-sm text-gray-900"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Category Filter */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <select
+                            className="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2 text-sm text-gray-900"
+                            value={categoryFilter}
+                            onChange={(e) => setCategoryFilter(e.target.value)}
+                        >
+                            <option value="all">All Categories</option>
+                            <option value="bahan_baku">Bahan Baku</option>
+                            <option value="packaging">Packaging</option>
+                        </select>
+                    </div>
+
+                    {/* Stock Filter */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Stock Status</label>
+                        <select
+                            className="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2 text-sm text-gray-900"
+                            value={stockFilter}
+                            onChange={(e) => setStockFilter(e.target.value)}
+                        >
+                            <option value="all">All Stock</option>
+                            <option value="low">Low Stock</option>
+                            <option value="normal">Normal Stock</option>
+                        </select>
+                    </div>
+
+                    {/* Items per page */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Items per page</label>
+                        <select
+                            className="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2 text-sm text-gray-900"
+                            value={itemsPerPage}
+                            onChange={(e) => {
+                                setItemsPerPage(Number(e.target.value))
+                                setCurrentPage(1)
+                            }}
+                        >
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Cost Range Filter */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Min Unit Cost</label>
+                        <input
+                            type="number"
+                            placeholder="Min unit cost"
+                            className="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2 text-sm text-gray-900"
+                            value={costFilter.min}
+                            onChange={(e) => setCostFilter(prev => ({ ...prev, min: e.target.value }))}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Max Unit Cost</label>
+                        <input
+                            type="number"
+                            placeholder="Max unit cost"
+                            className="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2 text-sm text-gray-900"
+                            value={costFilter.max}
+                            onChange={(e) => setCostFilter(prev => ({ ...prev, max: e.target.value }))}
+                        />
+                    </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between">
+                    <div className="text-sm text-gray-600">
+                        Showing {paginatedItems.length} of {totalItems} items
+                    </div>
+                    <button
+                        onClick={() => {
+                            setSearchTerm('')
+                            setCategoryFilter('all')
+                            setStockFilter('all')
+                            setCostFilter({ min: '', max: '' })
+                            setCurrentPage(1)
+                        }}
+                        className="text-sm text-blue-600 hover:text-blue-800"
+                    >
+                        Clear all filters
                     </button>
                 </div>
             </div>
@@ -411,16 +577,15 @@ export default function InventoryForm() {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {items.length === 0 ? (
+                        {paginatedItems.length === 0 ? (
                             <tr>
                                 <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                                    Belum ada item inventory
+                                    {filteredItems.length === 0 ? 'No items found.' : 'No items found for current page.'}
                                 </td>
                             </tr>
                         ) : (
-                            items.map((item) => {
+                            paginatedItems.map((item) => {
                                 const stockStatus = getStockStatus(item)
-                                const StatusIcon = stockStatus.icon
                                 return (
                                     <tr key={item.id} className="hover:bg-gray-50">
                                         <td className="px-6 py-4 whitespace-nowrap">
@@ -461,7 +626,7 @@ export default function InventoryForm() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${stockStatus.color} flex items-center gap-1`}>
-                                                <StatusIcon size={12} />
+                                                {stockStatus.text === 'Low Stock' && <AlertTriangle size={12} />}
                                                 {stockStatus.text}
                                             </span>
                                         </td>
@@ -472,6 +637,86 @@ export default function InventoryForm() {
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                    <div className="flex-1 flex justify-between sm:hidden">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Previous
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Next
+                        </button>
+                    </div>
+                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p className="text-sm text-gray-700">
+                                Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+                                <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{' '}
+                                <span className="font-medium">{totalItems}</span> results
+                            </p>
+                        </div>
+                        <div>
+                            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <span className="sr-only">Previous</span>
+                                    <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                                </button>
+                                
+                                {/* Page numbers */}
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                    let pageNum
+                                    if (totalPages <= 5) {
+                                        pageNum = i + 1
+                                    } else if (currentPage <= 3) {
+                                        pageNum = i + 1
+                                    } else if (currentPage >= totalPages - 2) {
+                                        pageNum = totalPages - 4 + i
+                                    } else {
+                                        pageNum = currentPage - 2 + i
+                                    }
+                                    
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => setCurrentPage(pageNum)}
+                                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                                currentPage === pageNum
+                                                    ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                                                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    )
+                                })}
+                                
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <span className="sr-only">Next</span>
+                                    <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                                </button>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
