@@ -2,13 +2,21 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Eye, FileText, Truck, PlusCircle, Download, MessageCircle, Pencil } from 'lucide-react'
+import { PlusCircle, Download, Pencil, Settings } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import InvoiceModal from '@/components/InvoiceModal'
+import DashboardCustomizer from '@/components/DashboardCustomizer'
 import { format } from 'date-fns'
 import Link from 'next/link'
 // @ts-ignore
 import { useRouter } from 'next/navigation'
+import {
+    WidgetId,
+    WidgetConfig,
+    WIDGET_REGISTRY,
+    DEFAULT_WIDGET_CONFIG,
+    WIDGET_STORAGE_KEY,
+} from '@/lib/widgetRegistry'
 
 type DashboardProps = {
     orders: any[]
@@ -22,7 +30,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
     const [selectedBatchId, setSelectedBatchId] = useState<string>(defaultBatchId)
     const [isInitialized, setIsInitialized] = useState(false)
 
-    // Load persistence
+    // Batch persistence
     useEffect(() => {
         const saved = localStorage.getItem('dashboard_selected_batch')
         if (saved) {
@@ -38,12 +46,37 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
         setIsInitialized(true)
     }, [batches, defaultBatchId])
 
-    // Save persistence
     useEffect(() => {
         if (isInitialized) {
             localStorage.setItem('dashboard_selected_batch', selectedBatchId)
         }
     }, [selectedBatchId, isInitialized])
+
+    // Widget config
+    const [widgetConfig, setWidgetConfig] = useState<WidgetConfig[]>(DEFAULT_WIDGET_CONFIG)
+    const [customizerOpen, setCustomizerOpen] = useState(false)
+
+    useEffect(() => {
+        const saved = localStorage.getItem(WIDGET_STORAGE_KEY)
+        if (saved) {
+            try {
+                const parsed: WidgetConfig[] = JSON.parse(saved)
+                const knownIds = WIDGET_REGISTRY.map(w => w.id)
+                const parsedIds = parsed.map(w => w.id)
+                const isValid =
+                    knownIds.length === parsedIds.length &&
+                    knownIds.every(id => parsedIds.includes(id as WidgetId))
+                if (isValid) setWidgetConfig(parsed)
+            } catch {
+                // fall back to defaults
+            }
+        }
+    }, [])
+
+    useEffect(() => {
+        localStorage.setItem(WIDGET_STORAGE_KEY, JSON.stringify(widgetConfig))
+    }, [widgetConfig])
+
     const [selectedOrder, setSelectedOrder] = useState<any>(null)
     const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
     const [logoBase64, setLogoBase64] = useState<string | null>(null)
@@ -81,26 +114,23 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
 
     const filteredOrders = useMemo(() => {
         let result = selectedBatchId === 'all' ? orders : orders.filter(o => o.po_id === selectedBatchId)
-        
-        // Filter by search query (customer name)
+
         if (searchQuery.trim()) {
-            result = result.filter(o => 
+            result = result.filter(o =>
                 o.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
             )
         }
-        
-        // Sort by invoice number
+
         result.sort((a, b) => {
             const invoiceA = a.invoice_number || ''
             const invoiceB = b.invoice_number || ''
             const comparison = invoiceA.localeCompare(invoiceB)
             return sortOrder === 'asc' ? comparison : -comparison
         })
-        
+
         return result
     }, [orders, selectedBatchId, searchQuery, sortOrder])
 
-    // Recalculate Stats based on filteredOrders
     const stats = useMemo(() => {
         let totalOrders = filteredOrders.length
         let totalRevenue = 0
@@ -109,7 +139,6 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
         const productMap = new Map<string, any>()
         const adonanMap = new Map<string, any>()
 
-        // Init Adonan Map
         adonan.forEach(a => {
             adonanMap.set(a.name, { ...a, totalQuantity: 0, totalWeight: 0, weightPerBatch: a.weight })
         })
@@ -121,7 +150,6 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
             order.order_items.forEach((item: any) => {
                 orderRevenue += (item.price || 0) * (item.quantity || 0)
 
-                // Product Stats
                 const pName = item.products?.name || 'Unknown'
                 if (!productMap.has(pName)) {
                     productMap.set(pName, {
@@ -135,7 +163,6 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                 pEntry.totalQuantity += item.quantity
                 pEntry.totalAmount += (item.price * item.quantity)
 
-                // Adonan Stats
                 const productDef = products.find(p => p.id === item.product_id)
                 if (productDef && productDef.adonan) {
                     const aName = productDef.adonan.name
@@ -187,9 +214,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                 format: 'a4'
             })
 
-            // Add watermark first if available
             if (logoBase64 && logoDims) {
-                console.log('Attempting to add watermark to PDF...')
                 try {
                     const canvas = document.createElement('canvas')
                     const ctx = canvas.getContext('2d')
@@ -226,21 +251,16 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                     const x = (pageWidth - renderWidth / 1.5) / 2
                     const y = (pageHeight - renderHeight / 1.5) / 2
 
-                    console.log('Adding watermark at:', { x, y, width: renderWidth / 1.5, height: renderHeight / 1.5 })
                     doc.saveGraphicsState()
-                    // @ts-ignore - jsPDF GState type issue
+                    // @ts-ignore
                     doc.setGState(new (doc as any).GState({ opacity: 0.2 }))
                     doc.addImage(cleanImageData, 'PNG', x, y, renderWidth / 1.5, renderHeight / 1.5)
                     doc.restoreGraphicsState()
-                    console.log('Watermark added successfully')
                 } catch (error) {
                     console.error('Error adding watermark:', error)
                 }
-            } else {
-                console.log('Skipping watermark - logoBase64:', !!logoBase64, 'logoDims:', !!logoDims)
             }
 
-            // Invoice content
             doc.setFontSize(24)
             doc.setFont('helvetica', 'bold')
             doc.text('Invoice', 200, 20, { align: 'right' })
@@ -293,7 +313,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                 const delivery = order.deliveries[0]
                 const shippingCost = delivery.shipping_cost || 0
                 subtotal += shippingCost
-                doc.text(`Ongkir`, 12, yPos)
+                doc.text('Ongkir', 12, yPos)
                 doc.text('1', 120, yPos, { align: 'center' })
                 doc.text(shippingCost > 0 ? formatRupiah(shippingCost) : '-', 155, yPos, { align: 'right' })
                 doc.text(shippingCost > 0 ? formatRupiah(shippingCost) : '-', 195, yPos, { align: 'right' })
@@ -341,10 +361,8 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
 
     const handleShareWhatsApp = async (order: any) => {
         try {
-            // Generate PDF first
             await handleDownloadInvoice(order)
 
-            // Format phone number (remove non-digits, add 62 if starts with 0)
             let phone = order.phone?.replace(/\D/g, '') || ''
             if (phone.startsWith('0')) {
                 phone = '62' + phone.substring(1)
@@ -352,10 +370,8 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                 phone = '62' + phone
             }
 
-            // Create WhatsApp message
             const message = `Halo ${order.customer_name},\n\nBerikut adalah invoice untuk pesanan Anda:\n\nInvoice: ${order.invoice_number}\nTanggal: ${format(new Date(order.date), 'dd MMM yyyy')}\nTotal: ${formatRupiah(order.order_items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0))}\n\nTerima kasih telah berbelanja di Sourdoughmu_ya!\n\nBaarakallaahu fiikum 🥖`
 
-            // Open WhatsApp Web with message
             const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
             window.open(whatsappUrl, '_blank')
         } catch (error) {
@@ -365,16 +381,14 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
     }
 
     const handleCreateDelivery = async (order: any) => {
-        // Logic to create delivery if not exists, or view it
         if (order.deliveries && order.deliveries.length > 0) {
-            router.push('/deliveries') // Or view specific delivery?
+            router.push('/deliveries')
         } else {
-            // Quick create pending delivery
             const confirmed = window.confirm(`Create delivery for Invoice #${order.invoice_number}?`)
             if (confirmed) {
                 const { error } = await supabase.from('deliveries').insert({
                     order_id: order.id,
-                    courier_name: 'TBD', // Placeholder
+                    courier_name: 'TBD',
                     shipping_cost: 0,
                     status: 'pending'
                 })
@@ -389,184 +403,231 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
         }
     }
 
+    // ─── Widget renderers ───────────────────────────────────────────────────────
+
+    const renderWidget = (id: WidgetId) => {
+        switch (id) {
+            case 'stat-cards':
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-lg text-white shadow-lg">
+                            <h3 className="text-sm font-medium opacity-90">Total Orders</h3>
+                            <p className="text-3xl font-bold mt-2">{stats.totalOrders}</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-green-500 to-green-400 p-6 rounded-lg text-white shadow-lg">
+                            <h3 className="text-sm font-medium opacity-90">Total Revenue</h3>
+                            <p className="text-3xl font-bold mt-2">{formatRupiah(stats.totalRevenue)}</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-pink-400 to-pink-600 p-6 rounded-lg text-white shadow-lg">
+                            <h3 className="text-sm font-medium opacity-90">Pending Invoices</h3>
+                            <p className="text-3xl font-bold mt-2">{stats.pendingCount}</p>
+                        </div>
+                    </div>
+                )
+
+            case 'orders-table':
+                return (
+                    <div className="mb-8">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                            <h2 className="text-lg sm:text-xl font-bold text-gray-800">📋 Orders</h2>
+                            <Link
+                                href="/orders/new"
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium"
+                            >
+                                <PlusCircle size={18} /> Add New Order
+                            </Link>
+                        </div>
+
+                        <div className="bg-white rounded-lg shadow p-4 mb-4">
+                            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                                <input
+                                    type="text"
+                                    placeholder="Search by customer name..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 text-sm"
+                                />
+                                <button
+                                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                    className="bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap"
+                                >
+                                    Invoice {sortOrder === 'asc' ? '↑' : '↓'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg shadow overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-indigo-500 text-white">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Invoice #</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Date</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Customer</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Items</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {filteredOrders.map(order => {
+                                        let orderTotal = order.order_items.reduce((s: number, i: any) => s + (i.price * i.quantity), 0)
+                                        if (order.deliveries?.length > 0) orderTotal += (order.deliveries[0].shipping_cost || 0)
+
+                                        return (
+                                            <tr key={order.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4 font-medium text-gray-900">{order.invoice_number}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-500">{new Date(order.date).toLocaleDateString('id-ID')}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-900">
+                                                    <div className="font-medium">{order.customer_name}</div>
+                                                    <div className="text-gray-500 text-xs">{order.phone}</div>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-500">{order.order_items.length} item(s)</td>
+                                                <td className="px-6 py-4 font-bold text-gray-900">{formatRupiah(orderTotal)}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${order.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                        {order.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <div className="flex flex-col sm:flex-row gap-2">
+                                                        <button
+                                                            onClick={() => handleDownloadInvoice(order)}
+                                                            className="text-green-600 hover:text-green-900 bg-green-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
+                                                            title="Download PDF"
+                                                        >
+                                                            <Download size={16} /> PDF
+                                                        </button>
+                                                        <Link href={`/orders/${order.id}`} className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded inline-flex items-center gap-1">
+                                                            <Pencil size={18} /> Edit
+                                                        </Link>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )
+
+            case 'product-summary':
+                return (
+                    <div className="mb-8">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">📦 Product Summary</h2>
+                        <div className="bg-white rounded-lg shadow overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-indigo-500 text-white">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Product Name</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Quantity</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Unit Price</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {stats.productSummary.map((item, idx) => (
+                                        <tr key={idx} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
+                                            <td className="px-6 py-4 text-gray-500">{item.totalQuantity} unit(s)</td>
+                                            <td className="px-6 py-4 text-gray-500">{formatRupiah(item.price)}</td>
+                                            <td className="px-6 py-4 font-bold text-gray-900">{formatRupiah(item.totalAmount)}</td>
+                                        </tr>
+                                    ))}
+                                    <tr className="bg-gray-100 font-bold">
+                                        <td className="px-6 py-4 text-right" colSpan={3}>TOTAL</td>
+                                        <td className="px-6 py-4 text-gray-900">{formatRupiah(stats.totalRevenue)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )
+
+            case 'adonan-summary':
+                return (
+                    <div className="mb-8">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">🥖 Adonan Summary</h2>
+                        <div className="bg-white rounded-lg shadow overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-indigo-500 text-white">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Adonan Name</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Quantity (Unit)</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Weight (gr)</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Weight per Batch (gr)</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Batch to Make</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {stats.adonanSummary.map((item, idx) => (
+                                        <tr key={idx} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
+                                            <td className="px-6 py-4 text-gray-500">{item.totalQuantity}</td>
+                                            <td className="px-6 py-4 text-gray-500">{item.totalWeight}</td>
+                                            <td className="px-6 py-4 text-gray-500">{item.weightPerBatch}</td>
+                                            <td className="px-6 py-4 font-bold text-indigo-600">{item.batchToMake}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )
+
+            default:
+                return null
+        }
+    }
+
+    // ─── Render ─────────────────────────────────────────────────────────────────
+
     return (
         <div>
+            {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">📊 Dashboard</h1>
-                <select
-                    className="w-full sm:w-auto border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2 text-gray-900 text-sm"
-                    value={selectedBatchId}
-                    onChange={(e) => setSelectedBatchId(e.target.value)}
-                >
-                    <option value="all">All Batches</option>
-                    {batches.map(b => (
-                        <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
-                </select>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-lg text-white shadow-lg">
-                    <h3 className="text-sm font-medium opacity-90">Total Orders</h3>
-                    <p className="text-3xl font-bold mt-2">{stats.totalOrders}</p>
-                </div>
-
-                <div className="bg-gradient-to-br from-green-500 to-green-400 p-6 rounded-lg text-white shadow-lg">
-                    <h3 className="text-sm font-medium opacity-90">Total Revenue</h3>
-                    <p className="text-3xl font-bold mt-2">{formatRupiah(stats.totalRevenue)}</p>
-                </div>
-
-                <div className="bg-gradient-to-br from-pink-400 to-pink-600 p-6 rounded-lg text-white shadow-lg">
-                    <h3 className="text-sm font-medium opacity-90">Pending Invoices</h3>
-                    <p className="text-3xl font-bold mt-2">{stats.pendingCount}</p>
-                </div>
-            </div>
-
-            {/* Orders Table - NEW */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-800">📋 Orders</h2>
-                <Link href="/orders/new" className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
-                    <PlusCircle size={18} /> Add New Order
-                </Link>
-            </div>
-            
-            <div className="bg-white rounded-lg shadow p-4 mb-4">
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                    <input
-                        type="text"
-                        placeholder="Search by customer name..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 text-sm"
-                    />
-                    <button
-                        onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                        className="bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap"
-                        title="Toggle sort order"
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <select
+                        className="flex-1 sm:flex-none border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2 text-gray-900 text-sm"
+                        value={selectedBatchId}
+                        onChange={(e) => setSelectedBatchId(e.target.value)}
                     >
-                        Invoice {sortOrder === 'asc' ? '↑' : '↓'}
+                        <option value="all">All Batches</option>
+                        {batches.map(b => (
+                            <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                    </select>
+                    <button
+                        onClick={() => setCustomizerOpen(true)}
+                        className="p-2 border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-gray-600"
+                        title="Kustomisasi Dashboard"
+                    >
+                        <Settings size={18} />
                     </button>
                 </div>
             </div>
-            
-            <div className="bg-white rounded-lg shadow overflow-x-auto mb-8">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-indigo-500 text-white">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Invoice #</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Customer</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Items</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredOrders.map(order => {
-                            let orderTotal = order.order_items.reduce((s: number, i: any) => s + (i.price * i.quantity), 0)
-                            if (order.deliveries?.length > 0) orderTotal += (order.deliveries[0].shipping_cost || 0)
-                            const hasDelivery = order.deliveries && order.deliveries.length > 0
 
-                            return (
-                                <tr key={order.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 font-medium text-gray-900">{order.invoice_number}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{new Date(order.date).toLocaleDateString('id-ID')}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-900">
-                                        <div className="font-medium">{order.customer_name}</div>
-                                        <div className="text-gray-500 text-xs">{order.phone}</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{order.order_items.length} item(s)</td>
-                                    <td className="px-6 py-4 font-bold text-gray-900">{formatRupiah(orderTotal)}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${order.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                            {order.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm">
-                                        <div className="flex flex-col sm:flex-row gap-2">
-                                            
+            {/* Widgets */}
+            {widgetConfig
+                .filter(w => w.enabled)
+                .map(w => (
+                    <div key={w.id}>
+                        {renderWidget(w.id)}
+                    </div>
+                ))
+            }
 
-                                            <button
-                                                onClick={() => handleDownloadInvoice(order)}
-                                                className="text-green-600 hover:text-green-900 bg-green-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
-                                                title="Download PDF"
-                                            >
-                                                <Download size={16} /> PDF
-                                            </button>
+            {/* Customizer panel */}
+            <DashboardCustomizer
+                isOpen={customizerOpen}
+                onClose={() => setCustomizerOpen(false)}
+                config={widgetConfig}
+                onChange={setWidgetConfig}
+            />
 
-                                            <Link href={`/orders/${order.id}`} className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded inline-block">
-                                                <Pencil size={18} /> Edit
-                                            </Link>
-
-                                            
-                                        </div>
-                                    </td>
-                                </tr>
-                            )
-                        })}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Product Summary Table */}
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mt-10 mb-4">📦 Product Summary</h2>
-            <div className="bg-white rounded-lg shadow overflow-x-auto mb-8">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-indigo-500 text-white">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Product Name</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Quantity</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Unit Price</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {stats.productSummary.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
-                                <td className="px-6 py-4 text-gray-500">{item.totalQuantity} unit(s)</td>
-                                <td className="px-6 py-4 text-gray-500">{formatRupiah(item.price)}</td>
-                                <td className="px-6 py-4 font-bold text-gray-900">{formatRupiah(item.totalAmount)}</td>
-                            </tr>
-                        ))}
-                        {/* Total Row */}
-                        <tr className="bg-gray-100 font-bold">
-                            <td className="px-6 py-4 text-right" colSpan={3}>TOTAL</td>
-                            <td className="px-6 py-4 text-gray-900">{formatRupiah(stats.totalRevenue)}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Adonan Summary Table */}
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mt-10 mb-4">🥖 Adonan Summary</h2>
-            <div className="bg-white rounded-lg shadow overflow-x-auto mb-8">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-indigo-500 text-white">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Adonan Name</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Quantity (Unit)</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Weight (gr)</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Weight per Batch (gr)</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Batch to Make</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {stats.adonanSummary.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
-                                <td className="px-6 py-4 text-gray-500">{item.totalQuantity}</td>
-                                <td className="px-6 py-4 text-gray-500">{item.totalWeight}</td>
-                                <td className="px-6 py-4 text-gray-500">{item.weightPerBatch}</td>
-                                <td className="px-6 py-4 font-bold text-indigo-600">{item.batchToMake}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
+            {/* Invoice modal — kept outside widget map so it stays mounted */}
             <InvoiceModal
                 isOpen={invoiceModalOpen}
                 onClose={() => setInvoiceModalOpen(false)}
