@@ -9,6 +9,7 @@ export type BusinessConfig = {
   invoice_closing_message: string
   invoice_closing_sub: string
   whatsapp_greeting_template: string
+  modules_enabled: string[]
 }
 
 export const DEFAULT_CONFIG: BusinessConfig = {
@@ -22,6 +23,7 @@ export const DEFAULT_CONFIG: BusinessConfig = {
   invoice_closing_message: 'Terima Kasih',
   invoice_closing_sub: '',
   whatsapp_greeting_template: '',
+  modules_enabled: [],
 }
 
 export function formatCurrency(amount: number, config: BusinessConfig): string {

@@ -23,6 +23,7 @@ export default async function DashboardLayout({
         invoice_closing_message: data.invoice_closing_message ?? DEFAULT_CONFIG.invoice_closing_message,
         invoice_closing_sub: data.invoice_closing_sub ?? DEFAULT_CONFIG.invoice_closing_sub,
         whatsapp_greeting_template: data.whatsapp_greeting_template ?? DEFAULT_CONFIG.whatsapp_greeting_template,
+        modules_enabled: data.modules_enabled ?? DEFAULT_CONFIG.modules_enabled,
     } : DEFAULT_CONFIG
 
     return (
