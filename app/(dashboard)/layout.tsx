@@ -24,10 +24,13 @@ export default async function DashboardLayout({
         invoice_closing_sub: data.invoice_closing_sub ?? DEFAULT_CONFIG.invoice_closing_sub,
         whatsapp_greeting_template: data.whatsapp_greeting_template ?? DEFAULT_CONFIG.whatsapp_greeting_template,
         modules_enabled: data.modules_enabled ?? DEFAULT_CONFIG.modules_enabled,
+        primary_color: data.primary_color ?? DEFAULT_CONFIG.primary_color,
+        logo_url: data.logo_url ?? DEFAULT_CONFIG.logo_url,
     } : DEFAULT_CONFIG
 
     return (
         <BusinessConfigProvider config={config}>
+            <style>{`:root { --color-primary: ${config.primary_color}; }`}</style>
             <div className="flex h-screen bg-gray-100">
                 <Sidebar />
                 <div className="flex-1 flex flex-col overflow-hidden w-full lg:w-auto">

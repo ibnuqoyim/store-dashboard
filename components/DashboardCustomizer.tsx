@@ -65,7 +65,7 @@ export default function DashboardCustomizer({ isOpen, onClose, config, onChange 
                                 key={widget.id}
                                 className={clsx(
                                     'flex items-center gap-3 p-3 rounded-lg border transition-colors',
-                                    widget.enabled ? 'border-indigo-200 bg-indigo-50' : 'border-gray-200 bg-gray-50'
+                                    widget.enabled ? 'border-primary bg-white' : 'border-gray-200 bg-gray-50'
                                 )}
                             >
                                 {/* Up/Down */}
@@ -102,7 +102,7 @@ export default function DashboardCustomizer({ isOpen, onClose, config, onChange 
                                     className={clsx(
                                         'relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent',
                                         'transition-colors duration-200 focus:outline-none',
-                                        widget.enabled ? 'bg-indigo-600' : 'bg-gray-300'
+                                        widget.enabled ? 'bg-primary' : 'bg-gray-300'
                                     )}
                                 >
                                     <span

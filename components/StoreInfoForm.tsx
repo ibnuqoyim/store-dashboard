@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Save, Loader2, Plus, Trash2 } from 'lucide-react'
 import { MODULE_REGISTRY, MODULE_PRESETS, type ModulePreset } from '@/lib/modules'
+import { CldUploadWidget } from 'next-cloudinary'
 
 type StoreInfo = {
   id: string
@@ -39,6 +40,8 @@ type StoreInfo = {
   currency: string | null
   locale: string | null
   modules_enabled: string[] | null
+  primary_color: string | null
+  logo_url: string | null
   created_at: string
   updated_at: string
 }
@@ -558,6 +561,80 @@ export default function StoreInfoForm() {
               placeholder="Gunakan {name}, {invoice}, {total} sebagai variabel. Kosongkan untuk menggunakan template default."
             />
           </div>
+        </div>
+      </div>
+
+      {/* Branding Section */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 text-gray-900">Branding</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          {/* Logo Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Logo Toko</label>
+            <div className="flex items-center gap-3">
+              {formData.logo_url ? (
+                <img src={formData.logo_url} alt="Logo" className="h-16 w-16 rounded-full object-cover border border-gray-200" />
+              ) : (
+                <div className="h-16 w-16 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                  No logo
+                </div>
+              )}
+              <div className="flex flex-col gap-1">
+                <CldUploadWidget
+                  uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'products'}
+                  onSuccess={(result: any) => {
+                    setFormData({ ...formData, logo_url: result.info.secure_url })
+                  }}
+                >
+                  {({ open }) => (
+                    <button
+                      type="button"
+                      onClick={() => open()}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm"
+                    >
+                      {formData.logo_url ? 'Ganti Logo' : 'Upload Logo'}
+                    </button>
+                  )}
+                </CldUploadWidget>
+                {formData.logo_url && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, logo_url: '' })}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    Hapus
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Primary Color */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Warna Utama</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={formData.primary_color || '#6366f1'}
+                onChange={e => setFormData({ ...formData, primary_color: e.target.value })}
+                className="h-10 w-16 rounded border border-gray-300 cursor-pointer p-0.5"
+              />
+              <input
+                type="text"
+                value={formData.primary_color || '#6366f1'}
+                onChange={e => setFormData({ ...formData, primary_color: e.target.value })}
+                className="w-32 border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm font-mono"
+                placeholder="#6366f1"
+              />
+              <div
+                className="h-10 w-10 rounded-md shadow-inner"
+                style={{ backgroundColor: formData.primary_color || '#6366f1' }}
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Digunakan pada tombol, header tabel, dan aksen UI</p>
+          </div>
+
         </div>
       </div>
 

@@ -415,7 +415,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
             case 'stat-cards':
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-lg text-white shadow-lg">
+                        <div className="bg-primary p-6 rounded-lg text-white shadow-lg">
                             <h3 className="text-sm font-medium opacity-90">Total Orders</h3>
                             <p className="text-3xl font-bold mt-2">{stats.totalOrders}</p>
                         </div>
@@ -437,7 +437,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                             <h2 className="text-lg sm:text-xl font-bold text-gray-800">📋 Orders</h2>
                             <Link
                                 href="/orders/new"
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium"
+                                className="btn-primary px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium"
                             >
                                 <PlusCircle size={18} /> Add New Order
                             </Link>
@@ -450,7 +450,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                                     placeholder="Search by customer name..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 text-sm"
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 text-sm"
                                 />
                                 <button
                                     onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
@@ -463,7 +463,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
 
                         <div className="bg-white rounded-lg shadow overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-indigo-500 text-white">
+                                <thead className="bg-primary text-white">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Invoice #</th>
                                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Date</th>
@@ -523,7 +523,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                         <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">📦 Product Summary</h2>
                         <div className="bg-white rounded-lg shadow overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-indigo-500 text-white">
+                                <thead className="bg-primary text-white">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Product Name</th>
                                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Quantity</th>
@@ -556,7 +556,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                         <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">🥖 Adonan Summary</h2>
                         <div className="bg-white rounded-lg shadow overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-indigo-500 text-white">
+                                <thead className="bg-primary text-white">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Adonan Name</th>
                                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Quantity (Unit)</th>
@@ -572,7 +572,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                                             <td className="px-6 py-4 text-gray-500">{item.totalQuantity}</td>
                                             <td className="px-6 py-4 text-gray-500">{item.totalWeight}</td>
                                             <td className="px-6 py-4 text-gray-500">{item.weightPerBatch}</td>
-                                            <td className="px-6 py-4 font-bold text-indigo-600">{item.batchToMake}</td>
+                                            <td className="px-6 py-4 font-bold text-primary">{item.batchToMake}</td>
                                         </tr>
                                     ))}
                                 </tbody>

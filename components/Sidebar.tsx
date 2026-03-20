@@ -116,7 +116,12 @@ export default function Sidebar() {
             )}>
                 {/* Header */}
                 <div className="flex h-16 items-center justify-between px-4 border-b border-gray-800">
-                    <h1 className="text-xl font-bold truncate">{config.name}</h1>
+                    <div className="flex items-center gap-2 min-w-0">
+                        {config.logo_url && (
+                            <img src={config.logo_url} alt="" className="h-8 w-8 rounded-full object-cover flex-shrink-0" />
+                        )}
+                        <h1 className="text-xl font-bold truncate">{config.name}</h1>
+                    </div>
                     <button
                         onClick={closeMobileMenu}
                         className="lg:hidden p-1 text-gray-400 hover:text-white"
