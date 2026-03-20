@@ -4,9 +4,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { MODULE_REGISTRY, MODULE_PRESETS, type ModulePreset } from '@/lib/modules'
-import { CldUploadWidget } from 'next-cloudinary'
+import dynamic from 'next/dynamic'
 import { ChevronRight, ChevronLeft, Check, Loader2 } from 'lucide-react'
 import clsx from 'clsx'
+
+const CldUploadWidget = dynamic(
+  () => import('next-cloudinary').then(m => m.CldUploadWidget),
+  { ssr: false }
+)
 
 type FormData = {
   name: string

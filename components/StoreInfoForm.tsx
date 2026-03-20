@@ -4,7 +4,12 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Save, Loader2, Plus, Trash2 } from 'lucide-react'
 import { MODULE_REGISTRY, MODULE_PRESETS, type ModulePreset } from '@/lib/modules'
-import { CldUploadWidget } from 'next-cloudinary'
+import dynamic from 'next/dynamic'
+
+const CldUploadWidget = dynamic(
+  () => import('next-cloudinary').then(m => m.CldUploadWidget),
+  { ssr: false }
+)
 
 type StoreInfo = {
   id: string
