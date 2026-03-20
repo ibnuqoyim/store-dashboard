@@ -1,36 +1,103 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Store Dashboard
 
-## Getting Started
+Dashboard manajemen toko berbasis web — orders, invoices, products, customers, inventory, financial reports, dan lainnya. Dirancang sebagai template multi-bisnis yang bisa di-deploy ulang untuk klien berbeda.
 
-First, run the development server:
+## Tech Stack
+
+- **Next.js 16** (App Router) + TypeScript
+- **Supabase** — Auth + PostgreSQL + RLS
+- **Tailwind CSS 4**
+- **Cloudinary** — image uploads (products, logo)
+- **jsPDF / html2pdf.js** — invoice PDF generation
+
+## Quick Start (dev)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local   # fill in your Supabase + Cloudinary credentials
+npm install
+npm run dev                   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka `/setup` untuk konfigurasi awal bisnis (nama, modul, warna, bank info).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Commands
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev      # dev server
+npm run build    # production build
+npm run lint     # ESLint
+```
 
-## Learn More
+## Deployment baru (klien baru)
 
-To learn more about Next.js, take a look at the following resources:
+Lihat **[SETUP.md](./SETUP.md)** untuk panduan lengkap:
+1. Fork repo → isi `.env.local` (Supabase + Cloudinary credentials)
+2. Apply `schema/core.sql` di Supabase SQL Editor
+3. Apply `schema/modules/*.sql` sesuai modul yang dibutuhkan
+4. `npm run dev` → buka `/setup` → isi wizard
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Struktur Utama
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/
+  (auth)/login/         — halaman login
+  (setup)/setup/        — wizard setup awal (muncul jika store_info kosong)
+  (dashboard)/          — semua halaman dashboard (sidebar)
+    page.tsx            — dashboard utama
+    orders/             — manajemen order & invoice
+    products/           — produk
+    customers/          — pelanggan
+    adonan/             — manajemen adonan (bakery)
+    batch-po/           — pre-order batch (bakery)
+    inventory/          — stok bahan baku
+    deliveries/         — pengiriman
+    shipping/           — tarif ongkir
+    financial/          — laporan keuangan
+    expenses/           — pengeluaran operasional
+    testimonials/       — testimoni pelanggan
+    store-info/         — pengaturan toko
 
-## Deploy on Vercel
+components/             — semua UI components (flat)
+lib/
+  config.ts             — BusinessConfig type, DEFAULT_CONFIG, formatCurrency, getEnvDefaults
+  modules.ts            — MODULE_REGISTRY, MODULE_PRESETS, getEnabledModules
+  business-config-context.tsx — React Context untuk config toko
+  widgetRegistry.ts     — registry widget dashboard
+utils/supabase/         — Supabase SSR client (server.ts + client.ts)
+schema/
+  core.sql              — schema lengkap untuk semua jenis bisnis
+  modules/              — schema tambahan per modul (adonan, inventory, dll)
+migrations/             — history perubahan schema (referensi)
+scripts/
+  setup-tenant.sh       — setup .env.local untuk deployment baru
+  seed.ts               — seed data untuk development
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Modul yang Tersedia
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Modul | Deskripsi | Preset |
+|---|---|---|
+| orders | Order & invoice management | Semua |
+| products | Katalog produk | Semua |
+| customers | Data pelanggan | Semua kecuali service |
+| inventory | Stok bahan baku | Bakery, Retail |
+| deliveries | Pengiriman order | Bakery, Retail |
+| shipping | Tarif ongkir | Bakery, Retail |
+| financial | Laporan keuangan | Semua |
+| expenses | Pengeluaran operasional | Semua |
+| adonan | Manajemen adonan | Bakery |
+| batch-po | Pre-order batch | Bakery |
+| testimonials | Testimoni pelanggan | Bakery, Cafe |
+
+Modul aktif dikonfigurasi per toko di **Settings → Store Info → Modul Aktif**.
+
+## Environment Variables
+
+Lihat `.env.example` untuk daftar lengkap. Yang wajib:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=
+```
