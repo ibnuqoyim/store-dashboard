@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sourdoughmu_ya Dashboard",
-  description: "Invoice and order management system for Sourdoughmu_ya",
+  title: `${process.env.NEXT_PUBLIC_STORE_NAME ?? 'Store'} Dashboard`,
+  description: `Invoice and order management system for ${process.env.NEXT_PUBLIC_STORE_NAME ?? 'Store'}`,
   icons: {
     icon: '/logo.png',
     apple: '/logo.png',

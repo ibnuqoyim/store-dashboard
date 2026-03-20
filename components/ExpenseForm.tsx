@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Plus, Trash2, Save, Receipt, Zap, Globe, CreditCard, Building, Users } from 'lucide-react'
+import { useBusinessConfig } from '@/lib/business-config-context'
+import { formatCurrency } from '@/lib/config'
 
 type OperationalExpense = {
     id: string
@@ -30,6 +32,8 @@ const EXPENSE_CATEGORIES = [
 const PAYMENT_METHODS = ['cash', 'transfer', 'card', 'e-wallet']
 
 export default function ExpenseForm() {
+    const config = useBusinessConfig()
+    const fc = (n: number) => formatCurrency(n, config)
     const [expenses, setExpenses] = useState<OperationalExpense[]>([])
     const [loading, setLoading] = useState(false)
     const [showAddForm, setShowAddForm] = useState(false)
@@ -131,14 +135,6 @@ export default function ExpenseForm() {
         }
     }
 
-    const formatRupiah = (amount: number) => {
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0
-        }).format(amount)
-    }
-
     const getCategoryInfo = (category: string) => {
         return EXPENSE_CATEGORIES.find(cat => cat.value === category) || EXPENSE_CATEGORIES[7]
     }
@@ -152,7 +148,7 @@ export default function ExpenseForm() {
         const rows = expenses.map(e => [
             e.expense_date,
             getCategoryInfo(e.category).label,
-            formatRupiah(Number(e.amount)),
+            fc(Number(e.amount)),
             e.description || '',
             e.payment_method || '',
             e.receipt_number || '',
@@ -206,7 +202,7 @@ export default function ExpenseForm() {
                     <div>
                         <p className="text-sm font-medium text-gray-600">Total Pengeluaran</p>
                         <p className="text-3xl font-bold text-red-600">
-                            {formatRupiah(calculateTotal())}
+                            {fc(calculateTotal())}
                         </p>
                     </div>
                     <div className="p-3 bg-red-100 rounded-full">
@@ -425,7 +421,7 @@ export default function ExpenseForm() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                                            {formatRupiah(Number(expense.amount))}
+                                            {fc(Number(expense.amount))}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-900">
                                             {expense.description || '-'}

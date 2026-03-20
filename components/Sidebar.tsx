@@ -8,6 +8,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import clsx from 'clsx'
 import { useState } from 'react'
+import { useBusinessConfig } from '@/lib/business-config-context'
 
 interface NavigationCategory {
     name: string
@@ -41,7 +42,6 @@ const navigationCategories: NavigationCategory[] = [
             { name: 'Orders', href: '/orders', icon: ClipboardList },
             { name: 'Deliveries', href: '/deliveries', icon: Truck },
             { name: 'Shipping', href: '/shipping', icon: Truck },
-            { name: 'Invoices', href: '/invoices', icon: ClipboardList },
         ]
     },
     {
@@ -64,6 +64,7 @@ export default function Sidebar() {
     const pathname = usePathname()
     const router = useRouter()
     const supabase = createClient()
+    const config = useBusinessConfig()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
 
@@ -119,7 +120,7 @@ export default function Sidebar() {
             )}>
                 {/* Header with Close Button */}
                 <div className="flex h-16 items-center justify-between px-4 border-b border-gray-800">
-                    <h1 className="text-xl font-bold">Sourdough Store</h1>
+                    <h1 className="text-xl font-bold">{config.name}</h1>
                     <button
                         onClick={closeMobileMenu}
                         className="lg:hidden p-1 text-gray-400 hover:text-white"

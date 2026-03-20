@@ -6,6 +6,8 @@ import { createClient } from '@/utils/supabase/client'
 import { Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import CustomerModal from './CustomerModal'
+import { useBusinessConfig } from '@/lib/business-config-context'
+import { formatCurrency } from '@/lib/config'
 
 export type Customer = {
     id: string
@@ -35,6 +37,7 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: C
     const [itemsPerPage, setItemsPerPage] = useState(10)
     const router = useRouter()
     const supabase = createClient()
+    const config = useBusinessConfig()
 
     const handleRecalculateSingleCustomer = async (customerId: string) => {
         setRecalculatingId(customerId)
@@ -159,14 +162,6 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: C
         setIsModalOpen(false)
         setEditingCustomer(null)
         router.refresh()
-    }
-
-    const formatRupiah = (amount: number) => {
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0
-        }).format(amount)
     }
 
     // Reset page when filters change
@@ -431,7 +426,7 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: C
                                         <div className="max-w-xs truncate">{customer.address || '-'}</div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {formatRupiah(customer.total_purchases)}
+                                        {formatCurrency(customer.total_purchases, config)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex items-center justify-end gap-2">

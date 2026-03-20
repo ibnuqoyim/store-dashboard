@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Eye, Truck, ArrowUp, ArrowDown, Search, Download, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import InvoiceModal from './InvoiceModal'
+import { useBusinessConfig } from '@/lib/business-config-context'
+import { formatCurrency } from '@/lib/config'
 
 type Order = {
     id: string
@@ -45,6 +46,8 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
     const [itemsPerPage, setItemsPerPage] = useState(10)
     const router = useRouter()
     const supabase = createClient()
+    const config = useBusinessConfig()
+    const fc = (n: number) => formatCurrency(n, config)
 
     // Load logo for watermark
     useEffect(() => {
@@ -225,12 +228,12 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
             doc.text('Invoice', 200, 20, { align: 'right' })
 
             doc.setFontSize(16)
-            doc.text('Sourdoughmu_ya!', 200, 30, { align: 'right' })
+            doc.text(config.name, 200, 30, { align: 'right' })
 
             doc.setFontSize(10)
             doc.setFont('helvetica', 'normal')
             doc.text('No HP', 200, 36, { align: 'right' })
-            doc.text('087722732214', 200, 41, { align: 'right' })
+            doc.text(config.phone, 200, 41, { align: 'right' })
 
             // Bill To Section
             doc.setFontSize(10)
@@ -272,8 +275,8 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
 
                 doc.text(item.products?.name || 'Unknown', 12, yPos)
                 doc.text(item.quantity.toString(), 120, yPos, { align: 'center' })
-                doc.text(formatRupiah(item.price), 155, yPos, { align: 'right' })
-                doc.text(formatRupiah(amount), 195, yPos, { align: 'right' })
+                doc.text(fc(item.price), 155, yPos, { align: 'right' })
+                doc.text(fc(amount), 195, yPos, { align: 'right' })
                 yPos += 6
             })
 
@@ -285,8 +288,8 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
 
                 doc.text(`Ongkir`, 12, yPos)
                 doc.text('1', 120, yPos, { align: 'center' })
-                doc.text(shippingCost > 0 ? formatRupiah(shippingCost) : '-', 155, yPos, { align: 'right' })
-                doc.text(shippingCost > 0 ? formatRupiah(shippingCost) : '-', 195, yPos, { align: 'right' })
+                doc.text(shippingCost > 0 ? fc(shippingCost) : '-', 155, yPos, { align: 'right' })
+                doc.text(shippingCost > 0 ? fc(shippingCost) : '-', 195, yPos, { align: 'right' })
                 yPos += 6
             }
 
@@ -294,12 +297,12 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
             yPos += 5
             doc.setFont('helvetica', 'bold')
             doc.text('Subtotal', 155, yPos, { align: 'right' })
-            doc.text(formatRupiah(subtotal), 195, yPos, { align: 'right' })
+            doc.text(fc(subtotal), 195, yPos, { align: 'right' })
 
             yPos += 8
             doc.setFontSize(12)
             doc.text('Total', 155, yPos, { align: 'right' })
-            doc.text(formatRupiah(subtotal), 195, yPos, { align: 'right' })
+            doc.text(fc(subtotal), 195, yPos, { align: 'right' })
 
             // Amount Due Box
             yPos += 10
@@ -308,7 +311,7 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
             doc.setFontSize(11)
             doc.text('Amount Due', 12, yPos + 3)
             doc.setFontSize(16)
-            doc.text(formatRupiah(subtotal), 195, yPos + 3, { align: 'right' })
+            doc.text(fc(subtotal), 195, yPos + 3, { align: 'right' })
 
             // Payment Info
             yPos += 25
@@ -316,15 +319,19 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
             doc.setFont('helvetica', 'normal')
             doc.setFillColor(250, 250, 250)
             doc.rect(10, yPos - 3, 190, 25, 'F')
+            if (config.bank_name || config.bank_account) {
+                doc.setFont('helvetica', 'bold')
+                doc.text('Silahkan transfer ke rekening berikut :', 12, yPos + 2)
+                doc.setFont('helvetica', 'normal')
+                doc.text(`• ${config.bank_name} : ${config.bank_account}${config.bank_holder ? ` a.n ${config.bank_holder}` : ''}`, 12, yPos + 7)
+                yPos += 5
+            }
             doc.setFont('helvetica', 'bold')
-            doc.text('Silahkan transfer ke rekening berikut :', 12, yPos + 2)
-            doc.setFont('helvetica', 'normal')
-            doc.text('• BRI : 367101015884504 a.n Sintia Nensih', 12, yPos + 7)
-            doc.text('Harap megirimkan bukti transfer 1x24 jam.', 12, yPos + 12)
-            doc.setFont('helvetica', 'bold')
-            doc.text('Terima Kasih', 12, yPos + 18)
-            doc.setFont('helvetica', 'normal')
-            doc.text('Baarakallaahu fiikum', 12, yPos + 22)
+            doc.text(config.invoice_closing_message, 12, yPos + 18)
+            if (config.invoice_closing_sub) {
+                doc.setFont('helvetica', 'normal')
+                doc.text(config.invoice_closing_sub, 12, yPos + 22)
+            }
 
             // Save PDF
             doc.save(`Invoice-${order.invoice_number}-${order.customer_name}.pdf`)
@@ -338,10 +345,6 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
         // Safe check for order_items being null/undefined
         if (!order.order_items) return 0
         return order.order_items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-    }
-
-    const formatRupiah = (num: number) => {
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num)
     }
 
     return (
@@ -502,7 +505,7 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.customer_name}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {formatRupiah(calculateTotal(order))}
+                                        {fc(calculateTotal(order))}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${order.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
@@ -636,11 +639,6 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
                 </div>
             )}
 
-            <InvoiceModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                order={selectedOrder}
-            />
         </div>
     )
 }

@@ -4,7 +4,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { PlusCircle, Download, Pencil, Settings } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
-import InvoiceModal from '@/components/InvoiceModal'
 import DashboardCustomizer from '@/components/DashboardCustomizer'
 import { format } from 'date-fns'
 import Link from 'next/link'
@@ -17,6 +16,8 @@ import {
     DEFAULT_WIDGET_CONFIG,
     WIDGET_STORAGE_KEY,
 } from '@/lib/widgetRegistry'
+import { useBusinessConfig } from '@/lib/business-config-context'
+import { formatCurrency } from '@/lib/config'
 
 type DashboardProps = {
     orders: any[]
@@ -85,6 +86,8 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
     const router = useRouter()
     const supabase = createClient()
+    const config = useBusinessConfig()
+    const fc = (n: number) => formatCurrency(n, config)
 
     // Load logo for watermark
     useEffect(() => {
@@ -190,14 +193,6 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
         return { totalOrders, totalRevenue, pendingCount, productSummary, adonanSummary }
     }, [filteredOrders, products, adonan])
 
-    const formatRupiah = (number: number) => {
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0
-        }).format(number)
-    }
-
     const handleGenerateInvoice = (order: any) => {
         setSelectedOrder(order)
         setInvoiceModalOpen(true)
@@ -265,11 +260,11 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
             doc.setFont('helvetica', 'bold')
             doc.text('Invoice', 200, 20, { align: 'right' })
             doc.setFontSize(16)
-            doc.text('Sourdoughmu_ya!', 200, 30, { align: 'right' })
+            doc.text(config.name, 200, 30, { align: 'right' })
             doc.setFontSize(10)
             doc.setFont('helvetica', 'normal')
             doc.text('No HP', 200, 36, { align: 'right' })
-            doc.text('087722732214', 200, 41, { align: 'right' })
+            doc.text(config.phone, 200, 41, { align: 'right' })
 
             doc.setFont('helvetica', 'bold')
             doc.text('BILL TO', 10, 55)
@@ -304,8 +299,8 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                 subtotal += amount
                 doc.text(item.products?.name || 'Unknown', 12, yPos)
                 doc.text(item.quantity.toString(), 120, yPos, { align: 'center' })
-                doc.text(formatRupiah(item.price), 155, yPos, { align: 'right' })
-                doc.text(formatRupiah(amount), 195, yPos, { align: 'right' })
+                doc.text(fc(item.price), 155, yPos, { align: 'right' })
+                doc.text(fc(amount), 195, yPos, { align: 'right' })
                 yPos += 6
             })
 
@@ -315,19 +310,19 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                 subtotal += shippingCost
                 doc.text('Ongkir', 12, yPos)
                 doc.text('1', 120, yPos, { align: 'center' })
-                doc.text(shippingCost > 0 ? formatRupiah(shippingCost) : '-', 155, yPos, { align: 'right' })
-                doc.text(shippingCost > 0 ? formatRupiah(shippingCost) : '-', 195, yPos, { align: 'right' })
+                doc.text(shippingCost > 0 ? fc(shippingCost) : '-', 155, yPos, { align: 'right' })
+                doc.text(shippingCost > 0 ? fc(shippingCost) : '-', 195, yPos, { align: 'right' })
                 yPos += 6
             }
 
             yPos += 5
             doc.setFont('helvetica', 'bold')
             doc.text('Subtotal', 155, yPos, { align: 'right' })
-            doc.text(formatRupiah(subtotal), 195, yPos, { align: 'right' })
+            doc.text(fc(subtotal), 195, yPos, { align: 'right' })
             yPos += 8
             doc.setFontSize(12)
             doc.text('Total', 155, yPos, { align: 'right' })
-            doc.text(formatRupiah(subtotal), 195, yPos, { align: 'right' })
+            doc.text(fc(subtotal), 195, yPos, { align: 'right' })
 
             yPos += 10
             doc.setFillColor(240, 240, 240)
@@ -335,22 +330,26 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
             doc.setFontSize(11)
             doc.text('Amount Due', 12, yPos + 3)
             doc.setFontSize(16)
-            doc.text(formatRupiah(subtotal), 195, yPos + 3, { align: 'right' })
+            doc.text(fc(subtotal), 195, yPos + 3, { align: 'right' })
 
             yPos += 25
             doc.setFontSize(9)
             doc.setFont('helvetica', 'normal')
             doc.setFillColor(250, 250, 250)
             doc.rect(10, yPos - 3, 190, 25, 'F')
+            if (config.bank_name || config.bank_account) {
+                doc.setFont('helvetica', 'bold')
+                doc.text('Silahkan transfer ke rekening berikut :', 12, yPos + 2)
+                doc.setFont('helvetica', 'normal')
+                doc.text(`• ${config.bank_name} : ${config.bank_account}${config.bank_holder ? ` a.n ${config.bank_holder}` : ''}`, 12, yPos + 7)
+                yPos += 5
+            }
             doc.setFont('helvetica', 'bold')
-            doc.text('Silahkan transfer ke rekening berikut :', 12, yPos + 2)
-            doc.setFont('helvetica', 'normal')
-            doc.text('• BRI : 367101015884504 a.n Sintia Nensih', 12, yPos + 7)
-            doc.text('Harap megirimkan bukti transfer 1x24 jam.', 12, yPos + 12)
-            doc.setFont('helvetica', 'bold')
-            doc.text('Terima Kasih', 12, yPos + 18)
-            doc.setFont('helvetica', 'normal')
-            doc.text('Baarakallaahu fiikum', 12, yPos + 22)
+            doc.text(config.invoice_closing_message, 12, yPos + 18)
+            if (config.invoice_closing_sub) {
+                doc.setFont('helvetica', 'normal')
+                doc.text(config.invoice_closing_sub, 12, yPos + 22)
+            }
 
             doc.save(`Invoice-${order.invoice_number}-${order.customer_name}.pdf`)
         } catch (error) {
@@ -370,7 +369,13 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                 phone = '62' + phone
             }
 
-            const message = `Halo ${order.customer_name},\n\nBerikut adalah invoice untuk pesanan Anda:\n\nInvoice: ${order.invoice_number}\nTanggal: ${format(new Date(order.date), 'dd MMM yyyy')}\nTotal: ${formatRupiah(order.order_items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0))}\n\nTerima kasih telah berbelanja di Sourdoughmu_ya!\n\nBaarakallaahu fiikum 🥖`
+            const defaultMessage = `Halo ${order.customer_name},\n\nBerikut adalah invoice untuk pesanan Anda:\n\nInvoice: ${order.invoice_number}\nTanggal: ${format(new Date(order.date), 'dd MMM yyyy')}\nTotal: ${fc(order.order_items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0))}\n\nTerima kasih telah berbelanja di ${config.name}!`
+            const message = config.whatsapp_greeting_template
+                ? config.whatsapp_greeting_template
+                    .replace('{name}', order.customer_name)
+                    .replace('{invoice}', order.invoice_number)
+                    .replace('{total}', fc(order.order_items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)))
+                : defaultMessage
 
             const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
             window.open(whatsappUrl, '_blank')
@@ -416,7 +421,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                         </div>
                         <div className="bg-gradient-to-br from-green-500 to-green-400 p-6 rounded-lg text-white shadow-lg">
                             <h3 className="text-sm font-medium opacity-90">Total Revenue</h3>
-                            <p className="text-3xl font-bold mt-2">{formatRupiah(stats.totalRevenue)}</p>
+                            <p className="text-3xl font-bold mt-2">{fc(stats.totalRevenue)}</p>
                         </div>
                         <div className="bg-gradient-to-br from-pink-400 to-pink-600 p-6 rounded-lg text-white shadow-lg">
                             <h3 className="text-sm font-medium opacity-90">Pending Invoices</h3>
@@ -483,7 +488,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                                                     <div className="text-gray-500 text-xs">{order.phone}</div>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-gray-500">{order.order_items.length} item(s)</td>
-                                                <td className="px-6 py-4 font-bold text-gray-900">{formatRupiah(orderTotal)}</td>
+                                                <td className="px-6 py-4 font-bold text-gray-900">{fc(orderTotal)}</td>
                                                 <td className="px-6 py-4">
                                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${order.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                                                         {order.status}
@@ -531,13 +536,13 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                                         <tr key={idx} className="hover:bg-gray-50">
                                             <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
                                             <td className="px-6 py-4 text-gray-500">{item.totalQuantity} unit(s)</td>
-                                            <td className="px-6 py-4 text-gray-500">{formatRupiah(item.price)}</td>
-                                            <td className="px-6 py-4 font-bold text-gray-900">{formatRupiah(item.totalAmount)}</td>
+                                            <td className="px-6 py-4 text-gray-500">{fc(item.price)}</td>
+                                            <td className="px-6 py-4 font-bold text-gray-900">{fc(item.totalAmount)}</td>
                                         </tr>
                                     ))}
                                     <tr className="bg-gray-100 font-bold">
                                         <td className="px-6 py-4 text-right" colSpan={3}>TOTAL</td>
-                                        <td className="px-6 py-4 text-gray-900">{formatRupiah(stats.totalRevenue)}</td>
+                                        <td className="px-6 py-4 text-gray-900">{fc(stats.totalRevenue)}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -627,12 +632,6 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                 onChange={setWidgetConfig}
             />
 
-            {/* Invoice modal — kept outside widget map so it stays mounted */}
-            <InvoiceModal
-                isOpen={invoiceModalOpen}
-                onClose={() => setInvoiceModalOpen(false)}
-                order={selectedOrder}
-            />
         </div>
     )
 }

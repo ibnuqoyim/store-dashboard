@@ -5,6 +5,8 @@ import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, X, Loader2, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useBusinessConfig } from '@/lib/business-config-context'
+import { formatCurrency } from '@/lib/config'
 
 type ShippingRate = {
     id: string
@@ -24,6 +26,7 @@ export default function ShippingRatesList({ initialRates }: { initialRates: Ship
     const [itemsPerPage, setItemsPerPage] = useState(10)
     const router = useRouter()
     const supabase = createClient()
+    const config = useBusinessConfig()
 
     const [formData, setFormData] = useState({
         courier_name: '',
@@ -141,10 +144,6 @@ export default function ShippingRatesList({ initialRates }: { initialRates: Ship
             setIsModalOpen(false)
             router.refresh()
         }
-    }
-
-    const formatRupiah = (num: number) => {
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num)
     }
 
     return (
@@ -271,7 +270,7 @@ export default function ShippingRatesList({ initialRates }: { initialRates: Ship
                             <tr key={rate.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{rate.courier_name}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{rate.description}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">{formatRupiah(rate.cost)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">{formatCurrency(rate.cost, config)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button onClick={() => openModal(rate)} className="text-blue-600 hover:text-blue-900 mr-4">
                                         <Pencil size={18} />
