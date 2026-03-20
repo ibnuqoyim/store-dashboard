@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Plus, Trash2, Save, Package, Wheat, AlertTriangle, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useBusinessConfig } from '@/lib/business-config-context'
+import { formatCurrency } from '@/lib/config'
 
 type InventoryItem = {
     id: string
@@ -27,6 +29,7 @@ type InventoryTransaction = {
 }
 
 export default function InventoryForm() {
+    const config = useBusinessConfig()
     const [items, setItems] = useState<InventoryItem[]>([])
     const [transactions, setTransactions] = useState<InventoryTransaction[]>([])
     const [loading, setLoading] = useState(false)
@@ -193,14 +196,6 @@ export default function InventoryForm() {
         } finally {
             setLoading(false)
         }
-    }
-
-    const formatRupiah = (amount: number) => {
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0
-        }).format(amount)
     }
 
     const getStockStatus = (item: InventoryItem) => {
@@ -619,7 +614,7 @@ export default function InventoryForm() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {formatRupiah(item.unit_cost)}
+                                            {formatCurrency(item.unit_cost, config)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                             {item.supplier || '-'}

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { TrendingUp, TrendingDown, DollarSign, Calendar, Download, Filter } from 'lucide-react'
 import { format } from 'date-fns'
+import { useBusinessConfig } from '@/lib/business-config-context'
+import { formatCurrency } from '@/lib/config'
 
 type FinancialTransaction = {
     id: string
@@ -20,6 +22,8 @@ type FinancialTransaction = {
 }
 
 export default function FinancialReport() {
+    const config = useBusinessConfig()
+    const fc = (n: number) => formatCurrency(n, config)
     const [transactions, setTransactions] = useState<FinancialTransaction[]>([])
     const [loading, setLoading] = useState(true)
     const [dateFilter, setDateFilter] = useState({
@@ -83,20 +87,12 @@ export default function FinancialReport() {
         return { income, expense, net: income - expense }
     }
 
-    const formatRupiah = (amount: number) => {
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0
-        }).format(amount)
-    }
-
     const exportToCSV = () => {
         const headers = ['Tanggal', 'Tipe', 'Jumlah', 'Deskripsi', 'Invoice', 'Customer']
         const rows = transactions.map(t => [
             format(new Date(t.transaction_date), 'dd/MM/yyyy'),
             t.transaction_type === 'income' ? 'Pemasukan' : 'Pengeluaran',
-            formatRupiah(Number(t.amount)),
+            fc(Number(t.amount)),
             t.description,
             t.orders?.invoice_number || '',
             t.orders?.customer_name || ''
@@ -143,7 +139,7 @@ export default function FinancialReport() {
                         <div>
                             <p className="text-sm font-medium text-gray-600">Total Pemasukan</p>
                             <p className="text-2xl font-bold text-green-600">
-                                {formatRupiah(totals.income)}
+                                {fc(totals.income)}
                             </p>
                         </div>
                         <div className="p-3 bg-green-100 rounded-full">
@@ -157,7 +153,7 @@ export default function FinancialReport() {
                         <div>
                             <p className="text-sm font-medium text-gray-600">Total Pengeluaran</p>
                             <p className="text-2xl font-bold text-red-600">
-                                {formatRupiah(totals.expense)}
+                                {fc(totals.expense)}
                             </p>
                         </div>
                         <div className="p-3 bg-red-100 rounded-full">
@@ -171,7 +167,7 @@ export default function FinancialReport() {
                         <div>
                             <p className="text-sm font-medium text-gray-600">Netto</p>
                             <p className={`text-2xl font-bold ${totals.net >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                                {formatRupiah(totals.net)}
+                                {fc(totals.net)}
                             </p>
                         </div>
                         <div className={`p-3 rounded-full ${totals.net >= 0 ? 'bg-blue-100' : 'bg-red-100'}`}>
@@ -284,7 +280,7 @@ export default function FinancialReport() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {formatRupiah(Number(transaction.amount))}
+                                        {fc(Number(transaction.amount))}
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-900">
                                         {transaction.description}

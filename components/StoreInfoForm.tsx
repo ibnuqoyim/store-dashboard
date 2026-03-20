@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Save, Loader2, Plus, Trash2 } from 'lucide-react'
+import { MODULE_REGISTRY, MODULE_PRESETS, type ModulePreset } from '@/lib/modules'
+import { CldUploadWidget } from 'next-cloudinary'
 
 type StoreInfo = {
   id: string
@@ -29,6 +31,17 @@ type StoreInfo = {
   contact_whatsapp_number: string | null
   contact_whatsapp_url: string | null
   contact_email: string | null
+  bank_name: string | null
+  bank_account: string | null
+  bank_holder: string | null
+  invoice_closing_message: string | null
+  invoice_closing_sub: string | null
+  whatsapp_greeting_template: string | null
+  currency: string | null
+  locale: string | null
+  modules_enabled: string[] | null
+  primary_color: string | null
+  logo_url: string | null
   created_at: string
   updated_at: string
 }
@@ -455,6 +468,225 @@ export default function StoreInfoForm() {
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
             />
           </div>
+        </div>
+      </div>
+
+      {/* Invoice & Payment Section */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 text-gray-900">Informasi Invoice & Pembayaran</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Bank</label>
+            <input
+              type="text"
+              value={formData.bank_name || ''}
+              onChange={e => setFormData({ ...formData, bank_name: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="Contoh: BRI, BCA, Mandiri"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">No. Rekening</label>
+            <input
+              type="text"
+              value={formData.bank_account || ''}
+              onChange={e => setFormData({ ...formData, bank_account: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="Nomor rekening"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Pemilik Rekening</label>
+            <input
+              type="text"
+              value={formData.bank_holder || ''}
+              onChange={e => setFormData({ ...formData, bank_holder: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="Nama a.n rekening"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pesan Penutup Invoice</label>
+            <input
+              type="text"
+              value={formData.invoice_closing_message || ''}
+              onChange={e => setFormData({ ...formData, invoice_closing_message: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="Contoh: Terima Kasih"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sub-pesan Penutup</label>
+            <input
+              type="text"
+              value={formData.invoice_closing_sub || ''}
+              onChange={e => setFormData({ ...formData, invoice_closing_sub: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              placeholder="Contoh: Baarakallaahu fiikum"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+            <select
+              value={formData.currency || 'IDR'}
+              onChange={e => setFormData({ ...formData, currency: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+            >
+              <option value="IDR">IDR (Rupiah)</option>
+              <option value="USD">USD (US Dollar)</option>
+              <option value="SGD">SGD (Singapore Dollar)</option>
+              <option value="MYR">MYR (Malaysian Ringgit)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Locale</label>
+            <select
+              value={formData.locale || 'id-ID'}
+              onChange={e => setFormData({ ...formData, locale: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+            >
+              <option value="id-ID">id-ID (Indonesia)</option>
+              <option value="en-US">en-US (US English)</option>
+              <option value="en-SG">en-SG (Singapore English)</option>
+              <option value="ms-MY">ms-MY (Malaysian)</option>
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Template WhatsApp</label>
+            <textarea
+              value={formData.whatsapp_greeting_template || ''}
+              onChange={e => setFormData({ ...formData, whatsapp_greeting_template: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+              rows={3}
+              placeholder="Gunakan {name}, {invoice}, {total} sebagai variabel. Kosongkan untuk menggunakan template default."
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Branding Section */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 text-gray-900">Branding</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          {/* Logo Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Logo Toko</label>
+            <div className="flex items-center gap-3">
+              {formData.logo_url ? (
+                <img src={formData.logo_url} alt="Logo" className="h-16 w-16 rounded-full object-cover border border-gray-200" />
+              ) : (
+                <div className="h-16 w-16 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                  No logo
+                </div>
+              )}
+              <div className="flex flex-col gap-1">
+                <CldUploadWidget
+                  uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'products'}
+                  onSuccess={(result: any) => {
+                    setFormData({ ...formData, logo_url: result.info.secure_url })
+                  }}
+                >
+                  {({ open }) => (
+                    <button
+                      type="button"
+                      onClick={() => open()}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm"
+                    >
+                      {formData.logo_url ? 'Ganti Logo' : 'Upload Logo'}
+                    </button>
+                  )}
+                </CldUploadWidget>
+                {formData.logo_url && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, logo_url: '' })}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    Hapus
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Primary Color */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Warna Utama</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={formData.primary_color || '#6366f1'}
+                onChange={e => setFormData({ ...formData, primary_color: e.target.value })}
+                className="h-10 w-16 rounded border border-gray-300 cursor-pointer p-0.5"
+              />
+              <input
+                type="text"
+                value={formData.primary_color || '#6366f1'}
+                onChange={e => setFormData({ ...formData, primary_color: e.target.value })}
+                className="w-32 border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm font-mono"
+                placeholder="#6366f1"
+              />
+              <div
+                className="h-10 w-10 rounded-md shadow-inner"
+                style={{ backgroundColor: formData.primary_color || '#6366f1' }}
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Digunakan pada tombol, header tabel, dan aksen UI</p>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Modul Aktif Section */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-1 text-gray-900">Modul Aktif</h2>
+        <p className="text-sm text-gray-500 mb-4">Pilih modul yang ingin ditampilkan di sidebar. Gunakan preset atau pilih manual.</p>
+
+        {/* Preset Buttons */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {(Object.entries(MODULE_PRESETS) as [ModulePreset, { label: string; modules: string[] }][]).map(([key, preset]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setFormData({ ...formData, modules_enabled: preset.modules })}
+              className="px-3 py-1.5 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+            >
+              {preset.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setFormData({ ...formData, modules_enabled: [] })}
+            className="px-3 py-1.5 text-sm rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+          >
+            Reset Semua
+          </button>
+        </div>
+
+        {/* Individual Checkboxes */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {MODULE_REGISTRY.map(mod => {
+            const enabled = (formData.modules_enabled ?? []).includes(mod.id)
+            return (
+              <label key={mod.id} className="flex items-center gap-2 p-2 rounded-md border border-gray-200 cursor-pointer hover:bg-gray-50 select-none">
+                <input
+                  type="checkbox"
+                  checked={enabled}
+                  onChange={e => {
+                    const current = formData.modules_enabled ?? []
+                    const next = e.target.checked
+                      ? [...current, mod.id]
+                      : current.filter(id => id !== mod.id)
+                    setFormData({ ...formData, modules_enabled: next })
+                  }}
+                  className="rounded"
+                />
+                <span className="text-sm text-gray-700">{mod.label}</span>
+                <span className="text-xs text-gray-400 ml-auto">{mod.category}</span>
+              </label>
+            )
+          })}
         </div>
       </div>
 

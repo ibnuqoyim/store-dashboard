@@ -6,6 +6,8 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Save, ArrowLeft, Truck, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { useBusinessConfig } from '@/lib/business-config-context'
+import { formatCurrency } from '@/lib/config'
 
 type Product = {
     id: string
@@ -56,6 +58,7 @@ export default function OrderForm({
 }) {
     const router = useRouter()
     const supabase = createClient()
+    const config = useBusinessConfig()
     const [customers, setCustomers] = useState<Customer[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [hasDelivery, setHasDelivery] = useState(false)
@@ -585,7 +588,7 @@ export default function OrderForm({
                                                     className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
                                                 >
                                                     <div className="font-medium text-gray-900">{product.name}</div>
-                                                    <div className="text-sm text-gray-500">Rp {product.price.toLocaleString('id-ID')}</div>
+                                                    <div className="text-sm text-gray-500">{formatCurrency(product.price, config)}</div>
                                                 </div>
                                             ))}
                                         </div>
@@ -711,7 +714,7 @@ export default function OrderForm({
                 {/* Summary Footer */}
                 <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-200 sticky bottom-0">
                     <div className="text-xl font-bold text-gray-900">
-                        Total: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(calculateTotal())}
+                        Total: {formatCurrency(calculateTotal(), config)}
                     </div>
                     <button
                         type="submit"

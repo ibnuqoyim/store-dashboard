@@ -3,67 +3,44 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ShoppingBag, Wheat, ClipboardList, Truck, LogOut, Menu, X, Users, FileText, MessageSquare, Settings, DollarSign, Package, Receipt, ChevronDown, ChevronRight } from 'lucide-react'
+import {
+    LayoutDashboard, ShoppingBag, Wheat, ClipboardList, Truck,
+    LogOut, Menu, X, Users, FileText, MessageSquare, Settings,
+    DollarSign, Package, Receipt, ChevronRight,
+} from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import clsx from 'clsx'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useBusinessConfig } from '@/lib/business-config-context'
+import { MODULE_REGISTRY, CATEGORY_ORDER, getEnabledModules, type ModuleId } from '@/lib/modules'
 
-interface NavigationCategory {
-    name: string
-    items: {
-        name: string
-        href: string
-        icon: any
-    }[]
+// Icon lookup per module
+const MODULE_ICONS: Record<ModuleId, any> = {
+    orders:       ClipboardList,
+    products:     ShoppingBag,
+    customers:    Users,
+    adonan:       Wheat,
+    'batch-po':   FileText,
+    inventory:    Package,
+    deliveries:   Truck,
+    shipping:     Truck,
+    financial:    DollarSign,
+    expenses:     Receipt,
+    testimonials: MessageSquare,
 }
 
-const navigationCategories: NavigationCategory[] = [
-    {
-        name: 'Main',
-        items: [
-            { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-            { name: 'Customers', href: '/customers', icon: Users },
-            { name: 'Products', href: '/products', icon: ShoppingBag },
-        ]
-    },
-    {
-        name: 'Production',
-        items: [
-            { name: 'Adonan', href: '/adonan', icon: Wheat },
-            { name: 'Pre-Orders', href: '/batch-po', icon: FileText },
-            { name: 'Inventory', href: '/inventory', icon: Package },
-        ]
-    },
-    {
-        name: 'Sales & Orders',
-        items: [
-            { name: 'Orders', href: '/orders', icon: ClipboardList },
-            { name: 'Deliveries', href: '/deliveries', icon: Truck },
-            { name: 'Shipping', href: '/shipping', icon: Truck },
-            { name: 'Invoices', href: '/invoices', icon: ClipboardList },
-        ]
-    },
-    {
-        name: 'Financial',
-        items: [
-            { name: 'Financial', href: '/financial', icon: DollarSign },
-            { name: 'Expenses', href: '/expenses', icon: Receipt },
-        ]
-    },
-    {
-        name: 'Settings',
-        items: [
-            { name: 'Testimonials', href: '/testimonials', icon: MessageSquare },
-            { name: 'Store Info', href: '/store-info', icon: Settings },
-        ]
-    }
-]
+// Items always visible regardless of enabled modules
+const FIXED_ITEMS: Record<string, { name: string; href: string; icon: any }[]> = {
+    'Main':     [{ name: 'Dashboard',  href: '/',           icon: LayoutDashboard }],
+    'Settings': [{ name: 'Store Info', href: '/store-info', icon: Settings }],
+}
 
 export default function Sidebar() {
     const pathname = usePathname()
     const router = useRouter()
     const supabase = createClient()
+    const config = useBusinessConfig()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
 
@@ -73,9 +50,7 @@ export default function Sidebar() {
         router.push('/login')
     }
 
-    const closeMobileMenu = () => {
-        setIsMobileMenuOpen(false)
-    }
+    const closeMobileMenu = () => setIsMobileMenuOpen(false)
 
     const toggleCategory = (categoryName: string) => {
         setCollapsedCategories(prev => {
@@ -89,9 +64,31 @@ export default function Sidebar() {
         })
     }
 
-    const isCategoryActive = (category: NavigationCategory) => {
-        return category.items.some(item => pathname === item.href)
-    }
+    const navigationCategories = useMemo(() => {
+        const enabledModules = getEnabledModules(config.modules_enabled)
+
+        // Group enabled module items by category
+        const grouped: Record<string, { name: string; href: string; icon: any }[]> = {}
+        MODULE_REGISTRY
+            .filter(m => enabledModules.includes(m.id))
+            .forEach(m => {
+                if (!grouped[m.category]) grouped[m.category] = []
+                grouped[m.category].push({ name: m.label, href: m.href, icon: MODULE_ICONS[m.id] })
+            })
+
+        // Prepend always-visible fixed items
+        Object.entries(FIXED_ITEMS).forEach(([cat, items]) => {
+            if (!grouped[cat]) grouped[cat] = []
+            grouped[cat] = [...items, ...grouped[cat]]
+        })
+
+        return CATEGORY_ORDER
+            .filter(cat => grouped[cat]?.length > 0)
+            .map(cat => ({ name: cat, items: grouped[cat] }))
+    }, [config.modules_enabled])
+
+    const isCategoryActive = (items: { href: string }[]) =>
+        items.some(item => pathname === item.href)
 
     return (
         <>
@@ -117,9 +114,14 @@ export default function Sidebar() {
                 "flex w-64 flex-col bg-gray-900 text-white min-h-screen fixed lg:static inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out",
                 isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}>
-                {/* Header with Close Button */}
+                {/* Header */}
                 <div className="flex h-16 items-center justify-between px-4 border-b border-gray-800">
-                    <h1 className="text-xl font-bold">Sourdough Store</h1>
+                    <div className="flex items-center gap-2 min-w-0">
+                        {config.logo_url && (
+                            <img src={config.logo_url} alt="" className="h-8 w-8 rounded-full object-cover flex-shrink-0" />
+                        )}
+                        <h1 className="text-xl font-bold truncate">{config.name}</h1>
+                    </div>
                     <button
                         onClick={closeMobileMenu}
                         className="lg:hidden p-1 text-gray-400 hover:text-white"
@@ -134,11 +136,10 @@ export default function Sidebar() {
                     <nav className="space-y-1 px-2">
                         {navigationCategories.map((category) => {
                             const isCollapsed = collapsedCategories.has(category.name)
-                            const categoryActive = isCategoryActive(category)
-                            
+                            const categoryActive = isCategoryActive(category.items)
+
                             return (
                                 <div key={category.name} className="mb-2">
-                                    {/* Category Header */}
                                     <button
                                         onClick={() => toggleCategory(category.name)}
                                         className={clsx(
@@ -157,15 +158,14 @@ export default function Sidebar() {
                                         />
                                         <span className="flex-1 text-left">{category.name}</span>
                                     </button>
-                                    
-                                    {/* Category Items */}
+
                                     {!isCollapsed && (
                                         <div className="mt-1 ml-4 space-y-1">
                                             {category.items.map((item) => {
                                                 const isActive = pathname === item.href
                                                 return (
                                                     <Link
-                                                        key={item.name}
+                                                        key={item.href}
                                                         href={item.href}
                                                         onClick={closeMobileMenu}
                                                         className={clsx(
@@ -194,7 +194,7 @@ export default function Sidebar() {
                     </nav>
                 </div>
 
-                {/* Sign Out Button */}
+                {/* Sign Out */}
                 <div className="border-t border-gray-800 p-4">
                     <button
                         onClick={handleSignOut}

@@ -6,6 +6,8 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Truck, MapPin, ExternalLink, Loader2, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
+import { useBusinessConfig } from '@/lib/business-config-context'
+import { formatCurrency } from '@/lib/config'
 
 type Delivery = {
     id: string
@@ -30,6 +32,7 @@ export default function DeliveryList({ initialDeliveries }: { initialDeliveries:
     const [itemsPerPage, setItemsPerPage] = useState(10)
     const router = useRouter()
     const supabase = createClient()
+    const config = useBusinessConfig()
 
     // Reset page when filters change
     useEffect(() => {
@@ -97,10 +100,6 @@ export default function DeliveryList({ initialDeliveries }: { initialDeliveries:
         } else {
             router.refresh()
         }
-    }
-
-    const formatRupiah = (num: number) => {
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num)
     }
 
     const getStatusColor = (status: string) => {
@@ -260,7 +259,7 @@ export default function DeliveryList({ initialDeliveries }: { initialDeliveries:
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {formatRupiah(delivery.shipping_cost)}
+                                    {formatCurrency(delivery.shipping_cost, config)}
                                 </td>
                                 <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                                     <div className="flex items-center gap-2" title={delivery.address}>
