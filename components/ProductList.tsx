@@ -13,6 +13,7 @@ type Product = {
     id: string
     name: string
     price: number
+    cost_price: number | null
     weight: number | null
     dough_id: string | null
     adonan?: { name: string } | null
@@ -113,6 +114,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
     const [formData, setFormData] = useState({
         name: '',
         price: '',
+        cost_price: '',
         weight: '',
         dough_id: '',
         image_url: '',
@@ -126,6 +128,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
             setFormData({
                 name: product.name,
                 price: String(product.price),
+                cost_price: product.cost_price != null ? String(product.cost_price) : '',
                 weight: product.weight ? String(product.weight) : '',
                 dough_id: product.dough_id || '',
                 image_url: product.image_url || '',
@@ -134,7 +137,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
             })
         } else {
             setEditingProduct(null)
-            setFormData({ name: '', price: '', weight: '', dough_id: '', image_url: '', is_active: true, is_ready: false })
+            setFormData({ name: '', price: '', cost_price: '', weight: '', dough_id: '', image_url: '', is_active: true, is_ready: false })
         }
         setIsModalOpen(true)
     }
@@ -160,6 +163,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
         const payload = {
             name: formData.name,
             price: Number(formData.price),
+            cost_price: formData.cost_price ? Number(formData.cost_price) : null,
             weight: formData.weight ? Number(formData.weight) : null,
             dough_id: formData.dough_id || null,
             image_url: formData.image_url || null,
@@ -489,15 +493,30 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Price (IDR)</label>
-                                <input
-                                    type="number"
-                                    required
-                                    value={formData.price}
-                                    onChange={e => setFormData({ ...formData, price: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Harga Jual (IDR)</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        value={formData.price}
+                                        onChange={e => setFormData({ ...formData, price: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        HPP / Modal (IDR)
+                                        <span className="ml-1 text-xs text-gray-400 font-normal">opsional</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.cost_price}
+                                        onChange={e => setFormData({ ...formData, cost_price: e.target.value })}
+                                        placeholder="Harga pokok per unit"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                                    />
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">

@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS adonan (
 
 ALTER TABLE adonan ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public Access Adonan" ON adonan FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated access adonan" ON adonan
+  FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- ---------------------------------------------------------------------------
 -- Link products → adonan

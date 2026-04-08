@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS batch_po (
 
 ALTER TABLE batch_po ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public Access Batch PO" ON batch_po FOR ALL USING (true);
+CREATE POLICY "Authenticated access batch_po" ON batch_po
+  FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- ---------------------------------------------------------------------------
 -- Link orders → batch_po

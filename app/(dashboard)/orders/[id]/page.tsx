@@ -9,13 +9,18 @@ export default async function EditOrderPage({ params }: { params: Promise<{ id: 
     const { id } = await params
     const supabase = await createClient()
 
+    const { data: storeInfo } = await supabase.from('store_info').select('modules_enabled').single()
+    const hasBatchPo = (storeInfo?.modules_enabled ?? []).includes('batch-po')
+
     const [productsResult, orderResult, batchesResult] = await Promise.all([
         supabase.from('products').select('id, name, price').order('name'),
         supabase.from('orders')
             .select(`*, order_items(*), deliveries(*)`)
             .eq('id', id)
             .single(),
-        supabase.from('batch_po').select('id, name').order('created_at', { ascending: false })
+        hasBatchPo
+            ? supabase.from('batch_po').select('id, name').order('created_at', { ascending: false })
+            : Promise.resolve({ data: [] }),
     ])
 
     const products = productsResult.data

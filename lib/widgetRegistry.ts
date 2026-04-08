@@ -22,5 +22,3 @@ export const DEFAULT_WIDGET_CONFIG: WidgetConfig[] = WIDGET_REGISTRY.map(w => ({
     id: w.id,
     enabled: true,
 }))
-
-export const WIDGET_STORAGE_KEY = 'dashboard_widget_config'

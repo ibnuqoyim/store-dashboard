@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { Save, Loader2, Plus, Trash2 } from 'lucide-react'
+import { Save, Loader2, Plus, Trash2, RotateCcw } from 'lucide-react'
 import { MODULE_REGISTRY, MODULE_PRESETS, type ModulePreset } from '@/lib/modules'
 import dynamic from 'next/dynamic'
 
@@ -55,6 +55,7 @@ export default function StoreInfoForm() {
   const supabase = createClient()
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
   const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null)
   const [formData, setFormData] = useState<Partial<StoreInfo>>({})
 
@@ -127,6 +128,24 @@ export default function StoreInfoForm() {
       alert('Error saving store info: ' + (error as any).message)
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleReset = async () => {
+    if (!storeInfo) return
+    const confirmed = window.confirm(
+      'Ini akan menghapus semua konfigurasi toko dan mengarahkan kembali ke setup wizard.\n\nData produk, pesanan, dan pelanggan TIDAK akan terhapus.\n\nLanjutkan?'
+    )
+    if (!confirmed) return
+
+    setIsResetting(true)
+    try {
+      const { error } = await supabase.from('store_info').delete().eq('id', storeInfo.id)
+      if (error) throw error
+      window.location.href = '/'
+    } catch (err) {
+      alert('Gagal mereset: ' + (err as any).message)
+      setIsResetting(false)
     }
   }
 
@@ -696,7 +715,7 @@ export default function StoreInfoForm() {
       </div>
 
       {/* Submit Button */}
-      <div className="flex gap-3 sticky bottom-0 bg-gray-50 p-4 rounded-lg border border-gray-200">
+      <div className="flex justify-between gap-3 sticky bottom-0 bg-gray-50 p-4 rounded-lg border border-gray-200">
         <button
           type="submit"
           disabled={isSaving}
@@ -705,6 +724,17 @@ export default function StoreInfoForm() {
           {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
           Save Store Information
         </button>
+        {storeInfo && (
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={isResetting}
+            className="text-red-600 border border-red-200 px-4 py-3 rounded-md hover:bg-red-50 disabled:opacity-50 flex items-center gap-2 text-sm"
+          >
+            {isResetting ? <Loader2 className="animate-spin" size={16} /> : <RotateCcw size={16} />}
+            Reset & Setup Ulang
+          </button>
+        )}
       </div>
     </form>
   )

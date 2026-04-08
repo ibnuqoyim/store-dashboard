@@ -16,5 +16,10 @@ CREATE TABLE IF NOT EXISTS public.testimonials (
 
 ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow public access" ON public.testimonials
-  FOR ALL USING (true) WITH CHECK (true);
+-- Public can read testimonials (for embedding on a public website).
+-- Only authenticated store owners can write/edit.
+CREATE POLICY "Public read testimonials" ON public.testimonials
+  FOR SELECT USING (true);
+
+CREATE POLICY "Authenticated modify testimonials" ON public.testimonials
+  FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');

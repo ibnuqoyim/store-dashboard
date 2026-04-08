@@ -14,19 +14,20 @@ import {
     WidgetConfig,
     WIDGET_REGISTRY,
     DEFAULT_WIDGET_CONFIG,
-    WIDGET_STORAGE_KEY,
 } from '@/lib/widgetRegistry'
 import { useBusinessConfig } from '@/lib/business-config-context'
 import { formatCurrency } from '@/lib/config'
 
 type DashboardProps = {
+    storeInfoId: string
+    initialWidgetConfig: WidgetConfig[] | null
     orders: any[]
     products: any[]
     adonan: any[]
     batches: any[]
 }
 
-export default function DashboardClient({ orders, products, adonan, batches }: DashboardProps) {
+export default function DashboardClient({ storeInfoId, initialWidgetConfig, orders, products, adonan, batches }: DashboardProps) {
     const defaultBatchId = useMemo(() => batches.length > 0 ? batches[batches.length - 1].id : 'all', [batches])
     const [selectedBatchId, setSelectedBatchId] = useState<string>(defaultBatchId)
     const [isInitialized, setIsInitialized] = useState(false)
@@ -53,30 +54,32 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
         }
     }, [selectedBatchId, isInitialized])
 
-    // Widget config
-    const [widgetConfig, setWidgetConfig] = useState<WidgetConfig[]>(DEFAULT_WIDGET_CONFIG)
+    // Widget config — seeded from DB, persisted back to DB on change
+    const resolveInitialConfig = (): WidgetConfig[] => {
+        if (!initialWidgetConfig) return DEFAULT_WIDGET_CONFIG
+        const knownIds = WIDGET_REGISTRY.map(w => w.id)
+        const parsedIds = initialWidgetConfig.map((w: WidgetConfig) => w.id)
+        const isValid =
+            knownIds.length === parsedIds.length &&
+            knownIds.every(id => parsedIds.includes(id as WidgetId))
+        return isValid ? initialWidgetConfig : DEFAULT_WIDGET_CONFIG
+    }
+
+    const [widgetConfig, setWidgetConfig] = useState<WidgetConfig[]>(resolveInitialConfig)
     const [customizerOpen, setCustomizerOpen] = useState(false)
 
-    useEffect(() => {
-        const saved = localStorage.getItem(WIDGET_STORAGE_KEY)
-        if (saved) {
-            try {
-                const parsed: WidgetConfig[] = JSON.parse(saved)
-                const knownIds = WIDGET_REGISTRY.map(w => w.id)
-                const parsedIds = parsed.map(w => w.id)
-                const isValid =
-                    knownIds.length === parsedIds.length &&
-                    knownIds.every(id => parsedIds.includes(id as WidgetId))
-                if (isValid) setWidgetConfig(parsed)
-            } catch {
-                // fall back to defaults
-            }
+    const handleWidgetConfigChange = (newConfig: WidgetConfig[]) => {
+        setWidgetConfig(newConfig)
+        if (storeInfoId) {
+            supabase
+                .from('store_info')
+                .update({ widget_config: newConfig })
+                .eq('id', storeInfoId)
+                .then(({ error }) => {
+                    if (error) console.error('Failed to save widget config:', error)
+                })
         }
-    }, [])
-
-    useEffect(() => {
-        localStorage.setItem(WIDGET_STORAGE_KEY, JSON.stringify(widgetConfig))
-    }, [widgetConfig])
+    }
 
     const [selectedOrder, setSelectedOrder] = useState<any>(null)
     const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
@@ -629,7 +632,7 @@ export default function DashboardClient({ orders, products, adonan, batches }: D
                 isOpen={customizerOpen}
                 onClose={() => setCustomizerOpen(false)}
                 config={widgetConfig}
-                onChange={setWidgetConfig}
+                onChange={handleWidgetConfigChange}
             />
 
         </div>

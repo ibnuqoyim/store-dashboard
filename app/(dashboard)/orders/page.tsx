@@ -6,6 +6,10 @@ export const revalidate = 0
 
 export default async function OrdersPage() {
   const supabase = await createClient()
+
+  const { data: storeInfo } = await supabase.from('store_info').select('modules_enabled').single()
+  const hasBatchPo = (storeInfo?.modules_enabled ?? []).includes('batch-po')
+
   const [ordersResult, batchesResult] = await Promise.all([
     supabase.from('orders')
       .select(`
@@ -22,7 +26,9 @@ export default async function OrdersPage() {
         )
       `)
       .order('date', { ascending: false }),
-    supabase.from('batch_po').select('id, name').order('created_at', { ascending: false })
+    hasBatchPo
+      ? supabase.from('batch_po').select('id, name').order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
   ])
 
   return <OrderList initialOrders={ordersResult.data || []} batches={batchesResult.data || []} />

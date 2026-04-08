@@ -71,14 +71,19 @@ CREATE TABLE IF NOT EXISTS public.store_info (
   primary_color text DEFAULT '#6366f1',
   logo_url text DEFAULT '',
 
+  -- Dashboard widget layout (order + visibility per store)
+  widget_config jsonb DEFAULT NULL,
+
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 ALTER TABLE public.store_info ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow public access" ON public.store_info
-  FOR ALL USING (true) WITH CHECK (true);
+-- Only authenticated users (logged-in store owners) can access store_info.
+-- The setup wizard and dashboard layout both require an active session first.
+CREATE POLICY "Authenticated access store_info" ON public.store_info
+  FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- ---------------------------------------------------------------------------
 -- products
@@ -95,7 +100,8 @@ CREATE TABLE IF NOT EXISTS products (
 
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public Access Products" ON products FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated access products" ON products
+  FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- ---------------------------------------------------------------------------
 -- customers
@@ -135,7 +141,8 @@ CREATE TABLE IF NOT EXISTS orders (
 
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public Access Orders" ON orders FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated access orders" ON orders
+  FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id);
 
@@ -153,7 +160,8 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public Access Order Items" ON order_items FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated access order_items" ON order_items
+  FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- ---------------------------------------------------------------------------
 -- deliveries
@@ -170,7 +178,8 @@ CREATE TABLE IF NOT EXISTS deliveries (
 
 ALTER TABLE deliveries ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public Access Deliveries" ON deliveries FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated access deliveries" ON deliveries
+  FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- ---------------------------------------------------------------------------
 -- shipping_rates
@@ -185,7 +194,8 @@ CREATE TABLE IF NOT EXISTS shipping_rates (
 
 ALTER TABLE shipping_rates ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public Access Shipping Rates" ON shipping_rates FOR ALL USING (true);
+CREATE POLICY "Authenticated access shipping_rates" ON shipping_rates
+  FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- ---------------------------------------------------------------------------
 -- financial_transactions

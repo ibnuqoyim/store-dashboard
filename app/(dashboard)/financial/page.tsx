@@ -1,10 +1,7 @@
-import { createClient } from '@/utils/supabase/server'
-import FinancialReport from '@/components/FinancialReport'
+import FinancialTabs from '@/components/FinancialTabs'
 
 export const revalidate = 0
 
 export default async function FinancialPage() {
-    const supabase = await createClient()
-
-    return <FinancialReport />
+    return <FinancialTabs />
 }

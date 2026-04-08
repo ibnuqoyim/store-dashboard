@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { MODULE_REGISTRY, MODULE_PRESETS, type ModulePreset } from '@/lib/modules'
 import dynamic from 'next/dynamic'
-import { ChevronRight, ChevronLeft, Check, Loader2 } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, Loader2, AlertTriangle } from 'lucide-react'
 import clsx from 'clsx'
 
 const CldUploadWidget = dynamic(
@@ -36,11 +36,30 @@ function getActivePreset(modules: string[]): ModulePreset | null {
   return null
 }
 
+type HealthStatus = 'checking' | 'ok' | 'no-schema' | 'no-connection'
+
 export default function SetupPage() {
   const router = useRouter()
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [health, setHealth] = useState<HealthStatus>('checking')
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from('store_info').select('id').limit(1).then(({ error }) => {
+      if (!error || error.code === 'PGRST116') {
+        // PGRST116 = no rows found — table exists, connection ok
+        setHealth('ok')
+      } else if (error.code === '42P01') {
+        // table does not exist — schema not applied yet
+        setHealth('no-schema')
+      } else {
+        // network error or wrong credentials
+        setHealth('no-connection')
+      }
+    })
+  }, [])
 
   const [form, setForm] = useState<FormData>({
     name: '',
@@ -99,6 +118,72 @@ export default function SetupPage() {
   }
 
   const activePreset = getActivePreset(form.modules_enabled)
+
+  if (health === 'checking') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-500">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span className="text-sm">Memeriksa koneksi database...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (health === 'no-connection') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-md p-6 space-y-4">
+          <div className="flex items-center gap-3 text-red-600">
+            <AlertTriangle className="w-6 h-6 flex-shrink-0" />
+            <h2 className="text-lg font-bold">Tidak bisa terhubung ke Supabase</h2>
+          </div>
+          <p className="text-sm text-gray-600">
+            Periksa konfigurasi environment variable berikut di file <code className="bg-gray-100 px-1 rounded">.env.local</code>:
+          </p>
+          <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside font-mono bg-gray-50 rounded-lg p-3">
+            <li>NEXT_PUBLIC_SUPABASE_URL</li>
+            <li>NEXT_PUBLIC_SUPABASE_ANON_KEY</li>
+          </ul>
+          <p className="text-sm text-gray-500">
+            Nilai ini bisa ditemukan di <strong>Supabase → Project Settings → API</strong>.
+            Setelah diperbaiki, restart dev server dan muat ulang halaman ini.
+          </p>
+          <button onClick={() => window.location.reload()} className="w-full px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+            Coba Lagi
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (health === 'no-schema') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-md p-6 space-y-4">
+          <div className="flex items-center gap-3 text-yellow-600">
+            <AlertTriangle className="w-6 h-6 flex-shrink-0" />
+            <h2 className="text-lg font-bold">Schema database belum diterapkan</h2>
+          </div>
+          <p className="text-sm text-gray-600">
+            Koneksi ke Supabase berhasil, tapi tabel <code className="bg-gray-100 px-1 rounded">store_info</code> belum ada.
+          </p>
+          <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+            <li>Buka <strong>Supabase → SQL Editor</strong></li>
+            <li>Salin dan jalankan isi file <code className="bg-gray-100 px-1 rounded">schema/core.sql</code></li>
+            <li>Jalankan module SQL yang dibutuhkan dari folder <code className="bg-gray-100 px-1 rounded">schema/modules/</code></li>
+            <li>Muat ulang halaman ini</li>
+          </ol>
+          <p className="text-sm text-gray-500">
+            Lihat <strong>SETUP.md</strong> untuk panduan lengkap.
+          </p>
+          <button onClick={() => window.location.reload()} className="w-full px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+            Coba Lagi
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
