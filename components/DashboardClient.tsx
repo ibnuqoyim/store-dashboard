@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { PlusCircle, Download, Pencil, Settings } from 'lucide-react'
+import { PlusCircle, Download, Pencil, Settings, CheckCircle, Loader2 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import DashboardCustomizer from '@/components/DashboardCustomizer'
 import { format } from 'date-fns'
@@ -83,6 +83,7 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
 
     const [selectedOrder, setSelectedOrder] = useState<any>(null)
     const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
+    const [paying, setPaying] = useState<string | null>(null)
     const [logoBase64, setLogoBase64] = useState<string | null>(null)
     const [logoDims, setLogoDims] = useState<{ width: number; height: number } | null>(null)
     const [searchQuery, setSearchQuery] = useState<string>('')
@@ -195,6 +196,21 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
 
         return { totalOrders, totalRevenue, pendingCount, productSummary, adonanSummary }
     }, [filteredOrders, products, adonan])
+
+    const handleMarkPaid = async (order: any) => {
+        if (!confirm(`Tandai order #${order.invoice_number} (${order.customer_name}) sebagai lunas?`)) return
+        setPaying(order.id)
+        const { error } = await supabase
+            .from('orders')
+            .update({ status: 'paid' })
+            .eq('id', order.id)
+        setPaying(null)
+        if (error) {
+            alert('Gagal mengupdate status: ' + error.message)
+        } else {
+            router.refresh()
+        }
+    }
 
     const handleGenerateInvoice = (order: any) => {
         setSelectedOrder(order)
@@ -499,6 +515,20 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
                                                 </td>
                                                 <td className="px-6 py-4 text-sm">
                                                     <div className="flex flex-col sm:flex-row gap-2">
+                                                        {order.status !== 'paid' && (
+                                                            <button
+                                                                onClick={() => handleMarkPaid(order)}
+                                                                disabled={paying === order.id}
+                                                                className="text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
+                                                                title="Tandai Lunas"
+                                                            >
+                                                                {paying === order.id
+                                                                    ? <Loader2 size={14} className="animate-spin" />
+                                                                    : <CheckCircle size={14} />
+                                                                }
+                                                                Lunas
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={() => handleDownloadInvoice(order)}
                                                             className="text-green-600 hover:text-green-900 bg-green-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"

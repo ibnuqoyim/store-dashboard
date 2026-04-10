@@ -5,6 +5,8 @@ export type ModuleId =
   | 'adonan'
   | 'batch-po'
   | 'inventory'
+  | 'resep'
+  | 'produksi'
   | 'deliveries'
   | 'shipping'
   | 'financial'
@@ -26,6 +28,8 @@ export const MODULE_REGISTRY: ModuleDef[] = [
   { id: 'adonan',       label: 'Adonan',      href: '/adonan',      category: 'Production' },
   { id: 'batch-po',     label: 'Pre-Orders',  href: '/batch-po',    category: 'Production' },
   { id: 'inventory',    label: 'Inventory',   href: '/inventory',   category: 'Production' },
+  { id: 'resep',        label: 'Resep & HPP', href: '/resep',       category: 'Production' },
+  { id: 'produksi',     label: 'Produksi',    href: '/produksi',    category: 'Production' },
   { id: 'orders',       label: 'Orders',      href: '/orders',      category: 'Sales & Orders' },
   { id: 'deliveries',   label: 'Deliveries',  href: '/deliveries',  category: 'Sales & Orders' },
   { id: 'shipping',     label: 'Shipping',    href: '/shipping',    category: 'Sales & Orders' },
@@ -37,7 +41,7 @@ export const MODULE_REGISTRY: ModuleDef[] = [
 export const MODULE_PRESETS: Record<ModulePreset, { label: string; modules: ModuleId[] }> = {
   bakery: {
     label: 'Bakery / Roti',
-    modules: ['orders', 'products', 'customers', 'adonan', 'batch-po', 'inventory', 'deliveries', 'shipping', 'financial', 'expenses', 'testimonials'],
+    modules: ['orders', 'products', 'customers', 'adonan', 'batch-po', 'inventory', 'resep', 'produksi', 'deliveries', 'shipping', 'financial', 'expenses', 'testimonials'],
   },
   retail: {
     label: 'Retail / Toko',

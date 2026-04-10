@@ -73,7 +73,7 @@ Paste and run each relevant file in the SQL Editor **after** `core.sql`.
 
 | Business type | Recommended modules |
 |---|---|
-| Sourdough bakery | adonan, batch-po, inventory, testimonials |
+| Sourdough bakery | adonan, batch-po, inventory, **resep, produksi**, testimonials |
 | General retail | inventory, testimonials |
 | Café / food service | inventory, testimonials |
 | Service business | *(none — core is sufficient)* |
@@ -179,6 +179,7 @@ Migration files are **safe to run multiple times** (they use `IF EXISTS` / `IF N
 | `schema/migrations/001_strengthen_rls.sql` | Locks down all tables to authenticated users only (was `FOR ALL USING (true)`) | All existing deployments |
 | `schema/migrations/002_widget_config.sql` | Adds `widget_config` column to `store_info` for per-store dashboard layout | All existing deployments |
 | `schema/migrations/003_product_cost_price.sql` | Adds `cost_price` (HPP) column to `products` for profit/loss reporting | All existing deployments |
+| `schema/migrations/004_resep_produksi.sql` | Adds `recipes`, `recipe_ingredients`, `production_runs` tables + inventory deduction trigger | Deployments using resep/produksi modules |
 
 ### Re-running the setup wizard
 

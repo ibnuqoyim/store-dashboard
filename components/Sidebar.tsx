@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
     LayoutDashboard, ShoppingBag, Wheat, ClipboardList, Truck,
     LogOut, Menu, X, Users, FileText, MessageSquare, Settings,
-    DollarSign, Package, Receipt, ChevronRight,
+    DollarSign, Package, Receipt, ChevronRight, BookOpen, Factory,
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -23,6 +23,8 @@ const MODULE_ICONS: Record<ModuleId, any> = {
     adonan:       Wheat,
     'batch-po':   FileText,
     inventory:    Package,
+    resep:        BookOpen,
+    produksi:     Factory,
     deliveries:   Truck,
     shipping:     Truck,
     financial:    DollarSign,
