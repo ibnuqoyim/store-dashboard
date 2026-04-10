@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
     LayoutDashboard, ShoppingBag, Wheat, ClipboardList, Truck,
     LogOut, Menu, X, Users, FileText, MessageSquare, Settings,
-    DollarSign, Package, Receipt, ChevronRight, BookOpen, Factory,
+    DollarSign, Package, Receipt, ChevronRight, BookOpen, Factory, Bot,
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -35,7 +35,10 @@ const MODULE_ICONS: Record<ModuleId, any> = {
 // Items always visible regardless of enabled modules
 const FIXED_ITEMS: Record<string, { name: string; href: string; icon: any }[]> = {
     'Main':     [{ name: 'Dashboard',  href: '/',           icon: LayoutDashboard }],
-    'Settings': [{ name: 'Store Info', href: '/store-info', icon: Settings }],
+    'Settings': [
+        { name: 'Store Info', href: '/store-info',  icon: Settings },
+        { name: 'Bot Config', href: '/bot-config',  icon: Bot },
+    ],
 }
 
 export default function Sidebar() {
