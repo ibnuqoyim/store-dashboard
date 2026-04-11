@@ -40,6 +40,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-/bot/session/
-/bot/bot/session/
-/bot/node_modules/
+/bot/*

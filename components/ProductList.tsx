@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/config'
 type Product = {
     id: string
     name: string
+    code: string | null
     price: number
     cost_price: number | null
     weight: number | null
@@ -56,6 +57,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
             const lowerSearch = searchTerm.toLowerCase()
             result = result.filter(p =>
                 p.name.toLowerCase().includes(lowerSearch) ||
+                (p.code && p.code.toLowerCase().includes(lowerSearch)) ||
                 (p.adonan?.name && p.adonan.name.toLowerCase().includes(lowerSearch))
             )
         }
@@ -113,6 +115,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
     }
     const [formData, setFormData] = useState({
         name: '',
+        code: '',
         price: '',
         cost_price: '',
         weight: '',
@@ -127,6 +130,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
             setEditingProduct(product)
             setFormData({
                 name: product.name,
+                code: product.code || '',
                 price: String(product.price),
                 cost_price: product.cost_price != null ? String(product.cost_price) : '',
                 weight: product.weight ? String(product.weight) : '',
@@ -137,7 +141,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
             })
         } else {
             setEditingProduct(null)
-            setFormData({ name: '', price: '', cost_price: '', weight: '', dough_id: '', image_url: '', is_active: true, is_ready: false })
+            setFormData({ name: '', code: '', price: '', cost_price: '', weight: '', dough_id: '', image_url: '', is_active: true, is_ready: false })
         }
         setIsModalOpen(true)
     }
@@ -162,6 +166,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
 
         const payload = {
             name: formData.name,
+            code: formData.code.trim() || null,
             price: Number(formData.price),
             cost_price: formData.cost_price ? Number(formData.cost_price) : null,
             weight: formData.weight ? Number(formData.weight) : null,
@@ -338,6 +343,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dough</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight (gr)</th>
@@ -351,6 +357,13 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                         {paginatedProducts.map((product) => (
                             <tr key={product.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.name}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {product.code ? (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-gray-100 text-gray-700">
+                                            {product.code}
+                                        </span>
+                                    ) : '-'}
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatCurrency(product.price, config)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.adonan?.name || '-'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.weight || '-'}</td>
@@ -381,7 +394,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                         ))}
                         {paginatedProducts.length === 0 && (
                             <tr>
-                                <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                                <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                                     {filteredProducts.length === 0 ? 'No products found.' : 'No products found for current page.'}
                                 </td>
                             </tr>
@@ -482,15 +495,30 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                                />
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.name}
+                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Kode Bot
+                                        <span className="ml-1 text-xs text-gray-400 font-normal">opsional</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.code}
+                                        onChange={e => setFormData({ ...formData, code: e.target.value })}
+                                        placeholder="mis: SD, CR"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-mono"
+                                    />
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
