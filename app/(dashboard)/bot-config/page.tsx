@@ -6,11 +6,15 @@ export const revalidate = 0
 export default async function BotConfigPage() {
     const supabase = await createClient()
 
-    const { data } = await supabase
-        .from('bot_config')
-        .select('*')
-        .limit(1)
-        .maybeSingle()
+    const [configResult, storesResult] = await Promise.all([
+        supabase.from('bot_config').select('*').limit(1).maybeSingle(),
+        supabase.from('stores').select('id, name').eq('is_active', true).order('name'),
+    ])
 
-    return <BotConfigForm initialConfig={data} />
+    return (
+        <BotConfigForm
+            initialConfig={configResult.data}
+            stores={storesResult.data || []}
+        />
+    )
 }

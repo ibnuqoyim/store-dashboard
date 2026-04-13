@@ -11,6 +11,12 @@ interface BotConfig {
     allowed_numbers: string
     ai_provider: string
     ai_model: string
+    store_id: string | null
+}
+
+interface StoreOption {
+    id: string
+    name: string
 }
 
 const DEFAULT_SYSTEM_PROMPT =
@@ -23,7 +29,13 @@ const AI_PROVIDERS = [
     { value: 'ollama',     label: 'Ollama (lokal)' },
 ]
 
-export default function BotConfigForm({ initialConfig }: { initialConfig: BotConfig | null }) {
+export default function BotConfigForm({
+    initialConfig,
+    stores,
+}: {
+    initialConfig: BotConfig | null
+    stores: StoreOption[]
+}) {
     const supabase = createClient()
     const [isSaving, setIsSaving] = useState(false)
     const [saved, setSaved] = useState(false)
@@ -34,6 +46,7 @@ export default function BotConfigForm({ initialConfig }: { initialConfig: BotCon
         allowed_numbers: initialConfig?.allowed_numbers ?? '',
         ai_provider:     initialConfig?.ai_provider     || 'openrouter',
         ai_model:        initialConfig?.ai_model        || 'openai/gpt-4o-mini',
+        store_id:        initialConfig?.store_id        ?? null,
     })
 
     const handleSave = async () => {
@@ -113,6 +126,29 @@ export default function BotConfigForm({ initialConfig }: { initialConfig: BotCon
                         placeholder="628123456789,628987654321"
                         className="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-mono"
                     />
+                </div>
+
+                {/* Store */}
+                <div className="p-5 space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Toko</label>
+                    <p className="text-xs text-gray-400">
+                        Bot hanya akan melihat orders, batch, dan produk dari toko yang dipilih. Kosongkan untuk lihat semua.
+                    </p>
+                    <select
+                        value={form.store_id ?? ''}
+                        onChange={e => setForm(f => ({ ...f, store_id: e.target.value || null }))}
+                        className="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                        <option value="">— Semua toko (tidak difilter) —</option>
+                        {stores.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                    </select>
+                    {stores.length === 0 && (
+                        <p className="text-xs text-amber-500">
+                            Belum ada toko. Buat toko dulu di menu <strong>Stores</strong>.
+                        </p>
+                    )}
                 </div>
 
                 {/* AI Provider */}

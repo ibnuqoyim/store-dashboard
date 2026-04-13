@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
     LayoutDashboard, ShoppingBag, Wheat, ClipboardList, Truck,
     LogOut, Menu, X, Users, FileText, MessageSquare, Settings,
-    DollarSign, Package, Receipt, ChevronRight, BookOpen, Factory, Bot,
+    DollarSign, Package, Receipt, ChevronRight, BookOpen, Factory, Bot, Store,
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -37,6 +37,7 @@ const FIXED_ITEMS: Record<string, { name: string; href: string; icon: any }[]> =
     'Main':     [{ name: 'Dashboard',  href: '/',           icon: LayoutDashboard }],
     'Settings': [
         { name: 'Store Info', href: '/store-info',  icon: Settings },
+        { name: 'Stores',     href: '/stores',      icon: Store },
         { name: 'Bot Config', href: '/bot-config',  icon: Bot },
     ],
 }
