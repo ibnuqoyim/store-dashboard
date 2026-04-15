@@ -28,6 +28,12 @@ type Delivery = {
     status: string
 }
 
+type Store = {
+    id: string
+    name: string
+    invoice_prefix: string | null
+}
+
 type OrderFormData = {
     invoice_number: string
     date: string
@@ -36,6 +42,7 @@ type OrderFormData = {
     phone: string
     status: string
     po_id: string
+    store_id: string
     items: OrderItem[]
     delivery: Delivery | null
 }
@@ -50,10 +57,12 @@ type Customer = {
 export default function OrderForm({
     products,
     batches = [],
+    stores = [],
     initialOrder
 }: {
     products: Product[],
     batches?: any[],
+    stores?: Store[],
     initialOrder?: any
 }) {
     const router = useRouter()
@@ -75,58 +84,55 @@ export default function OrderForm({
         phone: '',
         status: 'pending',
         po_id: '',
+        store_id: '',
         items: [],
         delivery: null
     })
 
     const [shippingRates, setShippingRates] = useState<any[]>([])
 
-    const generateInvoiceNumber = async (): Promise<string> => {
+    const generateInvoiceNumber = async (storeId?: string | null, prefix?: string | null): Promise<string> => {
         try {
-            // Get all orders sorted by invoice_number descending to get the latest one
-            const { data: orders, error } = await supabase
+            const now = new Date()
+            const currentYYYYMM = String(now.getFullYear()) + String(now.getMonth() + 1).padStart(2, '0')
+            const prefixStr = prefix ? `${prefix}-` : ''
+
+            let query = supabase
                 .from('orders')
                 .select('invoice_number')
-                .order('invoice_number', { ascending: false })
-                .limit(1)
+                .order('created_at', { ascending: false })
+                .limit(50)
 
-            if (error) throw error
+            if (storeId) query = (query as any).eq('store_id', storeId)
 
-            const now = new Date()
-            const currentYYYY = String(now.getFullYear())
-            const currentMM = String(now.getMonth() + 1).padStart(2, '0')
-            const currentYYYYMM = currentYYYY + currentMM
+            const { data: orders } = await query
 
-            // If no orders exist, start with YYYYMM00
-            if (!orders || orders.length === 0) {
-                return currentYYYYMM + '00'
-            }
-
-            const lastInvoiceNumber = orders[0].invoice_number
-            const lastYYYYMM = lastInvoiceNumber.slice(0, 6)
-            const lastXX = parseInt(lastInvoiceNumber.slice(6, 8), 10)
-
-            console.log('Last Invoice:', lastInvoiceNumber, 'Current YYYYMM:', currentYYYYMM)
-
-            // If YYYY``MM is the same, increment XX
-            if (lastYYYYMM === currentYYYYMM) {
-                const nextXX = lastXX + 1
-                if (nextXX > 99) {
-                    throw new Error('Invoice number counter exceeded maximum (99)')
+            let maxSeq = 0
+            if (orders && orders.length > 0) {
+                for (const order of orders) {
+                    const num = order.invoice_number as string
+                    const numPart = prefixStr && num.startsWith(prefixStr) ? num.slice(prefixStr.length) : num
+                    if (numPart.startsWith(currentYYYYMM)) {
+                        const seq = parseInt(numPart.slice(6), 10)
+                        if (!isNaN(seq) && seq > maxSeq) maxSeq = seq
+                    }
                 }
-                return currentYYYYMM + String(nextXX).padStart(2, '0')
-            } else {
-                // If YYYYMM is different, reset to YYYYMM00
-                return currentYYYYMM + '00'
             }
+
+            return `${prefixStr}${currentYYYYMM}${String(maxSeq + 1).padStart(3, '0')}`
         } catch (error) {
             console.error('Error generating invoice number:', error)
-            // Fallback: generate based on current date
             const now = new Date()
-            const yyyy = String(now.getFullYear())
-            const mm = String(now.getMonth() + 1).padStart(2, '0')
-            return yyyy + mm + '00'
+            const currentYYYYMM = String(now.getFullYear()) + String(now.getMonth() + 1).padStart(2, '0')
+            return `${currentYYYYMM}001`
         }
+    }
+
+    const generateAndSetInvoiceNumber = async (storeId?: string | null) => {
+        if (initialOrder) return
+        const store = stores.find(s => s.id === storeId)
+        const num = await generateInvoiceNumber(storeId || null, store?.invoice_prefix || null)
+        setFormData(prev => ({ ...prev, invoice_number: num }))
     }
 
     useEffect(() => {
@@ -147,20 +153,12 @@ export default function OrderForm({
             }
         }
 
-        const initializeInvoiceNumber = async () => {
-            // Only generate invoice number if creating new order (not editing)
-            if (!initialOrder) {
-                const newInvoiceNumber = await generateInvoiceNumber()
-                setFormData(prev => ({ ...prev, invoice_number: newInvoiceNumber }))
-            }
-        }
-
         fetchRates()
         fetchCustomers()
         if (!initialOrder) {
             fetchLatestBatch()
+            generateAndSetInvoiceNumber(null)
         }
-        initializeInvoiceNumber()
     }, [])
 
     useEffect(() => {
@@ -182,6 +180,7 @@ export default function OrderForm({
                 phone: initialOrder.phone || '',
                 status: initialOrder.status || 'pending',
                 po_id: initialOrder.po_id || '',
+                store_id: initialOrder.store_id || '',
                 items: initialOrder.order_items.map((item: any) => ({
                     product_id: item.product_id,
                     quantity: item.quantity,
@@ -397,7 +396,8 @@ export default function OrderForm({
                 customer_name: formData.customer_name,
                 phone: formData.phone,
                 status: formData.status,
-                po_id: formData.po_id || null
+                po_id: formData.po_id || null,
+                store_id: formData.store_id || null,
             }
 
             let orderId = initialOrder?.id
@@ -552,6 +552,25 @@ export default function OrderForm({
                                 ))}
                             </select>
                         </div>
+                        {stores.length > 0 && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Store</label>
+                                <select
+                                    value={formData.store_id}
+                                    onChange={e => {
+                                        const storeId = e.target.value
+                                        setFormData(prev => ({ ...prev, store_id: storeId }))
+                                        generateAndSetInvoiceNumber(storeId || null)
+                                    }}
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+                                >
+                                    <option value="">No Store</option>
+                                    {stores.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
                 </div>
 

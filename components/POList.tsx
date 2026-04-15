@@ -5,11 +5,17 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, X, Loader2, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 
+type POProduct = {
+    product_id: string
+    products: { name: string; code: string | null } | null
+}
+
 type PO = {
     id: string
     name: string
     description: string | null
     created_at: string
+    po_list: POProduct[]
 }
 
 export default function POList({ initialPOs }: { initialPOs: PO[] }) {
@@ -224,6 +230,7 @@ export default function POList({ initialPOs }: { initialPOs: PO[] }) {
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produk Dibuka</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -233,6 +240,23 @@ export default function POList({ initialPOs }: { initialPOs: PO[] }) {
                         {paginatedPOs.map((item) => (
                             <tr key={item.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.name}</td>
+                                <td className="px-6 py-4 text-sm text-gray-500">
+                                    {item.po_list && item.po_list.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1">
+                                            {item.po_list.map(pl => (
+                                                <span
+                                                    key={pl.product_id}
+                                                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"
+                                                    title={pl.products?.name}
+                                                >
+                                                    {pl.products?.code ?? pl.products?.name ?? '?'}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-400 text-xs italic">Belum ada produk</span>
+                                    )}
+                                </td>
                                 <td className="px-6 py-4 text-sm text-gray-500">{item.description || '-'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {new Date(item.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' })}
@@ -249,7 +273,7 @@ export default function POList({ initialPOs }: { initialPOs: PO[] }) {
                         ))}
                         {paginatedPOs.length === 0 && (
                             <tr>
-                                <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
                                     {filteredPOs.length === 0 ? 'No PO found.' : 'No PO found for current page.'}
                                 </td>
                             </tr>

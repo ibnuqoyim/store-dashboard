@@ -103,7 +103,7 @@ Open `.env.local` and set:
 | Variable | Where to find it | Required? |
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL | **Yes** |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → anon/public key | **Yes** |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API → anon/public key | **Yes** |
 | `CLOUDINARY_URL` | Cloudinary → Settings → API Keys (format: `cloudinary://key:secret@cloudname`) | **Yes** |
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Cloudinary → Dashboard → Cloud name | **Yes** |
 | `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` | Name of the upload preset you create in step 6 (default: `products`) | **Yes** |

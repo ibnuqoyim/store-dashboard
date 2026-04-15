@@ -95,9 +95,10 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
 
     // Load logo for watermark
     useEffect(() => {
+        if (!config.logo_url) return
         const fetchLogo = async () => {
             try {
-                const response = await fetch('/logo.png')
+                const response = await fetch(config.logo_url)
                 if (!response.ok) throw new Error('Logo not found')
                 const blob = await response.blob()
                 const reader = new FileReader()
@@ -117,7 +118,7 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
             }
         }
         fetchLogo()
-    }, [])
+    }, [config.logo_url])
 
     const filteredOrders = useMemo(() => {
         let result = selectedBatchId === 'all' ? orders : orders.filter(o => o.po_id === selectedBatchId)

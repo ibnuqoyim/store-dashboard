@@ -12,8 +12,8 @@
     "bot:install": "cd bot && npm install"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.95.3",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.103.0",
     "@types/papaparse": "^5.5.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

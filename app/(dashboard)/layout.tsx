@@ -11,7 +11,9 @@ export default async function DashboardLayout({
     children: React.ReactNode
 }) {
     const supabase = await createClient()
-    const { data } = await supabase.from('store_info').select('*').single()
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data, error } = await supabase.from('store_info').select('*').single()
+
 
     if (!data) {
         redirect('/setup')

@@ -10,11 +10,12 @@ export default async function OrdersPage() {
   const { data: storeInfo } = await supabase.from('store_info').select('modules_enabled').single()
   const hasBatchPo = (storeInfo?.modules_enabled ?? []).includes('batch-po')
 
-  const [ordersResult, batchesResult] = await Promise.all([
+  const [ordersResult, batchesResult, storesResult] = await Promise.all([
     supabase.from('orders')
       .select(`
         *,
         customer_id,
+        store_id,
         order_items (
           price,
           quantity,
@@ -22,14 +23,16 @@ export default async function OrdersPage() {
         ),
         deliveries (
           status,
-          courier_name
+          courier_name,
+          shipping_cost
         )
       `)
       .order('date', { ascending: false }),
     hasBatchPo
       ? supabase.from('batch_po').select('id, name').order('created_at', { ascending: false })
       : Promise.resolve({ data: [] }),
+    supabase.from('stores').select('id, logo_url'),
   ])
 
-  return <OrderList initialOrders={ordersResult.data || []} batches={batchesResult.data || []} />
+  return <OrderList initialOrders={ordersResult.data || []} batches={batchesResult.data || []} stores={storesResult.data || []} />
 }

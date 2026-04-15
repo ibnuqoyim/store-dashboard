@@ -143,7 +143,7 @@ export default function SetupPage() {
           </p>
           <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside font-mono bg-gray-50 rounded-lg p-3">
             <li>NEXT_PUBLIC_SUPABASE_URL</li>
-            <li>NEXT_PUBLIC_SUPABASE_ANON_KEY</li>
+            <li>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</li>
           </ul>
           <p className="text-sm text-gray-500">
             Nilai ini bisa ditemukan di <strong>Supabase → Project Settings → API</strong>.

@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, X, Loader2, Store } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Loader2, Store, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
 
 type StoreItem = {
     id: string
@@ -118,10 +119,11 @@ export default function StoreList({ initialStores }: { initialStores: StoreItem[
                             {initialStores.map(store => (
                                 <tr key={store.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center gap-2">
+                                        <Link href={`/stores/${store.id}`} className="flex items-center gap-2 group">
                                             <Store className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                            <span className="text-sm font-medium text-gray-900">{store.name}</span>
-                                        </div>
+                                            <span className="text-sm font-medium text-gray-900 group-hover:text-blue-600">{store.name}</span>
+                                            <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-400" />
+                                        </Link>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                                         {store.description ?? '-'}
@@ -137,12 +139,13 @@ export default function StoreList({ initialStores }: { initialStores: StoreItem[
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex justify-end gap-2">
-                                            <button
-                                                onClick={() => openModal(store)}
+                                            <Link
+                                                href={`/stores/${store.id}`}
                                                 className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded"
+                                                title="Edit detail"
                                             >
                                                 <Pencil size={16} />
-                                            </button>
+                                            </Link>
                                             <button
                                                 onClick={() => handleDelete(store.id)}
                                                 disabled={isLoading}

@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/config'
 
 type Order = {
     id: string
+    store_id?: string | null
     invoice_number: string
     date: string
     customer_id?: string
@@ -31,15 +32,18 @@ type Order = {
     po_id?: string
 }
 
-export default function OrderList({ initialOrders, batches }: { initialOrders: Order[], batches: any[] }) {
+type Store = {
+    id: string
+    logo_url: string | null
+}
+
+export default function OrderList({ initialOrders, batches, stores = [] }: { initialOrders: Order[], batches: any[], stores?: Store[] }) {
     const [isLoading, setIsLoading] = useState(false)
     const [selectedBatchId, setSelectedBatchId] = useState<string>('all')
     const [searchTerm, setSearchTerm] = useState('')
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const [logoBase64, setLogoBase64] = useState<string | null>(null)
-    const [logoDims, setLogoDims] = useState<{ width: number; height: number } | null>(null)
     const [statusFilter, setStatusFilter] = useState<string>('all')
     const [dateFilter, setDateFilter] = useState({ start: '', end: '' })
     const [currentPage, setCurrentPage] = useState(1)
@@ -48,32 +52,6 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
     const supabase = createClient()
     const config = useBusinessConfig()
     const fc = (n: number) => formatCurrency(n, config)
-
-    // Load logo for watermark
-    useEffect(() => {
-        const fetchLogo = async () => {
-            try {
-                const response = await fetch('/logo.png')
-                if (!response.ok) throw new Error('Logo not found')
-                const blob = await response.blob()
-                const reader = new FileReader()
-                reader.onloadend = () => {
-                    const base64data = reader.result as string
-                    setLogoBase64(base64data)
-
-                    const img = new Image()
-                    img.onload = () => {
-                        setLogoDims({ width: img.width, height: img.height })
-                    }
-                    img.src = base64data
-                }
-                reader.readAsDataURL(blob)
-            } catch (error) {
-                console.error('Error loading logo:', error)
-            }
-        }
-        fetchLogo()
-    }, [])
 
     const filteredOrders = useMemo(() => {
         let result = initialOrders
@@ -161,65 +139,66 @@ export default function OrderList({ initialOrders, batches }: { initialOrders: O
                 format: 'a4'
             })
 
-            // Add watermark first if available
-            if (logoBase64 && logoDims) {
-                console.log('Attempting to add watermark to PDF...')
+            // Fetch logo watermark from the order's store
+            const store = stores.find(s => s.id === order.store_id)
+            const logoUrl = store?.logo_url || null
+
+            if (logoUrl) {
                 try {
-                    // Convert PNG to canvas to strip metadata
-                    const canvas = document.createElement('canvas')
-                    const ctx = canvas.getContext('2d')
-                    const img = new Image()
+                    const response = await fetch(logoUrl)
+                    if (response.ok) {
+                        const blob = await response.blob()
+                        const logoBase64 = await new Promise<string>((resolve) => {
+                            const reader = new FileReader()
+                            reader.onloadend = () => resolve(reader.result as string)
+                            reader.readAsDataURL(blob)
+                        })
+                        const logoDims = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+                            const img = new Image()
+                            img.onload = () => resolve({ width: img.width, height: img.height })
+                            img.onerror = reject
+                            img.src = logoBase64
+                        })
 
-                    // Wait for image to load
-                    await new Promise((resolve, reject) => {
-                        img.onload = resolve
-                        img.onerror = reject
-                        img.src = logoBase64
-                    })
+                        const canvas = document.createElement('canvas')
+                        const ctx = canvas.getContext('2d')
+                        const img = new Image()
+                        await new Promise((resolve, reject) => {
+                            img.onload = resolve
+                            img.onerror = reject
+                            img.src = logoBase64
+                        })
+                        canvas.width = logoDims.width
+                        canvas.height = logoDims.height
+                        ctx?.clearRect(0, 0, canvas.width, canvas.height)
+                        ctx?.drawImage(img, 0, 0)
+                        const cleanImageData = canvas.toDataURL('image/png')
 
-                    canvas.width = logoDims.width
-                    canvas.height = logoDims.height
+                        const pageWidth = doc.internal.pageSize.getWidth()
+                        const pageHeight = doc.internal.pageSize.getHeight()
+                        const imgRatio = logoDims.width / logoDims.height
+                        const pageRatio = pageWidth / pageHeight
+                        let renderWidth, renderHeight
+                        if (imgRatio > pageRatio) {
+                            renderWidth = pageWidth
+                            renderHeight = pageWidth / imgRatio
+                        } else {
+                            renderHeight = pageHeight
+                            renderWidth = pageHeight * imgRatio
+                        }
+                        const x = (pageWidth - renderWidth / 1.5) / 2
+                        const y = (pageHeight - renderHeight / 1.5) / 2
 
-                    // Clear canvas with transparency
-                    ctx?.clearRect(0, 0, canvas.width, canvas.height)
-                    ctx?.drawImage(img, 0, 0)
-
-                    // Get clean PNG data without problematic metadata
-                    const cleanImageData = canvas.toDataURL('image/png')
-
-                    const pageWidth = doc.internal.pageSize.getWidth()
-                    const pageHeight = doc.internal.pageSize.getHeight()
-
-                    const imgWidth = logoDims.width
-                    const imgHeight = logoDims.height
-                    const imgRatio = imgWidth / imgHeight
-                    const pageRatio = pageWidth / pageHeight
-
-                    let renderWidth, renderHeight
-                    if (imgRatio > pageRatio) {
-                        renderWidth = pageWidth
-                        renderHeight = pageWidth / imgRatio
-                    } else {
-                        renderHeight = pageHeight
-                        renderWidth = pageHeight * imgRatio
+                        doc.saveGraphicsState()
+                        // @ts-ignore - jsPDF GState type issue
+                        doc.setGState(new (doc as any).GState({ opacity: 0.2 }))
+                        doc.addImage(cleanImageData, 'PNG', x, y, renderWidth / 1.5, renderHeight / 1.5)
+                        doc.restoreGraphicsState()
                     }
-
-                    const x = (pageWidth - renderWidth / 1.5) / 2
-                    const y = (pageHeight - renderHeight / 1.5) / 2
-
-                    console.log('Adding watermark at:', { x, y, width: renderWidth / 1.5, height: renderHeight / 1.5 })
-                    doc.saveGraphicsState()
-                    // @ts-ignore - jsPDF GState type issue
-                    doc.setGState(new (doc as any).GState({ opacity: 0.2 }))
-                    doc.addImage(cleanImageData, 'PNG', x, y, renderWidth / 1.5, renderHeight / 1.5)
-                    doc.restoreGraphicsState()
-                    console.log('Watermark added successfully')
                 } catch (error) {
                     console.error('Error adding watermark:', error)
                     // Continue without watermark if it fails
                 }
-            } else {
-                console.log('Skipping watermark - logoBase64:', !!logoBase64, 'logoDims:', !!logoDims)
             }
 
             // Invoice Header
