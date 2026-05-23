@@ -35,6 +35,13 @@ type Order = {
 type Store = {
     id: string
     logo_url: string | null
+    name: string | null
+    phone: string | null
+    bank_name: string | null
+    bank_account: string | null
+    bank_holder: string | null
+    invoice_closing_message: string | null
+    invoice_closing_sub: string | null
 }
 
 export default function OrderList({ initialOrders, batches, stores = [] }: { initialOrders: Order[], batches: any[], stores?: Store[] }) {
@@ -139,8 +146,16 @@ export default function OrderList({ initialOrders, batches, stores = [] }: { ini
                 format: 'a4'
             })
 
-            // Fetch logo watermark from the order's store
+            // Resolve store for this order; fall back to global config for any missing field
             const store = stores.find(s => s.id === order.store_id)
+            const invoiceName = store?.name || config.name
+            const invoicePhone = store?.phone || config.phone
+            const invoiceBankName = store?.bank_name || config.bank_name || ''
+            const invoiceBankAccount = store?.bank_account || config.bank_account || ''
+            const invoiceBankHolder = store?.bank_holder || config.bank_holder || ''
+            const invoiceClosingMsg = store?.invoice_closing_message || config.invoice_closing_message || 'Terima Kasih'
+            const invoiceClosingSub = store?.invoice_closing_sub || config.invoice_closing_sub || ''
+
             const logoUrl = store?.logo_url || null
 
             if (logoUrl) {
@@ -207,12 +222,12 @@ export default function OrderList({ initialOrders, batches, stores = [] }: { ini
             doc.text('Invoice', 200, 20, { align: 'right' })
 
             doc.setFontSize(16)
-            doc.text(config.name, 200, 30, { align: 'right' })
+            doc.text(invoiceName, 200, 30, { align: 'right' })
 
             doc.setFontSize(10)
             doc.setFont('helvetica', 'normal')
             doc.text('No HP', 200, 36, { align: 'right' })
-            doc.text(config.phone, 200, 41, { align: 'right' })
+            doc.text(invoicePhone, 200, 41, { align: 'right' })
 
             // Bill To Section
             doc.setFontSize(10)
@@ -298,18 +313,18 @@ export default function OrderList({ initialOrders, batches, stores = [] }: { ini
             doc.setFont('helvetica', 'normal')
             doc.setFillColor(250, 250, 250)
             doc.rect(10, yPos - 3, 190, 25, 'F')
-            if (config.bank_name || config.bank_account) {
+            if (invoiceBankName || invoiceBankAccount) {
                 doc.setFont('helvetica', 'bold')
                 doc.text('Silahkan transfer ke rekening berikut :', 12, yPos + 2)
                 doc.setFont('helvetica', 'normal')
-                doc.text(`• ${config.bank_name} : ${config.bank_account}${config.bank_holder ? ` a.n ${config.bank_holder}` : ''}`, 12, yPos + 7)
+                doc.text(`• ${invoiceBankName} : ${invoiceBankAccount}${invoiceBankHolder ? ` a.n ${invoiceBankHolder}` : ''}`, 12, yPos + 7)
                 yPos += 5
             }
             doc.setFont('helvetica', 'bold')
-            doc.text(config.invoice_closing_message, 12, yPos + 18)
-            if (config.invoice_closing_sub) {
+            doc.text(invoiceClosingMsg, 12, yPos + 18)
+            if (invoiceClosingSub) {
                 doc.setFont('helvetica', 'normal')
-                doc.text(config.invoice_closing_sub, 12, yPos + 22)
+                doc.text(invoiceClosingSub, 12, yPos + 22)
             }
 
             // Save PDF

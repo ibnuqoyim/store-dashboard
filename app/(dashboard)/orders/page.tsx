@@ -31,7 +31,7 @@ export default async function OrdersPage() {
     hasBatchPo
       ? supabase.from('batch_po').select('id, name').order('created_at', { ascending: false })
       : Promise.resolve({ data: [] }),
-    supabase.from('stores').select('id, logo_url'),
+    supabase.from('stores').select('id, logo_url, name, phone, bank_name, bank_account, bank_holder, invoice_closing_message, invoice_closing_sub'),
   ])
 
   return <OrderList initialOrders={ordersResult.data || []} batches={batchesResult.data || []} stores={storesResult.data || []} />
