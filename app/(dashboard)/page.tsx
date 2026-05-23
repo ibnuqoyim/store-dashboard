@@ -12,7 +12,7 @@ export default async function DashboardPage() {
     const hasAdonan = modules.includes('adonan')
     const hasBatchPo = modules.includes('batch-po')
 
-    const [ordersResult, productsResult, adonanResult, batchesResult] = await Promise.all([
+    const [ordersResult, productsResult, adonanResult, batchesResult, storesResult] = await Promise.all([
         supabase
             .from('orders')
             .select('*, order_items(*, products(*)), deliveries(shipping_cost)'),
@@ -25,12 +25,14 @@ export default async function DashboardPage() {
         hasBatchPo
             ? supabase.from('batch_po').select('*').order('created_at', { ascending: false })
             : Promise.resolve({ data: [] }),
+        supabase.from('stores').select('id, logo_url, name, phone, bank_name, bank_account, bank_holder, invoice_closing_message, invoice_closing_sub'),
     ])
 
     const orders = ordersResult.data || []
     const allProducts = productsResult.data || []
     const allAdonan = adonanResult.data || []
     const batches = batchesResult.data || []
+    const stores = storesResult.data || []
 
     return (
         <DashboardClient
@@ -40,6 +42,7 @@ export default async function DashboardPage() {
             products={allProducts}
             adonan={allAdonan}
             batches={batches}
+            stores={stores}
         />
     )
 }
