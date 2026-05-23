@@ -1,40 +1,44 @@
 # Store Dashboard
 
-Dashboard manajemen toko berbasis web — orders, invoices, products, customers, inventory, financial reports, dan lainnya. Dirancang sebagai template multi-bisnis yang bisa di-deploy ulang untuk klien berbeda.
+> Dashboard manajemen toko berbasis web — orders, invoices, products, customers, inventory, laporan keuangan, dan lainnya.
+> Dirancang sebagai **template multi-bisnis** yang bisa di-deploy ulang untuk klien berbeda.
 
 ## Tech Stack
 
-- **Next.js 16** (App Router) + TypeScript
-- **Supabase** — Auth + PostgreSQL + RLS
-- **Tailwind CSS 4**
-- **Cloudinary** — image uploads (products, logo)
-- **jsPDF / html2pdf.js** — invoice PDF generation
+| Layer | Teknologi |
+|---|---|
+| Framework | Next.js (App Router) + TypeScript |
+| Database & Auth | Supabase (PostgreSQL + RLS) |
+| Styling | Tailwind CSS 4 |
+| Image Upload | Cloudinary |
+| PDF Generation | jsPDF / html2pdf.js |
 
-## Quick Start (dev)
+## Quick Start
 
 ```bash
-cp .env.example .env.local   # fill in your Supabase + Cloudinary credentials
+cp .env.example .env.local   # isi Supabase + Cloudinary credentials
 npm install
 npm run dev                   # http://localhost:3000
 ```
 
-Buka `/setup` untuk konfigurasi awal bisnis (nama, modul, warna, bank info).
+Buka `/setup` untuk konfigurasi awal bisnis (nama toko, modul aktif, warna, info bank).
 
 ## Commands
 
 ```bash
 npm run dev      # dev server
 npm run build    # production build
-npm run lint     # ESLint
+npm run lint     # ESLint check
 ```
 
-## Deployment baru (klien baru)
+## Deployment Klien Baru
 
 Lihat **[SETUP.md](./SETUP.md)** untuk panduan lengkap:
+
 1. Fork repo → isi `.env.local` (Supabase + Cloudinary credentials)
 2. Apply `schema/core.sql` di Supabase SQL Editor
 3. Apply `schema/modules/*.sql` sesuai modul yang dibutuhkan
-4. `npm run dev` → buka `/setup` → isi wizard
+4. `npm run dev` → buka `/setup` → ikuti wizard
 
 ## Struktur Utama
 
