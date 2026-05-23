@@ -18,6 +18,18 @@ import {
 import { useBusinessConfig } from '@/lib/business-config-context'
 import { formatCurrency } from '@/lib/config'
 
+type Store = {
+    id: string
+    logo_url: string | null
+    name: string | null
+    phone: string | null
+    bank_name: string | null
+    bank_account: string | null
+    bank_holder: string | null
+    invoice_closing_message: string | null
+    invoice_closing_sub: string | null
+}
+
 type DashboardProps = {
     storeInfoId: string
     initialWidgetConfig: WidgetConfig[] | null
@@ -25,9 +37,10 @@ type DashboardProps = {
     products: any[]
     adonan: any[]
     batches: any[]
+    stores?: Store[]
 }
 
-export default function DashboardClient({ storeInfoId, initialWidgetConfig, orders, products, adonan, batches }: DashboardProps) {
+export default function DashboardClient({ storeInfoId, initialWidgetConfig, orders, products, adonan, batches, stores = [] }: DashboardProps) {
     const defaultBatchId = useMemo(() => batches.length > 0 ? batches[batches.length - 1].id : 'all', [batches])
     const [selectedBatchId, setSelectedBatchId] = useState<string>(defaultBatchId)
     const [isInitialized, setIsInitialized] = useState(false)
@@ -84,41 +97,12 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
     const [selectedOrder, setSelectedOrder] = useState<any>(null)
     const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
     const [paying, setPaying] = useState<string | null>(null)
-    const [logoBase64, setLogoBase64] = useState<string | null>(null)
-    const [logoDims, setLogoDims] = useState<{ width: number; height: number } | null>(null)
     const [searchQuery, setSearchQuery] = useState<string>('')
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
     const router = useRouter()
     const supabase = createClient()
     const config = useBusinessConfig()
     const fc = (n: number) => formatCurrency(n, config)
-
-    // Load logo for watermark
-    useEffect(() => {
-        if (!config.logo_url) return
-        const fetchLogo = async () => {
-            try {
-                const response = await fetch(config.logo_url)
-                if (!response.ok) throw new Error('Logo not found')
-                const blob = await response.blob()
-                const reader = new FileReader()
-                reader.onloadend = () => {
-                    const base64data = reader.result as string
-                    setLogoBase64(base64data)
-
-                    const img = new Image()
-                    img.onload = () => {
-                        setLogoDims({ width: img.width, height: img.height })
-                    }
-                    img.src = base64data
-                }
-                reader.readAsDataURL(blob)
-            } catch (error) {
-                console.error('Error loading logo:', error)
-            }
-        }
-        fetchLogo()
-    }, [config.logo_url])
 
     const filteredOrders = useMemo(() => {
         let result = selectedBatchId === 'all' ? orders : orders.filter(o => o.po_id === selectedBatchId)
@@ -229,48 +213,70 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
                 format: 'a4'
             })
 
-            if (logoBase64 && logoDims) {
+            // Resolve store for this order; fall back to global config for any missing field
+            const store = stores.find(s => s.id === order.store_id)
+            const invoiceName = store?.name || config.name
+            const invoicePhone = store?.phone || config.phone
+            const invoiceBankName = store?.bank_name || config.bank_name || ''
+            const invoiceBankAccount = store?.bank_account || config.bank_account || ''
+            const invoiceBankHolder = store?.bank_holder || config.bank_holder || ''
+            const invoiceClosingMsg = store?.invoice_closing_message || config.invoice_closing_message || 'Terima Kasih'
+            const invoiceClosingSub = store?.invoice_closing_sub || config.invoice_closing_sub || ''
+
+            const logoUrl = store?.logo_url || config.logo_url || null
+
+            if (logoUrl) {
                 try {
-                    const canvas = document.createElement('canvas')
-                    const ctx = canvas.getContext('2d')
-                    const img = new Image()
+                    const response = await fetch(logoUrl)
+                    if (response.ok) {
+                        const blob = await response.blob()
+                        const logoBase64 = await new Promise<string>((resolve) => {
+                            const reader = new FileReader()
+                            reader.onloadend = () => resolve(reader.result as string)
+                            reader.readAsDataURL(blob)
+                        })
+                        const logoDims = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+                            const img = new Image()
+                            img.onload = () => resolve({ width: img.width, height: img.height })
+                            img.onerror = reject
+                            img.src = logoBase64
+                        })
 
-                    await new Promise((resolve, reject) => {
-                        img.onload = resolve
-                        img.onerror = reject
-                        img.src = logoBase64
-                    })
+                        const canvas = document.createElement('canvas')
+                        const ctx = canvas.getContext('2d')
+                        const img = new Image()
+                        await new Promise((resolve, reject) => {
+                            img.onload = resolve
+                            img.onerror = reject
+                            img.src = logoBase64
+                        })
+                        canvas.width = logoDims.width
+                        canvas.height = logoDims.height
+                        ctx?.clearRect(0, 0, canvas.width, canvas.height)
+                        ctx?.drawImage(img, 0, 0)
+                        const cleanImageData = canvas.toDataURL('image/png')
 
-                    canvas.width = logoDims.width
-                    canvas.height = logoDims.height
-                    ctx?.clearRect(0, 0, canvas.width, canvas.height)
-                    ctx?.drawImage(img, 0, 0)
-                    const cleanImageData = canvas.toDataURL('image/png')
+                        const pageWidth = doc.internal.pageSize.getWidth()
+                        const pageHeight = doc.internal.pageSize.getHeight()
+                        const imgRatio = logoDims.width / logoDims.height
+                        const pageRatio = pageWidth / pageHeight
+                        let renderWidth, renderHeight
+                        if (imgRatio > pageRatio) {
+                            renderWidth = pageWidth
+                            renderHeight = pageWidth / imgRatio
+                        } else {
+                            renderHeight = pageHeight
+                            renderWidth = pageHeight * imgRatio
+                        }
+                        const x = (pageWidth - renderWidth / 1.5) / 2
+                        const y = (pageHeight - renderHeight / 1.5) / 2
 
-                    const pageWidth = doc.internal.pageSize.getWidth()
-                    const pageHeight = doc.internal.pageSize.getHeight()
-                    const imgWidth = logoDims.width
-                    const imgHeight = logoDims.height
-                    const imgRatio = imgWidth / imgHeight
-                    const pageRatio = pageWidth / pageHeight
-
-                    let renderWidth, renderHeight
-                    if (imgRatio > pageRatio) {
-                        renderWidth = pageWidth
-                        renderHeight = pageWidth / imgRatio
-                    } else {
-                        renderHeight = pageHeight
-                        renderWidth = pageHeight * imgRatio
+                        doc.saveGraphicsState()
+                        // @ts-ignore
+                        doc.setGState(new (doc as any).GState({ opacity: 0.2 }))
+                        doc.addImage(cleanImageData, 'PNG', x, y, renderWidth / 1.5, renderHeight / 1.5)
+                        doc.restoreGraphicsState()
                     }
-
-                    const x = (pageWidth - renderWidth / 1.5) / 2
-                    const y = (pageHeight - renderHeight / 1.5) / 2
-
-                    doc.saveGraphicsState()
-                    // @ts-ignore
-                    doc.setGState(new (doc as any).GState({ opacity: 0.2 }))
-                    doc.addImage(cleanImageData, 'PNG', x, y, renderWidth / 1.5, renderHeight / 1.5)
-                    doc.restoreGraphicsState()
                 } catch (error) {
                     console.error('Error adding watermark:', error)
                 }
@@ -280,11 +286,11 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
             doc.setFont('helvetica', 'bold')
             doc.text('Invoice', 200, 20, { align: 'right' })
             doc.setFontSize(16)
-            doc.text(config.name, 200, 30, { align: 'right' })
+            doc.text(invoiceName, 200, 30, { align: 'right' })
             doc.setFontSize(10)
             doc.setFont('helvetica', 'normal')
             doc.text('No HP', 200, 36, { align: 'right' })
-            doc.text(config.phone, 200, 41, { align: 'right' })
+            doc.text(invoicePhone, 200, 41, { align: 'right' })
 
             doc.setFont('helvetica', 'bold')
             doc.text('BILL TO', 10, 55)
@@ -357,18 +363,18 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
             doc.setFont('helvetica', 'normal')
             doc.setFillColor(250, 250, 250)
             doc.rect(10, yPos - 3, 190, 25, 'F')
-            if (config.bank_name || config.bank_account) {
+            if (invoiceBankName || invoiceBankAccount) {
                 doc.setFont('helvetica', 'bold')
                 doc.text('Silahkan transfer ke rekening berikut :', 12, yPos + 2)
                 doc.setFont('helvetica', 'normal')
-                doc.text(`• ${config.bank_name} : ${config.bank_account}${config.bank_holder ? ` a.n ${config.bank_holder}` : ''}`, 12, yPos + 7)
+                doc.text(`• ${invoiceBankName} : ${invoiceBankAccount}${invoiceBankHolder ? ` a.n ${invoiceBankHolder}` : ''}`, 12, yPos + 7)
                 yPos += 5
             }
             doc.setFont('helvetica', 'bold')
-            doc.text(config.invoice_closing_message, 12, yPos + 18)
-            if (config.invoice_closing_sub) {
+            doc.text(invoiceClosingMsg, 12, yPos + 18)
+            if (invoiceClosingSub) {
                 doc.setFont('helvetica', 'normal')
-                doc.text(config.invoice_closing_sub, 12, yPos + 22)
+                doc.text(invoiceClosingSub, 12, yPos + 22)
             }
 
             doc.save(`Invoice-${order.invoice_number}-${order.customer_name}.pdf`)
