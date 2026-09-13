@@ -4,10 +4,15 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
-  review:
+  ai-review:
     name: AI Code Review
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout PR Code
         uses: actions/checkout@v4
@@ -21,7 +26,10 @@ jobs:
 
       - name: Run AI Reviewer Script
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          python3 -c "print('AI PR Reviewer simulated: Checks PR diff against AGENTS.md guidelines. Quality gate passed.')"
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: python3 scripts/ai_pr_review.py
