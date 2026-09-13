@@ -20,21 +20,25 @@ export default function NewProductModal({ isOpen, onClose, onSaveProduct }: NewP
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !price || parseInt(price) <= 0) {
+    const parsedPrice = Number(price);
+    if (!name.trim() || isNaN(parsedPrice) || parsedPrice <= 0) {
       alert('Harap isi Nama dan Harga produk secara benar!');
       return;
     }
 
     const newProduct: CatalogProduct = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name: name.trim(),
-      price: parseInt(price),
+      price: parsedPrice,
       category: category,
+      doughRecipe: doughRecipe,
     };
 
     onSaveProduct(newProduct);
     setName('');
     setPrice('');
+    setCategory('Sourdough');
+    setDoughRecipe('Soft Bread Base (120g/unit)');
     onClose();
   };
 
