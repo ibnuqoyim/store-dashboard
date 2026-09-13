@@ -103,7 +103,7 @@ export default function ProductPosCart({
               className="bg-amber-50/40 hover:bg-amber-100/60 border border-amber-200/80 rounded-lg p-2 transition flex flex-col justify-between cursor-pointer group shadow-2xs"
             >
               <div>
-                <span class="text-[9px] text-amber-800 font-semibold bg-amber-100 px-1 py-0.2 rounded">{p.category}</span>
+                <span className="text-[9px] text-amber-800 font-semibold bg-amber-100 px-1 py-0.2 rounded">{p.category}</span>
                 <h4 className="font-bold text-xs text-gray-800 mt-0.5 line-clamp-1 group-hover:text-amber-900">{p.name}</h4>
                 <p className="text-[11px] font-semibold text-amber-700">Rp {p.price.toLocaleString('id-ID')}</p>
               </div>
