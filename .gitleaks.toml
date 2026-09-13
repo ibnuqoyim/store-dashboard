@@ -1,0 +1,6 @@
+[allowlist]
+description = "Global allowlist"
+paths = [
+    '''gitleaks.toml''',
+    '''.env.example'''
+]
