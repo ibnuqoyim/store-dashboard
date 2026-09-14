@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react';
 import { PackageSearch, Search, Plus, ShoppingBag, Trash2, CheckCircle2 } from 'lucide-react';
+import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
 
 export interface CatalogProduct {
   id: string;
   name: string;
   price: number;
   category: string;
+  doughRecipe?: string;
 }
 
 export interface CartItem {
@@ -27,7 +29,7 @@ interface ProductPosCartProps {
   onUpdateQty: (index: number, delta: number) => void;
   onUpdateInlinePrice: (index: number, newPrice: number) => void;
   onClearCart: () => void;
-  onSubmitOrder: (payStatus: string, payMethod: string) => void;
+  onSubmitOrder: (payStatus: 'PAID' | 'DP' | 'UNPAID', payMethod: 'QRIS' | 'Transfer BCA' | 'Cash') => void;
 }
 
 export default function ProductPosCart({
@@ -42,8 +44,10 @@ export default function ProductPosCart({
 }: ProductPosCartProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [payStatus, setPayStatus] = useState('PAID');
-  const [payMethod, setPayMethod] = useState('QRIS');
+  const [payStatus, setPayStatus] = useState<'PAID' | 'DP' | 'UNPAID'>('PAID');
+  const [payMethod, setPayMethod] = useState<'QRIS' | 'Transfer BCA' | 'Cash'>('QRIS');
+
+  const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
 
   const filteredCatalog = catalog.filter((p) => {
     const matchCat = selectedCategory === 'all' || p.category === selectedCategory;
@@ -105,7 +109,7 @@ export default function ProductPosCart({
               <div>
                 <span className="text-[9px] text-amber-800 font-semibold bg-amber-100 px-1 py-0.2 rounded">{p.category}</span>
                 <h4 className="font-bold text-xs text-gray-800 mt-0.5 line-clamp-1 group-hover:text-amber-900">{p.name}</h4>
-                <p className="text-[11px] font-semibold text-amber-700">Rp {p.price.toLocaleString('id-ID')}</p>
+                <p className="text-[11px] font-semibold text-amber-700">{fc(p.price)}</p>
               </div>
               <button className="mt-1 text-[10px] bg-white hover:bg-amber-600 hover:text-white border border-amber-300 text-amber-900 font-bold py-0.5 px-1.5 rounded transition flex items-center justify-center gap-0.5 w-full">
                 <Plus className="w-3 h-3" /> Tambah
@@ -136,7 +140,7 @@ export default function ProductPosCart({
             </div>
           ) : (
             cart.map((item, idx) => (
-              <div key={idx} className="bg-white p-2 rounded-lg border border-gray-200 flex items-center justify-between text-xs shadow-2xs gap-2">
+              <div key={item.productId || idx} className="bg-white p-2 rounded-lg border border-gray-200 flex items-center justify-between text-xs shadow-2xs gap-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-1">
                     <span className="font-bold text-gray-800 line-clamp-1">{item.name}</span>
@@ -147,7 +151,7 @@ export default function ProductPosCart({
                     <input
                       type="number"
                       value={item.price}
-                      onChange={(e) => onUpdateInlinePrice(idx, parseInt(e.target.value) || 0)}
+                      onChange={(e) => onUpdateInlinePrice(idx, Number(e.target.value) || 0)}
                       className="w-20 px-1.5 py-0.5 bg-amber-50/80 font-bold text-amber-900 border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-500 text-xs"
                     />
                   </div>
@@ -159,7 +163,7 @@ export default function ProductPosCart({
                     <button onClick={() => onUpdateQty(idx, 1)} className="px-1.5 py-0.5 hover:bg-gray-200 font-bold">+</button>
                   </div>
                   <span className="font-extrabold text-amber-800 min-w-[65px] text-right">
-                    Rp {(item.price * item.qty).toLocaleString('id-ID')}
+                    {fc(item.price * item.qty)}
                   </span>
                 </div>
               </div>
@@ -172,15 +176,15 @@ export default function ProductPosCart({
           <div className="space-y-1 text-xs">
             <div className="flex justify-between items-center text-gray-600">
               <span>Subtotal Produk:</span>
-              <span className="font-semibold">Rp {subtotal.toLocaleString('id-ID')}</span>
+              <span className="font-semibold">{fc(subtotal)}</span>
             </div>
             <div className="flex justify-between items-center text-gray-600">
               <span>Ongkos Kirim:</span>
-              <span className="font-semibold text-amber-800">Rp {(shippingFee || 0).toLocaleString('id-ID')}</span>
+              <span className="font-semibold text-amber-800">{fc(shippingFee || 0)}</span>
             </div>
             <div className="flex justify-between items-center text-sm font-bold text-gray-900 border-t border-amber-200/80 pt-1">
               <span>Total Tagihan:</span>
-              <span className="text-base text-amber-900 font-extrabold">Rp {grandTotal.toLocaleString('id-ID')}</span>
+              <span className="text-base text-amber-900 font-extrabold">{fc(grandTotal)}</span>
             </div>
           </div>
 
@@ -189,7 +193,7 @@ export default function ProductPosCart({
               <label className="block text-[10px] font-semibold text-gray-600 mb-0.5">Status Pembayaran</label>
               <select
                 value={payStatus}
-                onChange={(e) => setPayStatus(e.target.value)}
+                onChange={(e) => setPayStatus(e.target.value as 'PAID' | 'DP' | 'UNPAID')}
                 className="w-full bg-white border border-gray-300 rounded p-1 text-xs font-bold"
               >
                 <option value="PAID">Lunas (Paid)</option>
@@ -201,7 +205,7 @@ export default function ProductPosCart({
               <label className="block text-[10px] font-semibold text-gray-600 mb-0.5">Cara Bayar</label>
               <select
                 value={payMethod}
-                onChange={(e) => setPayMethod(e.target.value)}
+                onChange={(e) => setPayMethod(e.target.value as 'QRIS' | 'Transfer BCA' | 'Cash')}
                 className="w-full bg-white border border-gray-300 rounded p-1 text-xs"
               >
                 <option value="QRIS">QRIS / Instant</option>

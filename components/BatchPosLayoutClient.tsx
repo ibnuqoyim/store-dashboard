@@ -6,6 +6,7 @@ import CustomerShippingForm, { CustomerShippingData } from './CustomerShippingFo
 import ProductPosCart, { CatalogProduct, CartItem } from './ProductPosCart';
 import NewProductModal from './NewProductModal';
 import BatchOrdersList, { BatchOrder } from './BatchOrdersList';
+import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
 
 const INITIAL_CATALOG: CatalogProduct[] = [
   { id: '1', name: 'Milk Bread', price: 40000, category: 'Sourdough' },
@@ -84,6 +85,8 @@ export default function BatchPosLayoutClient() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [batchOrders, setBatchOrders] = useState<BatchOrder[]>(INITIAL_ORDERS);
 
+  const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
+
   const handleAddToCart = (product: CatalogProduct) => {
     setCart((prev) => {
       const idx = prev.findIndex((item) => item.productId === product.id);
@@ -141,7 +144,7 @@ export default function BatchPosLayoutClient() {
     alert(`Produk "${newProduct.name}" ditambahkan ke POS!`);
   };
 
-  const handleSubmitOrder = (payStatus: string, payMethod: string) => {
+  const handleSubmitOrder = (payStatus: 'PAID' | 'DP' | 'UNPAID', payMethod: 'QRIS' | 'Transfer BCA' | 'Cash') => {
     if (!customerShipping.customerName) {
       alert('Harap isi Nama Pembeli terlebih dahulu!');
       return;
@@ -155,23 +158,23 @@ export default function BatchPosLayoutClient() {
     const total = subtotal + customerShipping.shippingFee;
 
     const newOrder: BatchOrder = {
-      id: `ORD-${Math.floor(100 + Math.random() * 900)}`,
+      id: `ORD-${Date.now().toString().slice(-4)}`,
       customerName: customerShipping.customerName,
       phone: customerShipping.customerPhone || '-',
       shipping: customerShipping.shippingMethod,
       shippingFee: customerShipping.shippingFee,
       time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
-      items: JSON.parse(JSON.stringify(cart)),
+      items: structuredClone(cart),
       subtotal,
       total,
-      payStatus: payStatus as any,
-      payMethod: payMethod as any,
+      payStatus,
+      payMethod,
       orderStatus: 'PENDING',
     };
 
     setBatchOrders((prev) => [newOrder, ...prev]);
     handleClearCart();
-    alert(`Order ${newOrder.id} berhasil ditambahkan ke ${activeBatch}!`);
+    alert(`Order ${newOrder.id} berhasil ditambahkan ke ${activeBatch}!\nTotal: ${fc(total)}`);
   };
 
   const handleUpdateOrderStatus = (orderId: string, newStatus: 'PENDING' | 'IN PREP' | 'READY') => {

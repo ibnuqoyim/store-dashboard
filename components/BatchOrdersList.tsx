@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ListChecks, Search, Printer, CheckCircle2, Clock, ChefHat } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { ListChecks, Search, Printer } from 'lucide-react';
 import { CartItem } from './ProductPosCart';
+import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
 
 export interface BatchOrder {
   id: string;
@@ -33,13 +34,17 @@ export default function BatchOrdersList({
   const [searchVal, setSearchVal] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  const filteredOrders = orders.filter((o) => {
-    const matchSearch =
-      o.customerName.toLowerCase().includes(searchVal.toLowerCase()) ||
-      o.id.toLowerCase().includes(searchVal.toLowerCase());
-    const matchStatus = statusFilter === 'ALL' || o.orderStatus === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((o) => {
+      const matchSearch =
+        o.customerName.toLowerCase().includes(searchVal.toLowerCase()) ||
+        o.id.toLowerCase().includes(searchVal.toLowerCase());
+      const matchStatus = statusFilter === 'ALL' || o.orderStatus === statusFilter;
+      return matchSearch && matchStatus;
+    });
+  }, [orders, searchVal, statusFilter]);
 
   return (
     <div className="flex flex-col gap-3 h-full">
@@ -127,10 +132,10 @@ export default function BatchOrdersList({
                     <p className="text-[11px] text-gray-500">{o.phone}</p>
                   </div>
                   <div className="text-right">
-                    <span className="font-extrabold text-amber-800 block">Rp {o.total.toLocaleString('id-ID')}</span>
+                    <span className="font-extrabold text-amber-800 block">{fc(o.total)}</span>
                     {o.shippingFee > 0 && (
                       <span className="text-[10px] text-gray-400 font-medium">
-                        (Ongkir Rp {o.shippingFee.toLocaleString('id-ID')})
+                        (Ongkir {fc(o.shippingFee)})
                       </span>
                     )}
                   </div>
@@ -138,13 +143,13 @@ export default function BatchOrdersList({
 
                 {/* Items detail list */}
                 <div className="bg-white p-2 rounded-lg border border-gray-100 text-[11px] space-y-1">
-                  {o.items.map((it, idx) => (
-                    <div key={idx} className="flex justify-between text-gray-600">
+                  {o.items.map((it) => (
+                    <div key={it.productId} className="flex justify-between text-gray-600">
                       <span>
                         {it.qty}x {it.name}{' '}
                         {it.isCustom && <span className="text-[9px] text-amber-700 font-semibold">(Custom Price)</span>}
                       </span>
-                      <span>Rp {(it.price * it.qty).toLocaleString('id-ID')}</span>
+                      <span>{fc(it.price * it.qty)}</span>
                     </div>
                   ))}
                 </div>
@@ -155,7 +160,7 @@ export default function BatchOrdersList({
                     <span className="text-gray-500">Status:</span>
                     <select
                       value={o.orderStatus}
-                      onChange={(e) => onUpdateOrderStatus(o.id, e.target.value as any)}
+                      onChange={(e) => onUpdateOrderStatus(o.id, e.target.value as 'PENDING' | 'IN PREP' | 'READY')}
                       className="bg-white border border-gray-300 rounded font-semibold text-[11px] p-1"
                     >
                       <option value="PENDING">PENDING ⏳</option>
