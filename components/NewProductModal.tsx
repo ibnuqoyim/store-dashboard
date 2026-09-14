@@ -2,11 +2,7 @@
 
 import React, { useState } from 'react';
 import { PlusCircle, X, Save, Info } from 'lucide-react';
-<<<<<<< HEAD
 import { CatalogProduct } from '@/lib/types/batch';
-=======
-import { CatalogProduct } from './ProductPosCart';
->>>>>>> main
 
 interface NewProductModalProps {
   isOpen: boolean;
