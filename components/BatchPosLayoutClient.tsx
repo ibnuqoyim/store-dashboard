@@ -6,6 +6,7 @@ import CustomerShippingForm from './CustomerShippingForm';
 import ProductPosCart from './ProductPosCart';
 import NewProductModal from './NewProductModal';
 import BatchOrdersList from './BatchOrdersList';
+import BatchDoughResume from './BatchDoughResume';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
 import { CatalogProduct, CartItem, CustomerShippingData, BatchOrder, PayStatus, PayMethod, OrderStatus } from '@/lib/types/batch';
 import { INITIAL_CATALOG, INITIAL_ORDERS } from '@/lib/mock/batch-pos-mock';
@@ -98,7 +99,6 @@ export default function BatchPosLayoutClient() {
     const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
     const total = subtotal + customerShipping.shippingFee;
 
-    // Use robust unique ID generator for order
     const orderId = `ORD-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
 
     const newOrder: BatchOrder = {
@@ -139,6 +139,7 @@ export default function BatchPosLayoutClient() {
       />
 
       <main className="max-w-[1700px] mx-auto w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* COLUMN 1: POS INPUT (Task 4, 5, 6) */}
         <section className="lg:col-span-5 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 flex flex-col gap-3.5">
           <CustomerShippingForm data={customerShipping} onChange={setCustomerShipping} />
           <ProductPosCart
@@ -153,6 +154,7 @@ export default function BatchPosLayoutClient() {
           />
         </section>
 
+        {/* COLUMN 2: BATCH ORDERS LIST (Task 7) */}
         <section className="lg:col-span-4 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]">
           <BatchOrdersList
             orders={batchOrders}
@@ -161,9 +163,9 @@ export default function BatchPosLayoutClient() {
           />
         </section>
 
+        {/* COLUMN 3: BATCH & DOUGH RESUME (Task 8) */}
         <section className="lg:col-span-3 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]">
-          <h2 className="font-bold text-gray-800 text-base border-b pb-2">3. Rekap Batch & Adonan</h2>
-          <p className="text-xs text-gray-400 mt-2">Container Resume Akumulasi Adonan Dapur (Task 8)</p>
+          <BatchDoughResume orders={batchOrders} activeBatch={activeBatch} />
         </section>
       </main>
 

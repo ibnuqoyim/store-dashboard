@@ -1,0 +1,15 @@
+## 📋 Deskripsi PR (Task 8)
+
+### 🔴 As-Is (Kondisi Sebelumnya)
+Kolom ke-3 pada layout POS Batch masih berupa placeholder container statis (`Container Resume Akumulasi Adonan Dapur`) tanpa kalkulasi data riil.
+
+### 🟢 Expected (Hasil yang Diharapkan)
+Kolom ke-3 menampilkan komponen `BatchDoughResume` yang terhubung secara real-time ke service `BatchDoughCalculatorService`:
+- Total Pcs Roti & Estimasi Omzet Batch.
+- Ringkasan kebutuhan adonan dapur (Total berat adonan Kg, Tepung Flour Kg, Air Liter, Levain Kg).
+- Ringkasan kebutuhan isian/filling (Cream Cheese Kg, Choco Chips Kg).
+- Tabel breakdown akumulasi Pcs dan omzet per varian produk.
+
+### 🛠️ Changes (Perubahan Kode)
+- **File Baru**: `components/BatchDoughResume.tsx` (Komponen rekap adonan dapur & produk).
+- **Update Component**: `components/BatchPosLayoutClient.tsx` (Integrasi `BatchDoughResume` ke kolom 3 layout).
