@@ -11,9 +11,10 @@ interface BatchDoughResumeProps {
   activeBatch: string;
 }
 
-export default function BatchDoughResume({ orders, activeBatch }: BatchDoughResumeProps) {
-  const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
+// Move formatCurrency helper to module scope to avoid re-allocation on every render
+const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
 
+export default function BatchDoughResume({ orders, activeBatch }: BatchDoughResumeProps) {
   // Transform BatchOrder array to OrderCreatePayload for BatchDoughCalculatorService
   const reqSummary = useMemo(() => {
     const payloadOrders: OrderCreatePayload[] = orders.map((o) => ({
@@ -36,23 +37,20 @@ export default function BatchDoughResume({ orders, activeBatch }: BatchDoughResu
     return BatchDoughCalculatorService.calculateBatchRequirements(payloadOrders);
   }, [orders, activeBatch]);
 
-  // Summarize Product Item Totals
+  // Summarize Product Item Totals aggregated by productId for accuracy
   const productSummary = useMemo(() => {
-    const summaryMap: Record<string, { qty: number; totalPrice: number }> = {};
+    const summaryMap: Record<string, { productId: string; name: string; qty: number; totalPrice: number }> = {};
     orders.forEach((o) => {
       o.items.forEach((it) => {
-        if (!summaryMap[it.name]) {
-          summaryMap[it.name] = { qty: 0, totalPrice: 0 };
+        const key = it.productId || it.name;
+        if (!summaryMap[key]) {
+          summaryMap[key] = { productId: it.productId, name: it.name, qty: 0, totalPrice: 0 };
         }
-        summaryMap[it.name].qty += it.qty;
-        summaryMap[it.name].totalPrice += it.price * it.qty;
+        summaryMap[key].qty += it.qty;
+        summaryMap[key].totalPrice += it.price * it.qty;
       });
     });
-    return Object.entries(summaryMap).map(([name, data]) => ({
-      name,
-      qty: data.qty,
-      totalPrice: data.totalPrice,
-    }));
+    return Object.values(summaryMap);
   }, [orders]);
 
   const totalBatchPcs = useMemo(
@@ -60,8 +58,9 @@ export default function BatchDoughResume({ orders, activeBatch }: BatchDoughResu
     [orders]
   );
 
-  const totalRevenue = useMemo(
-    () => orders.reduce((sum, o) => sum + o.total, 0),
+  // Total Revenue (excl. shipping fee for pure product sales revenue accuracy)
+  const totalProductRevenue = useMemo(
+    () => orders.reduce((sum, o) => sum + o.subtotal, 0),
     [orders]
   );
 
@@ -86,8 +85,8 @@ export default function BatchDoughResume({ orders, activeBatch }: BatchDoughResu
           <p className="text-lg font-extrabold text-amber-950 mt-0.5">{totalBatchPcs} <span className="text-xs font-normal">Pcs</span></p>
         </div>
         <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
-          <span className="text-[10px] text-emerald-800 uppercase tracking-wider font-bold">Estimasi Omzet</span>
-          <p className="text-sm font-extrabold text-emerald-950 mt-1">{fc(totalRevenue)}</p>
+          <span className="text-[10px] text-emerald-800 uppercase tracking-wider font-bold">Omzet Produk (Net)</span>
+          <p className="text-sm font-extrabold text-emerald-950 mt-1">{fc(totalProductRevenue)}</p>
         </div>
       </div>
 
@@ -99,46 +98,46 @@ export default function BatchDoughResume({ orders, activeBatch }: BatchDoughResu
             <span>Adonan & Bahan Mentah Dapur</span>
           </h3>
           <span className="text-[10px] bg-amber-800 text-amber-200 px-1.5 py-0.5 rounded font-bold">
-            {reqSummary.baseDoughName}
+            {reqSummary.baseDoughName || 'Sourdough Base'}
           </span>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="bg-amber-900/60 p-2 rounded-lg border border-amber-800/60">
             <span className="text-[10px] text-amber-300 block">Total Berat Adonan</span>
-            <span className="text-sm font-extrabold text-white">{reqSummary.totalWeightKg} Kg</span>
+            <span className="text-sm font-extrabold text-white">{reqSummary.totalWeightKg || 0} Kg</span>
           </div>
           <div className="bg-amber-900/60 p-2 rounded-lg border border-amber-800/60">
             <span className="text-[10px] text-amber-300 block">Tepung (Flour)</span>
-            <span className="text-sm font-extrabold text-white">{reqSummary.ingredients.flourKg} Kg</span>
+            <span className="text-sm font-extrabold text-white">{reqSummary.ingredients?.flourKg || 0} Kg</span>
           </div>
           <div className="bg-amber-900/60 p-2 rounded-lg border border-amber-800/60">
             <span className="text-[10px] text-amber-300 block flex items-center gap-1">
               <Droplets className="w-3 h-3 text-blue-300" /> Air (Water)
             </span>
-            <span className="text-xs font-bold text-white">{reqSummary.ingredients.waterLiter} Liter</span>
+            <span className="text-xs font-bold text-white">{reqSummary.ingredients?.waterLiter || 0} Liter</span>
           </div>
           <div className="bg-amber-900/60 p-2 rounded-lg border border-amber-800/60">
             <span className="text-[10px] text-amber-300 block flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-amber-400" /> Levain Aktif
             </span>
-            <span className="text-xs font-bold text-white">{reqSummary.ingredients.levainActiveKg} Kg</span>
+            <span className="text-xs font-bold text-white">{reqSummary.ingredients?.levainActiveKg || 0} Kg</span>
           </div>
         </div>
 
         {/* Fillings summary if available */}
-        {((reqSummary.fillings.creamCheeseKg ?? 0) > 0 || (reqSummary.fillings.chocoChipsKg ?? 0) > 0) && (
+        {((reqSummary.fillings?.creamCheeseKg ?? 0) > 0 || (reqSummary.fillings?.chocoChipsKg ?? 0) > 0) && (
           <div className="border-t border-amber-800/80 pt-2 text-[11px] space-y-1">
             <span className="text-[10px] text-amber-400 font-bold block uppercase tracking-wide">Kebutuhan Isian / Filling:</span>
             <div className="flex flex-wrap gap-2">
-              {(reqSummary.fillings.creamCheeseKg ?? 0) > 0 && (
+              {(reqSummary.fillings?.creamCheeseKg ?? 0) > 0 && (
                 <span className="bg-amber-800/80 px-2 py-0.5 rounded text-amber-100 font-medium">
-                  🧀 Cream Cheese: {reqSummary.fillings.creamCheeseKg} Kg
+                  🧀 Cream Cheese: {reqSummary.fillings?.creamCheeseKg} Kg
                 </span>
               )}
-              {(reqSummary.fillings.chocoChipsKg ?? 0) > 0 && (
+              {(reqSummary.fillings?.chocoChipsKg ?? 0) > 0 && (
                 <span className="bg-amber-800/80 px-2 py-0.5 rounded text-amber-100 font-medium">
-                  🍫 Choco Chips: {reqSummary.fillings.chocoChipsKg} Kg
+                  🍫 Choco Chips: {reqSummary.fillings?.chocoChipsKg} Kg
                 </span>
               )}
             </div>
@@ -158,7 +157,7 @@ export default function BatchDoughResume({ orders, activeBatch }: BatchDoughResu
             <div className="text-center py-4 text-gray-400 text-xs">Belum ada item di batch ini</div>
           ) : (
             productSummary.map((p) => (
-              <div key={p.name} className="flex justify-between items-center bg-white p-2 rounded-lg border border-gray-200">
+              <div key={p.productId || p.name} className="flex justify-between items-center bg-white p-2 rounded-lg border border-gray-200">
                 <div>
                   <span className="font-bold text-gray-800 block">{p.name}</span>
                   <span className="text-[10px] text-gray-400 font-semibold">{p.qty} Pcs diproduksi</span>
