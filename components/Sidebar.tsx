@@ -1,4 +1,3 @@
-
 'use client'
 
 import Link from 'next/link'
@@ -6,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
     LayoutDashboard, ShoppingBag, Wheat, ClipboardList, Truck,
     LogOut, Menu, X, Users, FileText, MessageSquare, Settings,
-    DollarSign, Package, Receipt, ChevronRight, BookOpen, Factory, Bot, Store,
+    DollarSign, Package, Receipt, ChevronRight, BookOpen, Factory, Bot, Store, ShoppingCart
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -17,6 +16,7 @@ import { MODULE_REGISTRY, CATEGORY_ORDER, getEnabledModules, type ModuleId } fro
 
 // Icon lookup per module
 const MODULE_ICONS: Record<ModuleId, any> = {
+    'batch-pos':   ShoppingCart,
     orders:       ClipboardList,
     products:     ShoppingBag,
     customers:    Users,

@@ -1,0 +1,12 @@
+## 📋 Deskripsi PR (Task 9)
+
+### 🔴 As-Is (Kondisi Sebelumnya)
+Halaman modul baru `Batch POS` (`/batch-pos`) belum terdaftar pada registri navigasi modul `lib/modules.ts` dan belum muncul pada menu Sidebar navigasi kiri dashboard.
+
+### 🟢 Expected (Hasil yang Diharapkan)
+- Modul `batch-pos` terdaftar pada `MODULE_REGISTRY` dan `MODULE_PRESETS` di `lib/modules.ts` (Kategori `Sales & Orders`).
+- Menu navigasi **Batch POS** (`/batch-pos`) muncul pada Sidebar kiri dashboard dengan ikon `ShoppingCart` dan terintegrasi dengan module toggle permission.
+
+### 🛠️ Changes (Perubahan Kode)
+- **Update Core**: `lib/modules.ts` (Menambahkan `batch-pos` ke `ModuleId`, `MODULE_REGISTRY`, dan `MODULE_PRESETS`).
+- **Update Component**: `components/Sidebar.tsx` (Menambahkan registri icon `ShoppingCart` untuk `batch-pos`).
