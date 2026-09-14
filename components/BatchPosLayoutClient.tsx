@@ -2,72 +2,13 @@
 
 import React, { useState } from 'react';
 import BatchPosHeader from './BatchPosHeader';
-import CustomerShippingForm, { CustomerShippingData } from './CustomerShippingForm';
-import ProductPosCart, { CatalogProduct, CartItem } from './ProductPosCart';
+import CustomerShippingForm from './CustomerShippingForm';
+import ProductPosCart from './ProductPosCart';
 import NewProductModal from './NewProductModal';
-import BatchOrdersList, { BatchOrder } from './BatchOrdersList';
+import BatchOrdersList from './BatchOrdersList';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
-
-const INITIAL_CATALOG: CatalogProduct[] = [
-  { id: '1', name: 'Milk Bread', price: 40000, category: 'Sourdough' },
-  { id: '2', name: 'Earl Grey CC Mini', price: 12500, category: 'Sweet Bread' },
-  { id: '3', name: 'Chocobanana', price: 35000, category: 'Sweet Bread' },
-  { id: '4', name: 'Burger Bun (Pack)', price: 35000, category: 'Sourdough' },
-  { id: '5', name: 'Paket Mini Isi 4', price: 50000, category: 'Paket' },
-  { id: '6', name: 'Paket Mini Isi 8', price: 100000, category: 'Paket' },
-];
-
-const INITIAL_ORDERS: BatchOrder[] = [
-  {
-    id: 'ORD-101',
-    customerName: 'Pak Ahmad',
-    phone: '08123456789',
-    shipping: 'Ahsan',
-    shippingFee: 15000,
-    time: '08:30 WIB',
-    items: [
-      { productId: '1', name: 'Milk Bread', qty: 2, price: 40000, normalPrice: 40000, isCustom: false },
-      { productId: '2', name: 'Earl Grey CC Mini', qty: 4, price: 12500, normalPrice: 12500, isCustom: false },
-    ],
-    subtotal: 130000,
-    total: 145000,
-    payStatus: 'PAID',
-    payMethod: 'QRIS',
-    orderStatus: 'READY',
-  },
-  {
-    id: 'ORD-102',
-    customerName: 'Ibu Siska',
-    phone: '087722732214',
-    shipping: 'TIKI',
-    shippingFee: 20000,
-    time: '09:15 WIB',
-    items: [
-      { productId: '6', name: 'Paket Mini Isi 8', qty: 1, price: 100000, normalPrice: 100000, isCustom: false },
-    ],
-    subtotal: 100000,
-    total: 120000,
-    payStatus: 'DP',
-    payMethod: 'Transfer BCA',
-    orderStatus: 'IN PREP',
-  },
-  {
-    id: 'ORD-103',
-    customerName: 'Warung Bu Maya',
-    phone: '08198765432',
-    shipping: 'COD',
-    shippingFee: 0,
-    time: '09:40 WIB',
-    items: [
-      { productId: '4', name: 'Burger Bun (Pack)', qty: 10, price: 30000, normalPrice: 35000, isCustom: true },
-    ],
-    subtotal: 300000,
-    total: 300000,
-    payStatus: 'UNPAID',
-    payMethod: 'Cash',
-    orderStatus: 'PENDING',
-  },
-];
+import { CatalogProduct, CartItem, CustomerShippingData, BatchOrder, PayStatus, PayMethod, OrderStatus } from '@/lib/types/batch';
+import { INITIAL_CATALOG, INITIAL_ORDERS } from '@/lib/mock/batch-pos-mock';
 
 export default function BatchPosLayoutClient() {
   const [activeBatch, setActiveBatch] = useState('BATCH-20260915-PAGI');
@@ -144,7 +85,7 @@ export default function BatchPosLayoutClient() {
     alert(`Produk "${newProduct.name}" ditambahkan ke POS!`);
   };
 
-  const handleSubmitOrder = (payStatus: 'PAID' | 'DP' | 'UNPAID', payMethod: 'QRIS' | 'Transfer BCA' | 'Cash') => {
+  const handleSubmitOrder = (payStatus: PayStatus, payMethod: PayMethod) => {
     if (!customerShipping.customerName) {
       alert('Harap isi Nama Pembeli terlebih dahulu!');
       return;
@@ -164,7 +105,7 @@ export default function BatchPosLayoutClient() {
       shipping: customerShipping.shippingMethod,
       shippingFee: customerShipping.shippingFee,
       time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
-      items: structuredClone(cart),
+      items: cart.map((i) => ({ ...i })),
       subtotal,
       total,
       payStatus,
@@ -177,7 +118,7 @@ export default function BatchPosLayoutClient() {
     alert(`Order ${newOrder.id} berhasil ditambahkan ke ${activeBatch}!\nTotal: ${fc(total)}`);
   };
 
-  const handleUpdateOrderStatus = (orderId: string, newStatus: 'PENDING' | 'IN PREP' | 'READY') => {
+  const handleUpdateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
     setBatchOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, orderStatus: newStatus } : o))
     );

@@ -3,23 +3,7 @@
 import React, { useState } from 'react';
 import { PackageSearch, Search, Plus, ShoppingBag, Trash2, CheckCircle2 } from 'lucide-react';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
-
-export interface CatalogProduct {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  doughRecipe?: string;
-}
-
-export interface CartItem {
-  productId: string;
-  name: string;
-  normalPrice: number;
-  price: number;
-  qty: number;
-  isCustom: boolean;
-}
+import { CatalogProduct, CartItem, PayStatus, PayMethod } from '@/lib/types/batch';
 
 interface ProductPosCartProps {
   catalog: CatalogProduct[];
@@ -29,7 +13,7 @@ interface ProductPosCartProps {
   onUpdateQty: (index: number, delta: number) => void;
   onUpdateInlinePrice: (index: number, newPrice: number) => void;
   onClearCart: () => void;
-  onSubmitOrder: (payStatus: 'PAID' | 'DP' | 'UNPAID', payMethod: 'QRIS' | 'Transfer BCA' | 'Cash') => void;
+  onSubmitOrder: (payStatus: PayStatus, payMethod: PayMethod) => void;
 }
 
 export default function ProductPosCart({
@@ -44,8 +28,8 @@ export default function ProductPosCart({
 }: ProductPosCartProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [payStatus, setPayStatus] = useState<'PAID' | 'DP' | 'UNPAID'>('PAID');
-  const [payMethod, setPayMethod] = useState<'QRIS' | 'Transfer BCA' | 'Cash'>('QRIS');
+  const [payStatus, setPayStatus] = useState<PayStatus>('PAID');
+  const [payMethod, setPayMethod] = useState<PayMethod>('QRIS');
 
   const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
 
@@ -140,7 +124,7 @@ export default function ProductPosCart({
             </div>
           ) : (
             cart.map((item, idx) => (
-              <div key={item.productId || idx} className="bg-white p-2 rounded-lg border border-gray-200 flex items-center justify-between text-xs shadow-2xs gap-2">
+              <div key={`${item.productId}-${idx}`} className="bg-white p-2 rounded-lg border border-gray-200 flex items-center justify-between text-xs shadow-2xs gap-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-1">
                     <span className="font-bold text-gray-800 line-clamp-1">{item.name}</span>
@@ -193,7 +177,7 @@ export default function ProductPosCart({
               <label className="block text-[10px] font-semibold text-gray-600 mb-0.5">Status Pembayaran</label>
               <select
                 value={payStatus}
-                onChange={(e) => setPayStatus(e.target.value as 'PAID' | 'DP' | 'UNPAID')}
+                onChange={(e) => setPayStatus(e.target.value as PayStatus)}
                 className="w-full bg-white border border-gray-300 rounded p-1 text-xs font-bold"
               >
                 <option value="PAID">Lunas (Paid)</option>
@@ -205,7 +189,7 @@ export default function ProductPosCart({
               <label className="block text-[10px] font-semibold text-gray-600 mb-0.5">Cara Bayar</label>
               <select
                 value={payMethod}
-                onChange={(e) => setPayMethod(e.target.value as 'QRIS' | 'Transfer BCA' | 'Cash')}
+                onChange={(e) => setPayMethod(e.target.value as PayMethod)}
                 className="w-full bg-white border border-gray-300 rounded p-1 text-xs"
               >
                 <option value="QRIS">QRIS / Instant</option>

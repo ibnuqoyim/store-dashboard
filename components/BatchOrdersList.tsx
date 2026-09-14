@@ -2,27 +2,12 @@
 
 import React, { useState, useMemo } from 'react';
 import { ListChecks, Search, Printer } from 'lucide-react';
-import { CartItem } from './ProductPosCart';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
-
-export interface BatchOrder {
-  id: string;
-  customerName: string;
-  phone: string;
-  shipping: 'Ahsan' | 'TIKI' | 'COD' | 'Ambil Sendiri';
-  shippingFee: number;
-  time: string;
-  items: CartItem[];
-  subtotal: number;
-  total: number;
-  payStatus: 'PAID' | 'DP' | 'UNPAID';
-  payMethod: 'QRIS' | 'Transfer BCA' | 'Cash';
-  orderStatus: 'PENDING' | 'IN PREP' | 'READY';
-}
+import { BatchOrder, OrderStatus } from '@/lib/types/batch';
 
 interface BatchOrdersListProps {
   orders: BatchOrder[];
-  onUpdateOrderStatus: (orderId: string, newStatus: 'PENDING' | 'IN PREP' | 'READY') => void;
+  onUpdateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
   onPrintReceipt?: (orderId: string) => void;
 }
 
@@ -143,8 +128,8 @@ export default function BatchOrdersList({
 
                 {/* Items detail list */}
                 <div className="bg-white p-2 rounded-lg border border-gray-100 text-[11px] space-y-1">
-                  {o.items.map((it) => (
-                    <div key={it.productId} className="flex justify-between text-gray-600">
+                  {o.items.map((it, idx) => (
+                    <div key={`${it.productId}-${idx}`} className="flex justify-between text-gray-600">
                       <span>
                         {it.qty}x {it.name}{' '}
                         {it.isCustom && <span className="text-[9px] text-amber-700 font-semibold">(Custom Price)</span>}
@@ -160,7 +145,7 @@ export default function BatchOrdersList({
                     <span className="text-gray-500">Status:</span>
                     <select
                       value={o.orderStatus}
-                      onChange={(e) => onUpdateOrderStatus(o.id, e.target.value as 'PENDING' | 'IN PREP' | 'READY')}
+                      onChange={(e) => onUpdateOrderStatus(o.id, e.target.value as OrderStatus)}
                       className="bg-white border border-gray-300 rounded font-semibold text-[11px] p-1"
                     >
                       <option value="PENDING">PENDING ⏳</option>
