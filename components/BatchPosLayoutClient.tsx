@@ -98,8 +98,11 @@ export default function BatchPosLayoutClient() {
     const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
     const total = subtotal + customerShipping.shippingFee;
 
+    // Use robust unique ID generator for order
+    const orderId = `ORD-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+
     const newOrder: BatchOrder = {
-      id: `ORD-${Date.now().toString().slice(-4)}`,
+      id: orderId,
       customerName: customerShipping.customerName,
       phone: customerShipping.customerPhone || '-',
       shipping: customerShipping.shippingMethod,

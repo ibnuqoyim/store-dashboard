@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { ListChecks, Search, Printer } from 'lucide-react';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
-import { BatchOrder, OrderStatus } from '@/lib/types/batch';
+import { BatchOrder, OrderStatus, ShippingMethod } from '@/lib/types/batch';
 
 interface BatchOrdersListProps {
   orders: BatchOrder[];
@@ -11,21 +11,30 @@ interface BatchOrdersListProps {
   onPrintReceipt?: (orderId: string) => void;
 }
 
+const SHIPPING_BADGE_MAP: Record<ShippingMethod, string> = {
+  Ahsan: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+  TIKI: 'bg-blue-100 text-blue-800 border-blue-300',
+  COD: 'bg-orange-100 text-orange-800 border-orange-300',
+  'Ambil Sendiri': 'bg-gray-100 text-gray-800 border-gray-300',
+};
+
 export default function BatchOrdersList({
   orders,
   onUpdateOrderStatus,
   onPrintReceipt,
 }: BatchOrdersListProps) {
   const [searchVal, setSearchVal] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | OrderStatus>('ALL');
 
   const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
 
   const filteredOrders = useMemo(() => {
+    const query = searchVal.toLowerCase().trim();
     return orders.filter((o) => {
       const matchSearch =
-        o.customerName.toLowerCase().includes(searchVal.toLowerCase()) ||
-        o.id.toLowerCase().includes(searchVal.toLowerCase());
+        !query ||
+        o.customerName.toLowerCase().includes(query) ||
+        o.id.toLowerCase().includes(query);
       const matchStatus = statusFilter === 'ALL' || o.orderStatus === statusFilter;
       return matchSearch && matchStatus;
     });
@@ -59,7 +68,7 @@ export default function BatchOrdersList({
         </div>
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => setStatusFilter(e.target.value as 'ALL' | OrderStatus)}
           className="bg-gray-50 border border-gray-200 text-xs rounded-lg p-1.5 font-medium"
         >
           <option value="ALL">Semua Status</option>
@@ -82,14 +91,7 @@ export default function BatchOrdersList({
                 ? 'bg-amber-100 text-amber-800 border-amber-300'
                 : 'bg-red-100 text-red-800 border-red-300';
 
-            const shippingBadgeClass =
-              o.shipping === 'Ahsan'
-                ? 'bg-indigo-100 text-indigo-800 border-indigo-300'
-                : o.shipping === 'TIKI'
-                ? 'bg-blue-100 text-blue-800 border-blue-300'
-                : o.shipping === 'COD'
-                ? 'bg-orange-100 text-orange-800 border-orange-300'
-                : 'bg-gray-100 text-gray-800 border-gray-300';
+            const shippingBadgeClass = SHIPPING_BADGE_MAP[o.shipping] || 'bg-gray-100 text-gray-800 border-gray-300';
 
             return (
               <div
