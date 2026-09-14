@@ -135,9 +135,7 @@ export default function BatchPosLayoutClient() {
         onRefresh={() => alert('Data batch direfresh')}
       />
 
-      {/* Main Content 3-Column Grid */}
       <main className="max-w-[1700px] mx-auto w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* COLUMN 1: POS INPUT (Task 4, 5, 6) */}
         <section className="lg:col-span-5 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 flex flex-col gap-3.5">
           <CustomerShippingForm data={customerShipping} onChange={setCustomerShipping} />
           <ProductPosCart
@@ -152,7 +150,6 @@ export default function BatchPosLayoutClient() {
           />
         </section>
 
-        {/* COLUMN 2: BATCH ORDERS LIST (Task 7) */}
         <section className="lg:col-span-4 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]">
           <BatchOrdersList
             orders={batchOrders}
@@ -161,7 +158,6 @@ export default function BatchPosLayoutClient() {
           />
         </section>
 
-        {/* COLUMN 3: BATCH & DOUGH RESUME (Task 8 - Container Shell) */}
         <section className="lg:col-span-3 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]">
           <h2 className="font-bold text-gray-800 text-base border-b pb-2">3. Rekap Batch & Adonan</h2>
           <p className="text-xs text-gray-400 mt-2">Container Resume Akumulasi Adonan Dapur (Task 8)</p>
