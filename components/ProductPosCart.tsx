@@ -8,6 +8,7 @@ export interface CatalogProduct {
   name: string;
   price: number;
   category: string;
+  doughRecipe?: string;
 }
 
 export interface CartItem {

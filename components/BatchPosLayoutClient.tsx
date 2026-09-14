@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import BatchPosHeader from './BatchPosHeader';
 import CustomerShippingForm, { CustomerShippingData } from './CustomerShippingForm';
 import ProductPosCart, { CatalogProduct, CartItem } from './ProductPosCart';
+import NewProductModal from './NewProductModal';
 
 const INITIAL_CATALOG: CatalogProduct[] = [
   { id: '1', name: 'Milk Bread', price: 40000, category: 'Sourdough' },
@@ -16,7 +17,8 @@ const INITIAL_CATALOG: CatalogProduct[] = [
 
 export default function BatchPosLayoutClient() {
   const [activeBatch, setActiveBatch] = useState('BATCH-20260915-PAGI');
-  
+  const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
+
   // Task 4 State: Customer & Shipping
   const [customerShipping, setCustomerShipping] = useState<CustomerShippingData>({
     customerName: '',
@@ -25,8 +27,8 @@ export default function BatchPosLayoutClient() {
     shippingFee: 15000,
   });
 
-  // Task 5 State: Catalog & Cart
-  const [catalog] = useState<CatalogProduct[]>(INITIAL_CATALOG);
+  // Task 5 & 6 State: Catalog & Cart
+  const [catalog, setCatalog] = useState<CatalogProduct[]>(INITIAL_CATALOG);
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const handleAddToCart = (product: CatalogProduct) => {
@@ -81,6 +83,11 @@ export default function BatchPosLayoutClient() {
     });
   };
 
+  const handleSaveNewProduct = (newProduct: CatalogProduct) => {
+    setCatalog((prev) => [newProduct, ...prev]);
+    alert(`Produk "${newProduct.name}" berhasil dibuat & ditambahkan ke Katalog POS!`);
+  };
+
   const handleSubmitOrder = (payStatus: string, payMethod: string) => {
     if (!customerShipping.customerName) {
       alert('Harap isi Nama Pembeli terlebih dahulu!');
@@ -107,6 +114,7 @@ export default function BatchPosLayoutClient() {
         onBatchChange={setActiveBatch}
         currentCapacity={75}
         maxCapacity={100}
+        onOpenNewProductModal={() => setIsNewProductModalOpen(true)}
         onRefresh={() => alert('Data batch direfresh')}
       />
 
@@ -114,13 +122,10 @@ export default function BatchPosLayoutClient() {
       <main className="max-w-[1700px] mx-auto w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* COLUMN 1: POS INPUT (Task 4 & Task 5 Integrated) */}
         <section className="lg:col-span-5 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 flex flex-col gap-3.5">
-          {/* STEP 1: Form Pembeli & Pengiriman (Task 4) */}
           <CustomerShippingForm
             data={customerShipping}
             onChange={setCustomerShipping}
           />
-
-          {/* STEP 2: Katalog Produk & Keranjang Inline Edit (Task 5) */}
           <ProductPosCart
             catalog={catalog}
             cart={cart}
@@ -145,6 +150,13 @@ export default function BatchPosLayoutClient() {
           <p className="text-xs text-gray-400 mt-2">Container Resume Akumulasi Adonan Dapur (Task 8)</p>
         </section>
       </main>
+
+      {/* TASK 6: QUICK CREATE PRODUCT MODAL */}
+      <NewProductModal
+        isOpen={isNewProductModalOpen}
+        onClose={() => setIsNewProductModalOpen(false)}
+        onSaveProduct={handleSaveNewProduct}
+      />
     </div>
   );
 }
