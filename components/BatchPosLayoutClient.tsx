@@ -2,24 +2,19 @@
 
 import React, { useState } from 'react';
 import BatchPosHeader from './BatchPosHeader';
-import CustomerShippingForm, { CustomerShippingData } from './CustomerShippingForm';
-import ProductPosCart, { CatalogProduct, CartItem } from './ProductPosCart';
+import CustomerShippingForm from './CustomerShippingForm';
+import ProductPosCart from './ProductPosCart';
 import NewProductModal from './NewProductModal';
-
-const INITIAL_CATALOG: CatalogProduct[] = [
-  { id: '1', name: 'Milk Bread', price: 40000, category: 'Sourdough' },
-  { id: '2', name: 'Earl Grey CC Mini', price: 12500, category: 'Sweet Bread' },
-  { id: '3', name: 'Chocobanana', price: 35000, category: 'Sweet Bread' },
-  { id: '4', name: 'Burger Bun (Pack)', price: 35000, category: 'Sourdough' },
-  { id: '5', name: 'Paket Mini Isi 4', price: 50000, category: 'Paket' },
-  { id: '6', name: 'Paket Mini Isi 8', price: 100000, category: 'Paket' },
-];
+import BatchOrdersList from './BatchOrdersList';
+import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
+import { CatalogProduct, CartItem, CustomerShippingData, BatchOrder, PayStatus, PayMethod, OrderStatus } from '@/lib/types/batch';
+import { INITIAL_CATALOG, INITIAL_ORDERS } from '@/lib/mock/batch-pos-mock';
 
 export default function BatchPosLayoutClient() {
   const [activeBatch, setActiveBatch] = useState('BATCH-20260915-PAGI');
   const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
 
-  // Task 4 State: Customer & Shipping
+  // Form & Cart States
   const [customerShipping, setCustomerShipping] = useState<CustomerShippingData>({
     customerName: '',
     customerPhone: '',
@@ -27,9 +22,11 @@ export default function BatchPosLayoutClient() {
     shippingFee: 15000,
   });
 
-  // Task 5 & 6 State: Catalog & Cart
   const [catalog, setCatalog] = useState<CatalogProduct[]>(INITIAL_CATALOG);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [batchOrders, setBatchOrders] = useState<BatchOrder[]>(INITIAL_ORDERS);
+
+  const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
 
   const handleAddToCart = (product: CatalogProduct) => {
     setCart((prev) => {
@@ -85,10 +82,10 @@ export default function BatchPosLayoutClient() {
 
   const handleSaveNewProduct = (newProduct: CatalogProduct) => {
     setCatalog((prev) => [newProduct, ...prev]);
-    alert(`Produk "${newProduct.name}" berhasil dibuat & ditambahkan ke Katalog POS!`);
+    alert(`Produk "${newProduct.name}" ditambahkan ke POS!`);
   };
 
-  const handleSubmitOrder = (payStatus: string, payMethod: string) => {
+  const handleSubmitOrder = (payStatus: PayStatus, payMethod: PayMethod) => {
     if (!customerShipping.customerName) {
       alert('Harap isi Nama Pembeli terlebih dahulu!');
       return;
@@ -99,12 +96,32 @@ export default function BatchPosLayoutClient() {
     }
 
     const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
-    const grandTotal = subtotal + customerShipping.shippingFee;
+    const total = subtotal + customerShipping.shippingFee;
 
-    alert(
-      `Order Berhasil Disimpan ke ${activeBatch}!\nPembeli: ${customerShipping.customerName}\nKurir: ${customerShipping.shippingMethod} (Ongkir: Rp ${customerShipping.shippingFee.toLocaleString('id-ID')})\nTotal: Rp ${grandTotal.toLocaleString('id-ID')}`
-    );
+    const newOrder: BatchOrder = {
+      id: `ORD-${Date.now().toString().slice(-4)}`,
+      customerName: customerShipping.customerName,
+      phone: customerShipping.customerPhone || '-',
+      shipping: customerShipping.shippingMethod,
+      shippingFee: customerShipping.shippingFee,
+      time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+      items: cart.map((i) => ({ ...i })),
+      subtotal,
+      total,
+      payStatus,
+      payMethod,
+      orderStatus: 'PENDING',
+    };
+
+    setBatchOrders((prev) => [newOrder, ...prev]);
     handleClearCart();
+    alert(`Order ${newOrder.id} berhasil ditambahkan ke ${activeBatch}!\nTotal: ${fc(total)}`);
+  };
+
+  const handleUpdateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
+    setBatchOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, orderStatus: newStatus } : o))
+    );
   };
 
   return (
@@ -112,20 +129,15 @@ export default function BatchPosLayoutClient() {
       <BatchPosHeader
         activeBatch={activeBatch}
         onBatchChange={setActiveBatch}
-        currentCapacity={75}
+        currentCapacity={batchOrders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.qty, 0), 0)}
         maxCapacity={100}
         onOpenNewProductModal={() => setIsNewProductModalOpen(true)}
         onRefresh={() => alert('Data batch direfresh')}
       />
 
-      {/* Main Content 3-Column Grid */}
       <main className="max-w-[1700px] mx-auto w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* COLUMN 1: POS INPUT (Task 4 & Task 5 Integrated) */}
         <section className="lg:col-span-5 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 flex flex-col gap-3.5">
-          <CustomerShippingForm
-            data={customerShipping}
-            onChange={setCustomerShipping}
-          />
+          <CustomerShippingForm data={customerShipping} onChange={setCustomerShipping} />
           <ProductPosCart
             catalog={catalog}
             cart={cart}
@@ -138,20 +150,20 @@ export default function BatchPosLayoutClient() {
           />
         </section>
 
-        {/* COLUMN 2: BATCH ORDERS LIST (4 Cols) */}
         <section className="lg:col-span-4 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]">
-          <h2 className="font-bold text-gray-800 text-base border-b pb-2">2. Daftar Order Batch</h2>
-          <p className="text-xs text-gray-400 mt-2">Container List Pesanan dalam Batch (Task 7)</p>
+          <BatchOrdersList
+            orders={batchOrders}
+            onUpdateOrderStatus={handleUpdateOrderStatus}
+            onPrintReceipt={(id) => alert(`Mencetak Struk untuk ${id}...`)}
+          />
         </section>
 
-        {/* COLUMN 3: BATCH & DOUGH RESUME (3 Cols) */}
         <section className="lg:col-span-3 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]">
           <h2 className="font-bold text-gray-800 text-base border-b pb-2">3. Rekap Batch & Adonan</h2>
           <p className="text-xs text-gray-400 mt-2">Container Resume Akumulasi Adonan Dapur (Task 8)</p>
         </section>
       </main>
 
-      {/* TASK 6: QUICK CREATE PRODUCT MODAL */}
       <NewProductModal
         isOpen={isNewProductModalOpen}
         onClose={() => setIsNewProductModalOpen(false)}

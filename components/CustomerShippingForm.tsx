@@ -2,13 +2,7 @@
 
 import React from 'react';
 import { UserCheck } from 'lucide-react';
-
-export interface CustomerShippingData {
-  customerName: string;
-  customerPhone: string;
-  shippingMethod: 'Ahsan' | 'TIKI' | 'COD' | 'Ambil Sendiri';
-  shippingFee: number;
-}
+import { CustomerShippingData, ShippingMethod } from '@/lib/types/batch';
 
 interface CustomerShippingFormProps {
   data: CustomerShippingData;
@@ -55,7 +49,7 @@ export default function CustomerShippingForm({ data, onChange }: CustomerShippin
           <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Kurir / Pengiriman *</label>
           <select
             value={data.shippingMethod}
-            onChange={(e) => onChange({ ...data, shippingMethod: e.target.value as any })}
+            onChange={(e) => onChange({ ...data, shippingMethod: e.target.value as ShippingMethod })}
             className="w-full bg-white border border-amber-300 text-gray-800 font-bold text-xs rounded-lg p-1.5 focus:ring-2 focus:ring-amber-500 focus:outline-none"
           >
             <option value="Ahsan">Ahsan Express (Kurir)</option>
@@ -69,7 +63,7 @@ export default function CustomerShippingForm({ data, onChange }: CustomerShippin
           <input
             type="number"
             value={data.shippingFee || ''}
-            onChange={(e) => onChange({ ...data, shippingFee: parseInt(e.target.value) || 0 })}
+            onChange={(e) => onChange({ ...data, shippingFee: Number(e.target.value) || 0 })}
             placeholder="0"
             className="w-full px-2 py-1.5 text-xs bg-white border border-amber-300 font-bold text-amber-900 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
           />
