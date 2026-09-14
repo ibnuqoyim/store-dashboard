@@ -2,28 +2,8 @@
 
 import React, { useState } from 'react';
 import { PackageSearch, Search, Plus, ShoppingBag, Trash2, CheckCircle2 } from 'lucide-react';
-<<<<<<< HEAD
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
 import { CatalogProduct, CartItem, PayStatus, PayMethod } from '@/lib/types/batch';
-=======
-
-export interface CatalogProduct {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  doughRecipe?: string;
-}
-
-export interface CartItem {
-  productId: string;
-  name: string;
-  normalPrice: number;
-  price: number;
-  qty: number;
-  isCustom: boolean;
-}
->>>>>>> main
 
 interface ProductPosCartProps {
   catalog: CatalogProduct[];
