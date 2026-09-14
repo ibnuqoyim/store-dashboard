@@ -23,10 +23,15 @@ def get_agents_md():
 
 
 def build_messages(agents_md, diff, repo, pr_number):
-    system = ("Kamu adalah senior code reviewer AI. Review pull request berikut berdasarkan konvensi "
+    system = ("WAJIB BALAS DALAM BAHASA INDONESIA CASUAL DAN PROFESIONAL. "
+        "Kamu adalah senior code reviewer AI. Review pull request berikut berdasarkan konvensi "
         "project di AGENTS.md. Fokus: correctness, security, code quality, test coverage untuk kode baru, "
-        "dan konsistensi struktur project. Balas dalam markdown dengan struktur: "
-        "## Critical / ## Warnings / ## Suggestions / ## Looks Good. Jika kosong tulis 'Tidak ada.'.")
+        "dan konsistensi struktur project. Balas dalam format markdown Bahasa Indonesia dengan struktur berikut:\n\n"
+        "## 📋 Ringkasan Review\n"
+        "## 🚨 Isu Kritis (Critical)\n"
+        "## ⚠️ Peringatan & Saran (Warnings & Suggestions)\n"
+        "## ✅ Hal yang Sudah Baik (Looks Good)\n\n"
+        "Jika ada bagian yang kosong, tulis 'Tidak ada isu.'.")
     user = f"REPO: {repo}\nPR: #{pr_number}\n\n=== AGENTS.md ===\n{agents_md}\n\n=== PR DIFF ===\n{diff}"
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
