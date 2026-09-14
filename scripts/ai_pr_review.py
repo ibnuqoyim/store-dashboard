@@ -23,7 +23,8 @@ def get_agents_md():
 
 
 def build_messages(agents_md, diff, repo, pr_number):
-    system = ("WAJIB BALAS DALAM BAHASA INDONESIA CASUAL DAN PROFESIONAL. "
+    system = ("WAJIB HARUS DAN SELALU MEMBALAS DALAM BAHASA INDONESIA CASUAL DAN PROFESIONAL. "
+        "DILARANG KERAS MENGGUNAKAN BAHASA INGGRIS DALAM OUTPUT TEKS BALASAN. "
         "Kamu adalah senior code reviewer AI. Review pull request berikut berdasarkan konvensi "
         "project di AGENTS.md. Fokus: correctness, security, code quality, test coverage untuk kode baru, "
         "dan konsistensi struktur project. Balas dalam format markdown Bahasa Indonesia dengan struktur berikut:\n\n"
