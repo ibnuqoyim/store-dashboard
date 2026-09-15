@@ -69,48 +69,63 @@ export default function ProductPosCart({
       {/* Product Catalog Grid — photo-first cards so items are recognizable at a
           glance instead of scanning names, closer to how the bakery staff
           already picks products visually off the counter. */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-3 gap-2.5 max-h-[280px] xl:max-h-[210px] overflow-y-auto pr-1">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-3 gap-2.5 max-h-[380px] xl:max-h-[260px] overflow-y-auto pr-1">
         {filteredCatalog.length === 0 ? (
-          <div className="col-span-full text-center py-4 text-xs text-gray-400">Tidak ada produk</div>
+          <div className="col-span-full text-center py-8 text-xs text-gray-400">
+            {catalog.length === 0 ? 'Belum ada produk di katalog' : 'Tidak ada produk yang cocok'}
+          </div>
         ) : (
           filteredCatalog.map((p) => {
-            const thumb = getResizedImageUrl(p.imageUrl, 160, 160);
+            const thumb = getResizedImageUrl(p.imageUrl, 200, 200);
             return (
-              <button
+              <div
                 key={p.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => onAddToCart(p)}
-                className="bg-white hover:bg-amber-50/60 border border-amber-200/80 rounded-xl overflow-hidden transition flex flex-col text-left cursor-pointer group shadow-2xs active:scale-[0.98]"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onAddToCart(p);
+                  }
+                }}
+                className="bg-white hover:bg-amber-50/70 border border-amber-200/90 hover:border-amber-300 rounded-xl overflow-hidden transition-all shadow-xs hover:shadow-md cursor-pointer flex flex-col justify-between active:scale-[0.98] select-none text-left group min-h-[160px]"
               >
-                <div className="aspect-square w-full bg-amber-50 relative overflow-hidden">
+                {/* Photo container with fixed height so it never collapses */}
+                <div className="h-24 sm:h-28 w-full bg-amber-50/80 relative overflow-hidden shrink-0 flex items-center justify-center border-b border-amber-100/60">
                   {thumb ? (
                     <img
                       src={thumb}
                       alt={p.name}
                       loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-amber-200">
-                      <ImageOff className="w-6 h-6" />
+                    <div className="flex flex-col items-center justify-center text-amber-300/80 gap-1 p-2">
+                      <ImageOff className="w-7 h-7 stroke-1 text-amber-300" />
+                      <span className="text-[9px] text-amber-600/70 font-medium">Tanpa foto</span>
                     </div>
                   )}
                   {p.doughName && (
-                    <span className="absolute top-1 left-1 text-[9px] text-amber-900 font-semibold bg-white/90 px-1.5 py-0.5 rounded shadow-sm">
+                    <span className="absolute top-1.5 left-1.5 text-[9px] font-bold text-amber-900 bg-amber-100/95 border border-amber-300/60 px-1.5 py-0.5 rounded shadow-2xs max-w-[85%] truncate">
                       {p.doughName}
                     </span>
                   )}
                 </div>
-                <div className="p-2 xl:p-1.5 flex flex-col gap-1 flex-1 w-full">
-                  <h4 className="font-bold text-xs text-gray-800 line-clamp-1 group-hover:text-amber-900">{p.name}</h4>
-                  <div className="flex items-center justify-between mt-auto gap-1">
-                    <p className="text-[11px] font-semibold text-amber-700">{fc(p.price)}</p>
-                    <span className="text-[10px] bg-amber-100 group-hover:bg-amber-600 group-hover:text-white text-amber-900 font-bold p-1 rounded-full transition flex items-center justify-center shrink-0">
-                      <Plus className="w-3 h-3" />
+
+                {/* Info and price */}
+                <div className="p-2 sm:p-2.5 flex flex-col justify-between flex-1 gap-1.5 w-full bg-white">
+                  <h4 className="font-bold text-xs text-gray-900 line-clamp-2 leading-snug group-hover:text-amber-950" title={p.name}>
+                    {p.name}
+                  </h4>
+                  <div className="flex items-center justify-between mt-auto pt-1 border-t border-gray-100">
+                    <p className="text-xs font-extrabold text-amber-800">{fc(p.price)}</p>
+                    <span className="text-[10px] bg-amber-100 group-hover:bg-amber-600 group-hover:text-white text-amber-900 font-bold px-2 py-0.5 rounded-full transition-colors flex items-center gap-0.5 shrink-0 shadow-2xs">
+                      <Plus className="w-3 h-3" /> Tambah
                     </span>
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })
         )}
