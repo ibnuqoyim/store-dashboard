@@ -235,27 +235,46 @@ export default function BatchPosLayoutClient({
 
       const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
 
-      // 2. Insert into the real orders table, linked to the active Batch PO
-      const invoiceNumber = await generateInvoiceNumber();
-      const { data: newOrder, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          invoice_number: invoiceNumber,
-          date: new Date().toISOString().split('T')[0],
-          customer_id: customerId,
-          customer_name: trimmedCustomerName,
-          phone: customerShipping.customerPhone || null,
-          status: payStatus === 'PAID' ? 'paid' : 'pending',
-          po_id: activeBatchId,
-          shipping_method: customerShipping.shippingMethod,
-          shipping_fee: customerShipping.shippingFee,
-          pay_status: payStatus,
-          pay_method: payMethod,
-          order_status: 'PENDING',
-        })
-        .select('id')
-        .single();
-      if (orderError) throw orderError;
+      // 2. Insert into the real orders table, linked to the active Batch PO.
+      // invoice_number is only unique-guaranteed by the DB constraint, so on a
+      // concurrent-write collision (Postgres 23505) we regenerate and retry
+      // rather than risk two operators silently colliding on the same number.
+      let newOrder: { id: string } | null = null;
+      let invoiceNumber = '';
+      const MAX_INVOICE_ATTEMPTS = 3;
+      for (let attempt = 0; attempt < MAX_INVOICE_ATTEMPTS; attempt++) {
+        invoiceNumber = await generateInvoiceNumber();
+        const { data, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            invoice_number: invoiceNumber,
+            date: new Date().toISOString().split('T')[0],
+            customer_id: customerId,
+            customer_name: trimmedCustomerName,
+            phone: customerShipping.customerPhone || null,
+            status: payStatus === 'PAID' ? 'paid' : 'pending',
+            po_id: activeBatchId,
+            shipping_method: customerShipping.shippingMethod,
+            shipping_fee: customerShipping.shippingFee,
+            pay_status: payStatus,
+            pay_method: payMethod,
+            order_status: 'PENDING',
+          })
+          .select('id')
+          .single();
+
+        if (!orderError) {
+          newOrder = data;
+          break;
+        }
+        // 23505 = unique_violation — another order grabbed this invoice number first, retry.
+        if (orderError.code !== '23505' || attempt === MAX_INVOICE_ATTEMPTS - 1) {
+          throw orderError;
+        }
+      }
+      if (!newOrder) {
+        throw new Error('Gagal membuat nomor invoice unik setelah beberapa percobaan, coba lagi.');
+      }
 
       // 3. Insert order items (feeds Products/Financial/Adonan via existing triggers)
       const itemsPayload = cart.map((item) => ({

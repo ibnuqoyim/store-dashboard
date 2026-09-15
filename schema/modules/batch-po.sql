@@ -29,7 +29,7 @@ ALTER TABLE orders
 -- ---------------------------------------------------------------------------
 ALTER TABLE orders
   ADD COLUMN IF NOT EXISTS shipping_method text DEFAULT 'Ambil Sendiri',
-  ADD COLUMN IF NOT EXISTS shipping_fee numeric DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS shipping_fee numeric(12,2) DEFAULT 0.00,
   ADD COLUMN IF NOT EXISTS pay_status text DEFAULT 'UNPAID' CHECK (pay_status IN ('PAID', 'DP', 'UNPAID')),
   ADD COLUMN IF NOT EXISTS pay_method text CHECK (pay_method IN ('QRIS', 'Transfer BCA', 'Cash')),
   ADD COLUMN IF NOT EXISTS order_status text DEFAULT 'PENDING' CHECK (order_status IN ('PENDING', 'IN PREP', 'READY'));
