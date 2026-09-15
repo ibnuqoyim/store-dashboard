@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { TrendingUp, TrendingDown, DollarSign, Calendar, Download, Filter } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, Download, Filter } from 'lucide-react'
 import { format } from 'date-fns'
 import { useBusinessConfig } from '@/lib/business-config-context'
 import { formatCurrency } from '@/lib/config'

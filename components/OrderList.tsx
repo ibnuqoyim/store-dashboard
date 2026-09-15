@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, Eye, Truck, ArrowUp, ArrowDown, Search, Download, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, Truck, ArrowUp, ArrowDown, Search, Download, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { useBusinessConfig } from '@/lib/business-config-context'
@@ -45,12 +45,9 @@ type Store = {
 }
 
 export default function OrderList({ initialOrders, batches, stores = [] }: { initialOrders: Order[], batches: { id: string; name: string }[], stores?: Store[] }) {
-    const [isLoading, setIsLoading] = useState(false)
     const [selectedBatchId, setSelectedBatchId] = useState<string>('all')
     const [searchTerm, setSearchTerm] = useState('')
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
-    const [isModalOpen, setIsModalOpen] = useState(false)
     const [statusFilter, setStatusFilter] = useState<string>('all')
     const [dateFilter, setDateFilter] = useState({ start: '', end: '' })
     const [currentPage, setCurrentPage] = useState(1)
@@ -119,20 +116,13 @@ export default function OrderList({ initialOrders, batches, stores = [] }: { ini
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this order?')) return
 
-        setIsLoading(true)
         const { error } = await supabase.from('orders').delete().eq('id', id)
-        setIsLoading(false)
 
         if (error) {
             alert('Error deleting order: ' + error.message)
         } else {
             router.refresh()
         }
-    }
-
-    const handleViewInvoice = (order: Order) => {
-        setSelectedOrder(order)
-        setIsModalOpen(true)
     }
 
     const handleDownloadInvoice = async (order: Order) => {
@@ -516,13 +506,6 @@ export default function OrderList({ initialOrders, batches, stores = [] }: { ini
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex justify-end gap-2">
-                                            <button
-                                                onClick={() => handleViewInvoice(order)}
-                                                className="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded"
-                                                title="View Invoice"
-                                            >
-                                                <Eye size={18} />
-                                            </button>
                                             <button
                                                 onClick={() => handleDownloadInvoice(order)}
                                                 className="text-green-600 hover:text-green-800 p-2 hover:bg-green-50 rounded"
