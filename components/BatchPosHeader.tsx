@@ -43,9 +43,9 @@ export default function BatchPosHeader({
   };
 
   return (
-    <header className="bg-amber-900 text-white shadow-md sticky top-0 z-30 rounded-xl mb-4">
+    <header className="bg-amber-900 text-white shadow-md sticky top-0 z-30 rounded-xl mb-4 overflow-hidden">
       <div className="max-w-[1700px] mx-auto px-3 sm:px-4 py-3 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <div className="p-2 bg-amber-700/60 rounded-lg flex items-center justify-center">
             <Store className="w-6 h-6 text-amber-200" />
           </div>
@@ -58,37 +58,38 @@ export default function BatchPosHeader({
         </div>
 
         {/* Batch Selector & Info */}
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4 bg-amber-800/80 px-3 sm:px-4 py-2 rounded-xl border border-amber-700 flex-1 min-w-[280px] sm:flex-none">
-          <div className="flex items-center gap-2 flex-1 min-w-[220px] sm:flex-none">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 bg-amber-800/80 px-3 sm:px-4 py-2 rounded-xl border border-amber-700 w-full sm:w-auto sm:flex-1 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <Layers className="w-4 h-4 text-amber-300 shrink-0" />
-            <span className="text-xs text-amber-200 font-semibold shrink-0">Target Batch PO:</span>
+            <span className="text-xs text-amber-200 font-semibold shrink-0 hidden sm:inline">Target Batch PO:</span>
+            <span className="text-xs text-amber-200 font-semibold shrink-0 sm:hidden">Batch:</span>
             {isCreatingBatch ? (
-              <form onSubmit={handleCreateSubmit} className="flex items-center gap-1 flex-1">
+              <form onSubmit={handleCreateSubmit} className="flex items-center gap-1 flex-1 min-w-0">
                 <input
                   type="text"
                   autoFocus
                   value={newBatchInput}
                   onChange={(e) => setNewBatchInput(e.target.value)}
                   placeholder="Nama Batch Baru (mis: #BATCH-SABTU)..."
-                  className="bg-white text-gray-900 font-bold text-xs px-2.5 py-1 rounded-lg focus:outline-none flex-1 min-w-[140px]"
+                  className="bg-white text-gray-900 font-bold text-xs px-2.5 py-1 rounded-lg focus:outline-none flex-1 min-w-0"
                 />
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold text-xs px-2 py-1 rounded-lg disabled:opacity-50 flex items-center gap-1"
+                  className="bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold text-xs px-2 py-1 rounded-lg disabled:opacity-50 flex items-center gap-1 shrink-0"
                 >
                   {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Simpan'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsCreatingBatch(false)}
-                  className="text-amber-200 text-xs px-1 hover:text-white"
+                  className="text-amber-200 text-xs px-1 hover:text-white shrink-0"
                 >
                   Batal
                 </button>
               </form>
             ) : (
-              <div className="flex items-center gap-1.5 flex-1">
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
                 <select
                   value={activeBatchId ?? ''}
                   onChange={(e) => {
@@ -98,7 +99,7 @@ export default function BatchPosHeader({
                       onBatchChange(e.target.value);
                     }
                   }}
-                  className="bg-amber-900 text-white font-bold text-xs px-3 py-1.5 rounded-lg border border-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400 flex-1"
+                  className="bg-amber-900 text-white font-bold text-xs px-3 py-1.5 rounded-lg border border-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400 flex-1 min-w-0 max-w-full"
                 >
                   {batchList.length === 0 && <option value="">Belum ada Batch PO</option>}
                   {batchList.map((b) => (
@@ -120,14 +121,14 @@ export default function BatchPosHeader({
             )}
           </div>
 
-          <div className="h-6 w-px bg-amber-700 hidden sm:block"></div>
-          <div className="flex items-center gap-2 text-xs">
+          <div className="h-6 w-px bg-amber-700 hidden lg:block"></div>
+          <div className="hidden lg:flex items-center gap-2 text-xs">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> IN PRODUCTION
             </span>
           </div>
           <div className="h-6 w-px bg-amber-700 hidden sm:block"></div>
-          <div className="text-xs">
+          <div className="text-xs shrink-0">
             <span className="text-amber-300">Kapasitas:</span>
             <span className="font-bold text-white ml-1">{currentCapacity}/{maxCapacity} Pcs ({percentage}%)</span>
             <div className="w-24 bg-amber-950 rounded-full h-1.5 mt-1 overflow-hidden">

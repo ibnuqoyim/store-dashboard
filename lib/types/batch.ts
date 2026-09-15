@@ -7,6 +7,7 @@ export interface CatalogProduct {
   id: string;
   name: string;
   price: number;
+  imageUrl?: string | null;
   doughId?: string | null;
   doughName?: string | null;
 }

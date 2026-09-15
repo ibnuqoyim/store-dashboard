@@ -20,8 +20,8 @@ export default async function BatchPosPage() {
     supabase.from('batch_po').select('id, name, description, created_at').order('created_at', { ascending: false }),
     supabase.from('customers').select('id, name, phone, address, default_courier').order('name'),
     hasAdonan
-      ? supabase.from('products').select('id, name, price, dough_id, adonan(name)').eq('is_active', true).order('name')
-      : supabase.from('products').select('id, name, price').eq('is_active', true).order('name'),
+      ? supabase.from('products').select('id, name, price, image_url, dough_id, adonan(name)').eq('is_active', true).order('name')
+      : supabase.from('products').select('id, name, price, image_url').eq('is_active', true).order('name'),
     hasAdonan
       ? supabase.from('adonan').select('id, name').order('name')
       : Promise.resolve({ data: [] }),
@@ -35,12 +35,13 @@ export default async function BatchPosPage() {
     : { data: [] };
 
   const catalog = (productsResult.data || []).map((p) => {
-    const product = p as { id: string; name: string; price: number; dough_id?: string | null; adonan?: { name: string } | { name: string }[] | null };
+    const product = p as { id: string; name: string; price: number; image_url?: string | null; dough_id?: string | null; adonan?: { name: string } | { name: string }[] | null };
     const adonan = Array.isArray(product.adonan) ? product.adonan[0] : product.adonan;
     return {
       id: product.id,
       name: product.name,
       price: product.price,
+      imageUrl: product.image_url ?? null,
       doughId: product.dough_id ?? null,
       doughName: adonan?.name ?? null,
     };
