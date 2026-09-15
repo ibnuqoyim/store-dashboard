@@ -176,19 +176,22 @@ export async function generateInvoicePdf(
     let subtotal = 0;
 
     order.order_items?.forEach((item) => {
-      const amount = item.price * item.quantity;
+      const price = Math.round(Number(item.price) || 0);
+      const qty = Math.round(Number(item.quantity) || 0);
+      const amount = price * qty;
       subtotal += amount;
-      const itemName = item.products?.name || item.name || 'Produk';
+      const itemName = item.name || item.products?.name || 'Produk';
       doc.text(itemName, 12, yPos);
-      doc.text(item.quantity.toString(), 120, yPos, { align: 'center' });
-      doc.text(fc(item.price), 155, yPos, { align: 'right' });
+      doc.text(qty.toString(), 120, yPos, { align: 'center' });
+      doc.text(fc(price), 155, yPos, { align: 'right' });
       doc.text(fc(amount), 195, yPos, { align: 'right' });
       yPos += 6;
     });
 
-    const shippingCost =
+    const rawShippingCost =
       order.shipping_fee ??
       (order.deliveries && order.deliveries.length > 0 ? order.deliveries[0].shipping_cost || 0 : 0);
+    const shippingCost = Math.round(Number(rawShippingCost) || 0);
 
     if (shippingCost > 0 || (order.deliveries && order.deliveries.length > 0)) {
       subtotal += shippingCost;
@@ -198,6 +201,8 @@ export async function generateInvoicePdf(
       doc.text(shippingCost > 0 ? fc(shippingCost) : '-', 195, yPos, { align: 'right' });
       yPos += 6;
     }
+
+    subtotal = Math.round(subtotal);
 
     yPos += 5;
     doc.setFont('helvetica', 'bold');
