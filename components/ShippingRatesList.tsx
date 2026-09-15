@@ -51,6 +51,7 @@ export default function ShippingRatesList({ initialRates }: { initialRates: Ship
 
     // Reset page when filters change
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting pagination on filter change, not a data-sync side effect
         setCurrentPage(1)
     }, [searchTerm, courierFilter, costFilter])
 

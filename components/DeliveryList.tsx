@@ -36,6 +36,7 @@ export default function DeliveryList({ initialDeliveries }: { initialDeliveries:
 
     // Reset page when filters change
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting pagination on filter change, not a data-sync side effect
         setCurrentPage(1)
     }, [searchTerm, statusFilter, courierFilter, costFilter])
 
