@@ -43,6 +43,7 @@ export default function BatchOrdersList({
           invoice_number: order.invoiceNumber,
           customer_name: order.customerName,
           phone: order.phone,
+          date: order.date,
           shipping_fee: order.shippingFee,
           order_items: order.items.map((it) => ({
             name: it.name,
@@ -50,8 +51,7 @@ export default function BatchOrdersList({
             quantity: it.qty,
           })),
         },
-        config,
-        null
+        config
       );
     } catch (err) {
       console.error('Error generating PDF struk:', err);

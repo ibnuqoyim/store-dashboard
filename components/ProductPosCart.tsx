@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { PackageSearch, Search, Plus, ShoppingBag, Trash2, CheckCircle2, Loader2, ImageOff, Pencil } from 'lucide-react';
-import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
+import { formatCurrency } from '@/lib/config';
+import { useBusinessConfig } from '@/lib/business-config-context';
 import { getResizedImageUrl } from '@/lib/cloudinary-image';
 import { CatalogProduct, CartItem } from '@/lib/types/batch';
 
@@ -32,8 +33,9 @@ export default function ProductPosCart({
   isSubmitting = false,
 }: ProductPosCartProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const config = useBusinessConfig();
 
-  const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
+  const fc = (amount: number) => formatCurrency(amount, config);
 
   const filteredCatalog = catalog.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())

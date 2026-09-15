@@ -37,6 +37,7 @@ export interface BatchOrder {
   shipping: ShippingMethod;
   shippingFee: number;
   time: string;
+  date?: string;
   items: CartItem[];
   subtotal: number;
   total: number;

@@ -57,6 +57,7 @@ export function mapDbOrderToBatchOrder(row: DbOrderRow): BatchOrder {
     shipping: (row.shipping_method as ShippingMethod) || 'Ambil Sendiri',
     shippingFee,
     time: new Date(row.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+    date: row.created_at,
     items,
     subtotal,
     total: subtotal + shippingFee,

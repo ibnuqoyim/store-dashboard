@@ -63,30 +63,24 @@ export async function generateInvoicePdf(
             reader.onloadend = () => resolve(reader.result as string);
             reader.readAsDataURL(blob);
           });
-          const logoDims = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => resolve({ width: img.width, height: img.height });
-            img.onerror = reject;
-            img.src = logoBase64;
+          const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = reject;
+            image.src = logoBase64;
           });
 
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
-          const img = new Image();
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = logoBase64;
-          });
-          canvas.width = logoDims.width;
-          canvas.height = logoDims.height;
+          canvas.width = img.width;
+          canvas.height = img.height;
           ctx?.clearRect(0, 0, canvas.width, canvas.height);
           ctx?.drawImage(img, 0, 0);
           const cleanImageData = canvas.toDataURL('image/png');
 
           const pageWidth = doc.internal.pageSize.getWidth();
           const pageHeight = doc.internal.pageSize.getHeight();
-          const imgRatio = logoDims.width / logoDims.height;
+          const imgRatio = img.width / img.height;
           const pageRatio = pageWidth / pageHeight;
           let renderWidth, renderHeight;
           if (imgRatio > pageRatio) {
@@ -96,15 +90,17 @@ export async function generateInvoicePdf(
             renderHeight = pageHeight;
             renderWidth = pageHeight * imgRatio;
           }
-          const x = (pageWidth - renderWidth / 1.5) / 2;
-          const y = (pageHeight - renderHeight / 1.5) / 2;
+          const w = renderWidth / 1.5;
+          const h = renderHeight / 1.5;
+          const x = (pageWidth - w) / 2;
+          const y = (pageHeight - h) / 2;
 
           doc.saveGraphicsState();
           interface JsPdfWithGState {
             GState: new (opts: { opacity: number }) => unknown;
           }
           doc.setGState(new (doc as unknown as JsPdfWithGState).GState({ opacity: 0.2 }));
-          doc.addImage(cleanImageData, 'PNG', x, y, renderWidth / 1.5, renderHeight / 1.5);
+          doc.addImage(cleanImageData, 'PNG', x, y, w, h);
           doc.restoreGraphicsState();
         }
       } catch (error) {
