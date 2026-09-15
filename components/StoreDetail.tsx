@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Save, Loader2, Bot, Store, ToggleLeft, ToggleRight, Upload, X } from 'lucide-react'
 import Link from 'next/link'
-import { CldUploadWidget } from 'next-cloudinary'
+import { CldUploadWidget, CloudinaryUploadWidgetResults } from 'next-cloudinary'
 
 type StoreRow = {
     id: string
@@ -220,8 +220,11 @@ export default function StoreDetail({
                                 )}
                                 <CldUploadWidget
                                     uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'products'}
-                                    onSuccess={(result: any) => {
-                                        setStoreForm(f => ({ ...f, logo_url: result.info.secure_url }))
+                                    onSuccess={(result: CloudinaryUploadWidgetResults) => {
+                                        const info = result.info
+                                        if (info && typeof info === 'object' && 'secure_url' in info) {
+                                            setStoreForm(f => ({ ...f, logo_url: info.secure_url as string }))
+                                        }
                                     }}
                                 >
                                     {({ open }) => (

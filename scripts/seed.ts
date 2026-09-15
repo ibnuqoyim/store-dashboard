@@ -35,17 +35,17 @@ async function seed() {
     // 1. Read Adonan & Products (Metadata)
     console.log('Reading Metadata CSVs...')
 
-    let adonanData: any[] = []
-    let produkData: any[] = []
+    let adonanData: Record<string, string>[] = []
+    let produkData: Record<string, string>[] = []
 
     try {
         const adonanFile = fs.readFileSync(path.join(BASE_PATH, 'adonan.csv'), 'utf8')
         const produkFile = fs.readFileSync(path.join(BASE_PATH, 'produk.csv'), 'utf8')
 
-        adonanData = Papa.parse<any>(adonanFile, { header: true }).data.filter(r => r.adonan)
-        produkData = Papa.parse<any>(produkFile, { header: true }).data.filter(r => r.nama_produk)
-    } catch (err: any) {
-        console.error('Error reading metadata CSVs:', err.message)
+        adonanData = Papa.parse<Record<string, string>>(adonanFile, { header: true }).data.filter(r => r.adonan)
+        produkData = Papa.parse<Record<string, string>>(produkFile, { header: true }).data.filter(r => r.nama_produk)
+    } catch (err) {
+        console.error('Error reading metadata CSVs:', err instanceof Error ? err.message : 'unknown error')
         process.exit(1)
     }
 
@@ -109,7 +109,7 @@ async function seed() {
             }
 
             const orderFile = fs.readFileSync(filePath, 'utf8')
-            const orderData = Papa.parse<any>(orderFile, { header: true }).data.filter(r => r.invoice_number)
+            const orderData = Papa.parse<Record<string, string>>(orderFile, { header: true }).data.filter(r => r.invoice_number)
 
             // Create or Get Batch PO
             const { data: batchData, error: batchError } = await supabase
@@ -125,8 +125,24 @@ async function seed() {
             const batchId = batchData.id
 
             // Group orders by invoice
+            type SeedOrderItem = {
+                product_id: string
+                quantity: number
+                price: number
+            }
+
+            type SeedDelivery = {
+                courier: string
+                cost: number
+            } | null
+
             const ordersMap = new Map<string, {
-                date: string, customer: string, phone: string, status: string, items: any[], delivery: any
+                date: string
+                customer: string
+                phone: string
+                status: string
+                items: SeedOrderItem[]
+                delivery: SeedDelivery
             }>()
 
             for (const row of orderData) {
@@ -138,7 +154,7 @@ async function seed() {
                         if (row.tanggal.match(/\d{1,2} [A-Za-z]{3} \d{4}/)) {
                             cleanDate = new Date(row.tanggal).toISOString()
                         }
-                    } catch (e) {
+                    } catch {
                         console.warn(`Date parse error for ${row.tanggal}, using raw string`)
                     }
 
@@ -219,8 +235,8 @@ async function seed() {
                 }
             }
 
-        } catch (err: any) {
-            console.error(`Error processing batch ${batch.batchName}:`, err)
+        } catch (err) {
+            console.error(`Error processing batch ${batch.batchName}:`, err instanceof Error ? err.message : err)
         }
     }
 

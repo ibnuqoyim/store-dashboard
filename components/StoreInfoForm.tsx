@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { Save, Loader2, Plus, Trash2, RotateCcw } from 'lucide-react'
 import { MODULE_REGISTRY, MODULE_PRESETS, type ModulePreset } from '@/lib/modules'
 import dynamic from 'next/dynamic'
+import type { CloudinaryUploadWidgetResults } from 'next-cloudinary'
 
 const CldUploadWidget = dynamic(
   () => import('next-cloudinary').then(m => m.CldUploadWidget),
@@ -125,7 +126,7 @@ export default function StoreInfoForm() {
       alert('Store information saved successfully!')
       await fetchStoreInfo()
     } catch (error) {
-      alert('Error saving store info: ' + (error as any).message)
+      alert('Error saving store info: ' + (error instanceof Error ? error.message : 'unknown error'))
     } finally {
       setIsSaving(false)
     }
@@ -144,7 +145,7 @@ export default function StoreInfoForm() {
       if (error) throw error
       window.location.href = '/'
     } catch (err) {
-      alert('Gagal mereset: ' + (err as any).message)
+      alert('Gagal mereset: ' + (err instanceof Error ? err.message : 'unknown error'))
       setIsResetting(false)
     }
   }
@@ -607,8 +608,11 @@ export default function StoreInfoForm() {
               <div className="flex flex-col gap-1">
                 <CldUploadWidget
                   uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'products'}
-                  onSuccess={(result: any) => {
-                    setFormData({ ...formData, logo_url: result.info.secure_url })
+                  onSuccess={(result: CloudinaryUploadWidgetResults) => {
+                    const info = result.info
+                    if (info && typeof info === 'object' && 'secure_url' in info) {
+                      setFormData({ ...formData, logo_url: info.secure_url as string })
+                    }
                   }}
                 >
                   {({ open }) => (

@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation'
 import {
     LayoutDashboard, ShoppingBag, Wheat, ClipboardList, Truck,
     LogOut, Menu, X, Users, FileText, MessageSquare, Settings,
-    DollarSign, Package, Receipt, ChevronRight, BookOpen, Factory, Bot, Store, ShoppingCart
+    DollarSign, Package, Receipt, ChevronRight, BookOpen, Factory, Bot, Store, ShoppingCart,
+    type LucideIcon,
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -15,7 +16,7 @@ import { useBusinessConfig } from '@/lib/business-config-context'
 import { MODULE_REGISTRY, CATEGORY_ORDER, getEnabledModules, type ModuleId } from '@/lib/modules'
 
 // Icon lookup per module
-const MODULE_ICONS: Record<ModuleId, any> = {
+const MODULE_ICONS: Record<ModuleId, LucideIcon> = {
     'batch-pos':   ShoppingCart,
     orders:       ClipboardList,
     products:     ShoppingBag,
@@ -33,7 +34,7 @@ const MODULE_ICONS: Record<ModuleId, any> = {
 }
 
 // Items always visible regardless of enabled modules
-const FIXED_ITEMS: Record<string, { name: string; href: string; icon: any }[]> = {
+const FIXED_ITEMS: Record<string, { name: string; href: string; icon: LucideIcon }[]> = {
     'Main':     [{ name: 'Dashboard',  href: '/',           icon: LayoutDashboard }],
     'Settings': [
         { name: 'Store Info', href: '/store-info',  icon: Settings },
@@ -74,7 +75,7 @@ export default function Sidebar() {
         const enabledModules = getEnabledModules(config.modules_enabled)
 
         // Group enabled module items by category
-        const grouped: Record<string, { name: string; href: string; icon: any }[]> = {}
+        const grouped: Record<string, { name: string; href: string; icon: LucideIcon }[]> = {}
         MODULE_REGISTRY
             .filter(m => enabledModules.includes(m.id))
             .forEach(m => {

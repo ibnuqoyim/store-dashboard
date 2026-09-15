@@ -54,7 +54,7 @@ export default function TestimonialList() {
       if (error) throw error
       setTestimonials(testimonials.filter(t => t.id !== id))
     } catch (error) {
-      alert('Error deleting testimonial: ' + (error as any).message)
+      alert('Error deleting testimonial: ' + (error instanceof Error ? error.message : 'unknown error'))
     }
   }
 

@@ -120,7 +120,7 @@ export default function ProfitLossReport() {
 
                 for (const item of items || []) {
                     const raw = item.products as unknown
-                    const product: { name: string; cost_price: number | null } | null = Array.isArray(raw) ? raw[0] ?? null : (raw as any)
+                    const product: { name: string; cost_price: number | null } | null = Array.isArray(raw) ? raw[0] ?? null : (raw as { name: string; cost_price: number | null } | null)
                     if (!product) continue
                     if (product.cost_price == null) {
                         if (!productsWithoutCost.includes(product.name)) {

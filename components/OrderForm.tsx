@@ -54,6 +54,49 @@ type Customer = {
     address: string | null
 }
 
+type BatchOption = {
+    id: string
+    name: string
+}
+
+type ShippingRate = {
+    id: string
+    courier_name: string
+    description?: string | null
+    cost: number
+}
+
+type InitialOrderItem = {
+    product_id: string
+    quantity: number
+    price: number
+}
+
+type InitialOrderDelivery = {
+    courier_name: string | null
+    shipping_cost: number | null
+    address: string | null
+    status: string | null
+}
+
+type InitialOrder = {
+    id: string
+    invoice_number: string
+    date: string
+    customer_id: string | null
+    customer_name: string
+    phone: string | null
+    status: string | null
+    po_id: string | null
+    store_id: string | null
+    order_items: InitialOrderItem[]
+    deliveries?: InitialOrderDelivery[]
+}
+
+type CustomerOrderAggregate = {
+    order_items: { price: number | null; quantity: number | null }[] | null
+}
+
 export default function OrderForm({
     products,
     batches = [],
@@ -61,9 +104,9 @@ export default function OrderForm({
     initialOrder
 }: {
     products: Product[],
-    batches?: any[],
+    batches?: BatchOption[],
     stores?: Store[],
-    initialOrder?: any
+    initialOrder?: InitialOrder
 }) {
     const router = useRouter()
     const supabase = createClient()
@@ -89,7 +132,7 @@ export default function OrderForm({
         delivery: null
     })
 
-    const [shippingRates, setShippingRates] = useState<any[]>([])
+    const [shippingRates, setShippingRates] = useState<ShippingRate[]>([])
 
     const generateInvoiceNumber = async (storeId?: string | null, prefix?: string | null): Promise<string> => {
         try {
@@ -97,15 +140,13 @@ export default function OrderForm({
             const currentYYYYMM = String(now.getFullYear()) + String(now.getMonth() + 1).padStart(2, '0')
             const prefixStr = prefix ? `${prefix}-` : ''
 
-            let query = supabase
+            const baseQuery = supabase
                 .from('orders')
                 .select('invoice_number')
                 .order('created_at', { ascending: false })
                 .limit(50)
 
-            if (storeId) query = (query as any).eq('store_id', storeId)
-
-            const { data: orders } = await query
+            const { data: orders } = storeId ? await baseQuery.eq('store_id', storeId) : await baseQuery
 
             let maxSeq = 0
             if (orders && orders.length > 0) {
@@ -164,7 +205,7 @@ export default function OrderForm({
     useEffect(() => {
         if (initialOrder) {
             const productSearchMap: Record<number, string> = {}
-            initialOrder.order_items.forEach((item: any, idx: number) => {
+            initialOrder.order_items.forEach((item, idx) => {
                 const product = products.find(p => p.id === item.product_id)
                 if (product) {
                     productSearchMap[idx] = product.name
@@ -181,7 +222,7 @@ export default function OrderForm({
                 status: initialOrder.status || 'pending',
                 po_id: initialOrder.po_id || '',
                 store_id: initialOrder.store_id || '',
-                items: initialOrder.order_items.map((item: any) => ({
+                items: initialOrder.order_items.map((item) => ({
                     product_id: item.product_id,
                     quantity: item.quantity,
                     price: item.price
@@ -214,7 +255,7 @@ export default function OrderForm({
         setFormData({ ...formData, items: newItems })
     }
 
-    const updateItem = (index: number, field: keyof OrderItem, value: any) => {
+    const updateItem = (index: number, field: keyof OrderItem, value: string | number) => {
         const newItems = [...formData.items]
         const item = { ...newItems[index], [field]: value }
 
@@ -241,9 +282,9 @@ export default function OrderForm({
 
             // Sum all order items
             let totalPurchases = 0
-            orders.forEach((order: any) => {
+            ;(orders as CustomerOrderAggregate[]).forEach((order) => {
                 if (order.order_items) {
-                    order.order_items.forEach((item: any) => {
+                    order.order_items.forEach((item) => {
                         totalPurchases += (item.price || 0) * (item.quantity || 0)
                     })
                 }
@@ -265,7 +306,7 @@ export default function OrderForm({
         setHasDelivery(enable)
         if (enable && !formData.delivery) {
             // Check if customer has address/courier
-            let defaultCourier = ''
+            const defaultCourier = ''
             let defaultAddress = ''
 
             if (formData.customer_id) {
@@ -451,8 +492,8 @@ export default function OrderForm({
             router.refresh()
             router.push('/')
 
-        } catch (error: any) {
-            alert('Error saving order: ' + error.message)
+        } catch (error) {
+            alert('Error saving order: ' + (error instanceof Error ? error.message : 'unknown error'))
         } finally {
             setIsLoading(false)
         }

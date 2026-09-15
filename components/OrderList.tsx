@@ -44,7 +44,7 @@ type Store = {
     invoice_closing_sub: string | null
 }
 
-export default function OrderList({ initialOrders, batches, stores = [] }: { initialOrders: Order[], batches: any[], stores?: Store[] }) {
+export default function OrderList({ initialOrders, batches, stores = [] }: { initialOrders: Order[], batches: { id: string; name: string }[], stores?: Store[] }) {
     const [isLoading, setIsLoading] = useState(false)
     const [selectedBatchId, setSelectedBatchId] = useState<string>('all')
     const [searchTerm, setSearchTerm] = useState('')
@@ -137,7 +137,6 @@ export default function OrderList({ initialOrders, batches, stores = [] }: { ini
 
     const handleDownloadInvoice = async (order: Order) => {
         try {
-            // @ts-ignore
             const jsPDF = (await import('jspdf')).default
 
             const doc = new jsPDF({
@@ -205,8 +204,8 @@ export default function OrderList({ initialOrders, batches, stores = [] }: { ini
                         const y = (pageHeight - renderHeight / 1.5) / 2
 
                         doc.saveGraphicsState()
-                        // @ts-ignore - jsPDF GState type issue
-                        doc.setGState(new (doc as any).GState({ opacity: 0.2 }))
+                        interface JsPdfWithGState { GState: new (opts: { opacity: number }) => unknown }
+                        doc.setGState(new (doc as unknown as JsPdfWithGState).GState({ opacity: 0.2 }))
                         doc.addImage(cleanImageData, 'PNG', x, y, renderWidth / 1.5, renderHeight / 1.5)
                         doc.restoreGraphicsState()
                     }
