@@ -55,7 +55,7 @@ export const MODULE_PRESETS: Record<ModulePreset, { label: string; modules: Modu
   },
   service: {
     label: 'Jasa / Service',
-    modules: ['orders', 'customers', 'financial', 'expenses'],
+    modules: ['batch-pos', 'orders', 'customers', 'financial', 'expenses'],
   },
 }
 
@@ -65,7 +65,12 @@ export function getEnabledModules(modules: string[] | null | undefined): ModuleI
   if (!modules || modules.length === 0) {
     return MODULE_PRESETS.bakery.modules
   }
-  return modules.filter((id): id is ModuleId => VALID_IDS.has(id))
+  const enabled = modules.filter((id): id is ModuleId => VALID_IDS.has(id))
+  // Always include batch-pos if not explicitly present in existing store_info array
+  if (!enabled.includes('batch-pos')) {
+    enabled.unshift('batch-pos')
+  }
+  return enabled
 }
 
 export const CATEGORY_ORDER = ['Main', 'Production', 'Sales & Orders', 'Financial', 'Settings']
