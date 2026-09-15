@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import BatchPosHeader from './BatchPosHeader';
 import CustomerShippingForm from './CustomerShippingForm';
 import ProductPosCart from './ProductPosCart';
@@ -23,9 +23,10 @@ export default function BatchPosLayoutClient({
   initialCustomers = [],
   initialProducts = [],
 }: BatchPosLayoutClientProps) {
-  const supabase = createClient();
+  // Memoize Supabase client instance to avoid recreating on every render
+  const supabase = useMemo(() => createClient(), []);
 
-  // Combine initial DB data with fallback mocks if DB is empty
+  // Hydrate initial state with DB data or clean fallback
   const [batchList, setBatchList] = useState<BatchPO[]>(
     initialBatchPO.length > 0 ? initialBatchPO : INITIAL_BATCH_POS
   );
@@ -75,13 +76,14 @@ export default function BatchPosLayoutClient({
       return;
     }
 
-    // Try inserting into Supabase batch_po table
     try {
       const { data, error } = await supabase
         .from('batch_po')
         .insert({ name: trimmed, description: 'Batch Pre-order Baru (POS)' })
         .select('id, name, description, created_at')
         .single();
+
+      if (error) console.error('Supabase insert batch_po error:', error);
 
       const newPO: BatchPO = data
         ? { id: data.id, name: data.name, description: data.description }
@@ -155,7 +157,6 @@ export default function BatchPosLayoutClient({
   };
 
   const handleSaveNewProduct = async (newProduct: CatalogProduct) => {
-    // Try saving product to Supabase DB
     try {
       const { data, error } = await supabase
         .from('products')
@@ -166,6 +167,8 @@ export default function BatchPosLayoutClient({
         })
         .select('id, name, price, category')
         .single();
+
+      if (error) console.error('Supabase insert product error:', error);
 
       const createdProd = data ? { ...newProduct, id: data.id } : newProduct;
       setCatalog((prev) => [createdProd, ...prev]);
@@ -188,13 +191,13 @@ export default function BatchPosLayoutClient({
       return;
     }
 
-    // Auto add customer to customerList and DB if not exists
     const exists = customerList.some(
       (c) => c.name.trim().toLowerCase() === trimmedCustomerName.toLowerCase()
     );
+
     if (!exists) {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('customers')
           .insert({
             name: trimmedCustomerName,
@@ -203,6 +206,8 @@ export default function BatchPosLayoutClient({
           })
           .select('id, name, phone, default_courier')
           .single();
+
+        if (error) console.error('Supabase insert customer error:', error);
 
         const newCust: Customer = data
           ? { id: data.id, name: data.name, phone: data.phone, default_courier: data.default_courier }
