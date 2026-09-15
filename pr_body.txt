@@ -1,0 +1,18 @@
+## 📋 Deskripsi PR (Task 16)
+
+### 🔴 As-Is (Kondisi Sebelumnya)
+Halaman `app/(dashboard)/batch-pos/page.tsx` dan `BatchPosLayoutClient.tsx` sebelumnya mengandalkan data *mock dummy* yang di-hardcode lokal, sehingga tidak terhubung dengan tabel data riil Supabase (`customers`, `batch_po`, `products`).
+
+### 🟢 Expected (Hasil yang Diharapkan)
+- **Supabase SSR Queries Integration**:
+  - `app/(dashboard)/batch-pos/page.tsx` melakukan query Server-side langsung ke Supabase PostgreSQL (`batch_po`, `customers`, `products`).
+  - `BatchPosLayoutClient` menerima `initialBatchPO`, `initialCustomers`, dan `initialProducts` hasil query DB Supabase.
+- **Real-Time Synchronized State & Fallback**:
+  - Autocomplete Nama Pembeli membaca daftar `customers` riil dari database.
+  - Target Batch PO membaca daftar `batch_po` riil dari database.
+  - Katalog Produk POS membaca daftar `products` riil dari database.
+  - Pembuatan Batch PO baru dan pendaftaran pembeli baru dari POS secara otomatis men-trigger `INSERT` ke database Supabase dengan safe fallback jika DB dalam mode dev/offline.
+
+### 🛠️ Changes (Perubahan Kode)
+- **Update Route**: `app/(dashboard)/batch-pos/page.tsx` (Penambahan `Promise.all` Supabase SSR queries untuk `batch_po`, `customers`, dan `products`).
+- **Update Client Component**: `components/BatchPosLayoutClient.tsx` (Menerima props data riil DB + penanganan sync create ke Supabase).

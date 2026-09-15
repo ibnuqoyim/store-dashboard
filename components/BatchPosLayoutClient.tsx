@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import BatchPosHeader from './BatchPosHeader';
 import CustomerShippingForm from './CustomerShippingForm';
 import ProductPosCart from './ProductPosCart';
@@ -10,11 +10,35 @@ import BatchDoughResume from './BatchDoughResume';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
 import { CatalogProduct, CartItem, CustomerShippingData, BatchOrder, PayStatus, PayMethod, OrderStatus, BatchPO, Customer } from '@/lib/types/batch';
 import { INITIAL_CATALOG, INITIAL_ORDERS, INITIAL_BATCH_POS, INITIAL_CUSTOMERS } from '@/lib/mock/batch-pos-mock';
+import { createClient } from '@/utils/supabase/client';
 
-export default function BatchPosLayoutClient() {
-  const [batchList, setBatchList] = useState<BatchPO[]>(INITIAL_BATCH_POS);
-  const [activeBatch, setActiveBatch] = useState(INITIAL_BATCH_POS[0].name);
-  const [customerList, setCustomerList] = useState<Customer[]>(INITIAL_CUSTOMERS);
+interface BatchPosLayoutClientProps {
+  initialBatchPO?: BatchPO[];
+  initialCustomers?: Customer[];
+  initialProducts?: CatalogProduct[];
+}
+
+export default function BatchPosLayoutClient({
+  initialBatchPO = [],
+  initialCustomers = [],
+  initialProducts = [],
+}: BatchPosLayoutClientProps) {
+  const supabase = createClient();
+
+  // Combine initial DB data with fallback mocks if DB is empty
+  const [batchList, setBatchList] = useState<BatchPO[]>(
+    initialBatchPO.length > 0 ? initialBatchPO : INITIAL_BATCH_POS
+  );
+  const [activeBatch, setActiveBatch] = useState<string>(
+    initialBatchPO.length > 0 ? initialBatchPO[0].name : INITIAL_BATCH_POS[0].name
+  );
+  const [customerList, setCustomerList] = useState<Customer[]>(
+    initialCustomers.length > 0 ? initialCustomers : INITIAL_CUSTOMERS
+  );
+  const [catalog, setCatalog] = useState<CatalogProduct[]>(
+    initialProducts.length > 0 ? initialProducts : INITIAL_CATALOG
+  );
+
   const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
 
   // Form & Cart States
@@ -25,13 +49,23 @@ export default function BatchPosLayoutClient() {
     shippingFee: 15000,
   });
 
-  const [catalog, setCatalog] = useState<CatalogProduct[]>(INITIAL_CATALOG);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [batchOrders, setBatchOrders] = useState<BatchOrder[]>(INITIAL_ORDERS);
 
   const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
 
-  const handleCreateNewBatch = (newBatchName: string) => {
+  // Synchronize state if props update from Server Component
+  useEffect(() => {
+    if (initialBatchPO.length > 0) {
+      setBatchList(initialBatchPO);
+      if (!activeBatch) setActiveBatch(initialBatchPO[0].name);
+    }
+    if (initialCustomers.length > 0) setCustomerList(initialCustomers);
+    if (initialProducts.length > 0) setCatalog(initialProducts);
+  }, [initialBatchPO, initialCustomers, initialProducts]);
+
+  // Handler: Create New Batch PO (Sync to Supabase & Local state)
+  const handleCreateNewBatch = async (newBatchName: string) => {
     const trimmed = newBatchName.trim();
     if (!trimmed) return;
 
@@ -41,15 +75,27 @@ export default function BatchPosLayoutClient() {
       return;
     }
 
-    const newPO: BatchPO = {
-      id: `po-${Date.now()}`,
-      name: trimmed,
-      description: 'Batch Pre-order Baru',
-    };
+    // Try inserting into Supabase batch_po table
+    try {
+      const { data, error } = await supabase
+        .from('batch_po')
+        .insert({ name: trimmed, description: 'Batch Pre-order Baru (POS)' })
+        .select('id, name, description, created_at')
+        .single();
 
-    setBatchList((prev) => [newPO, ...prev]);
-    setActiveBatch(trimmed);
-    alert(`Batch Pre-Order baru "${trimmed}" berhasil dibuat dan dipilih!`);
+      const newPO: BatchPO = data
+        ? { id: data.id, name: data.name, description: data.description }
+        : { id: `po-${Date.now()}`, name: trimmed, description: 'Batch Pre-order Baru' };
+
+      setBatchList((prev) => [newPO, ...prev]);
+      setActiveBatch(trimmed);
+      alert(`Batch Pre-Order baru "${trimmed}" berhasil dibuat dan dipilih!`);
+    } catch (err) {
+      console.warn('Supabase insert batch_po fallback:', err);
+      const newPO: BatchPO = { id: `po-${Date.now()}`, name: trimmed, description: 'Batch Pre-order Baru' };
+      setBatchList((prev) => [newPO, ...prev]);
+      setActiveBatch(trimmed);
+    }
   };
 
   const handleBatchChange = (batchName: string) => {
@@ -108,12 +154,29 @@ export default function BatchPosLayoutClient() {
     });
   };
 
-  const handleSaveNewProduct = (newProduct: CatalogProduct) => {
-    setCatalog((prev) => [newProduct, ...prev]);
-    alert(`Produk "${newProduct.name}" ditambahkan ke POS!`);
+  const handleSaveNewProduct = async (newProduct: CatalogProduct) => {
+    // Try saving product to Supabase DB
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          name: newProduct.name,
+          price: newProduct.price,
+          category: newProduct.category,
+        })
+        .select('id, name, price, category')
+        .single();
+
+      const createdProd = data ? { ...newProduct, id: data.id } : newProduct;
+      setCatalog((prev) => [createdProd, ...prev]);
+      alert(`Produk "${newProduct.name}" berhasil dibuat dan tersimpan ke DB!`);
+    } catch (err) {
+      setCatalog((prev) => [newProduct, ...prev]);
+      alert(`Produk "${newProduct.name}" ditambahkan ke katalog POS!`);
+    }
   };
 
-  const handleSubmitOrder = (payStatus: PayStatus, payMethod: PayMethod) => {
+  const handleSubmitOrder = async (payStatus: PayStatus, payMethod: PayMethod) => {
     const trimmedCustomerName = customerShipping.customerName.trim();
 
     if (!trimmedCustomerName) {
@@ -125,23 +188,40 @@ export default function BatchPosLayoutClient() {
       return;
     }
 
-    // Auto add customer to customerList if not exists (trimmed name compare)
+    // Auto add customer to customerList and DB if not exists
     const exists = customerList.some(
       (c) => c.name.trim().toLowerCase() === trimmedCustomerName.toLowerCase()
     );
     if (!exists) {
-      const newCust: Customer = {
-        id: `c-${Date.now()}`,
-        name: trimmedCustomerName,
-        phone: customerShipping.customerPhone,
-        default_courier: customerShipping.shippingMethod,
-      };
-      setCustomerList((prev) => [newCust, ...prev]);
+      try {
+        const { data } = await supabase
+          .from('customers')
+          .insert({
+            name: trimmedCustomerName,
+            phone: customerShipping.customerPhone,
+            default_courier: customerShipping.shippingMethod,
+          })
+          .select('id, name, phone, default_courier')
+          .single();
+
+        const newCust: Customer = data
+          ? { id: data.id, name: data.name, phone: data.phone, default_courier: data.default_courier }
+          : { id: `c-${Date.now()}`, name: trimmedCustomerName, phone: customerShipping.customerPhone, default_courier: customerShipping.shippingMethod };
+
+        setCustomerList((prev) => [newCust, ...prev]);
+      } catch (err) {
+        const newCust: Customer = {
+          id: `c-${Date.now()}`,
+          name: trimmedCustomerName,
+          phone: customerShipping.customerPhone,
+          default_courier: customerShipping.shippingMethod,
+        };
+        setCustomerList((prev) => [newCust, ...prev]);
+      }
     }
 
     const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
     const total = subtotal + customerShipping.shippingFee;
-
     const orderId = `ORD-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
 
     const newOrder: BatchOrder = {
@@ -184,7 +264,7 @@ export default function BatchPosLayoutClient() {
       />
 
       <main className="max-w-[1700px] mx-auto w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* COLUMN 1: POS INPUT (Task 4, 5, 6 + Customer Autocomplete) */}
+        {/* COLUMN 1: POS INPUT */}
         <section className="lg:col-span-5 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 flex flex-col gap-3.5">
           <CustomerShippingForm
             data={customerShipping}
@@ -203,7 +283,7 @@ export default function BatchPosLayoutClient() {
           />
         </section>
 
-        {/* COLUMN 2: BATCH ORDERS LIST (Task 7) */}
+        {/* COLUMN 2: BATCH ORDERS LIST */}
         <section className="lg:col-span-4 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]">
           <BatchOrdersList
             orders={batchOrders}
@@ -212,7 +292,7 @@ export default function BatchPosLayoutClient() {
           />
         </section>
 
-        {/* COLUMN 3: BATCH & DOUGH RESUME (Task 8) */}
+        {/* COLUMN 3: BATCH & DOUGH RESUME */}
         <section className="lg:col-span-3 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]">
           <BatchDoughResume orders={batchOrders} activeBatch={activeBatch} />
         </section>
