@@ -130,9 +130,9 @@ export default function ProductPosCart({
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center border rounded overflow-hidden bg-gray-50">
-                    <button onClick={() => onUpdateQty(idx, -1)} className="px-2.5 py-1.5 xl:px-1.5 xl:py-0.5 hover:bg-gray-200 font-bold">-</button>
+                    <button onClick={() => onUpdateQty(idx, -1)} className="min-w-[40px] min-h-[40px] xl:min-w-0 xl:min-h-0 px-2.5 py-1.5 xl:px-1.5 xl:py-0.5 hover:bg-gray-200 font-bold">-</button>
                     <span className="px-2 py-0.5 font-bold text-xs">{item.qty}</span>
-                    <button onClick={() => onUpdateQty(idx, 1)} className="px-2.5 py-1.5 xl:px-1.5 xl:py-0.5 hover:bg-gray-200 font-bold">+</button>
+                    <button onClick={() => onUpdateQty(idx, 1)} className="min-w-[40px] min-h-[40px] xl:min-w-0 xl:min-h-0 px-2.5 py-1.5 xl:px-1.5 xl:py-0.5 hover:bg-gray-200 font-bold">+</button>
                   </div>
                   <span className="font-extrabold text-amber-800 min-w-[65px] text-right">
                     {fc(item.price * item.qty)}

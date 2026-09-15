@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ClipboardList, ShoppingCart, ChefHat } from 'lucide-react';
 import BatchPosHeader from './BatchPosHeader';
@@ -328,14 +328,20 @@ export default function BatchPosLayoutClient({
     }
   };
 
-  const orderCount = batchOrders.length;
-  const cartCount = cart.reduce((sum, i) => sum + i.qty, 0);
+  const orderCount = useMemo(() => batchOrders.length, [batchOrders]);
+  const cartCount = useMemo(() => cart.reduce((sum, i) => sum + i.qty, 0), [cart]);
 
   const TABS: { id: PosTab; label: string; icon: typeof ShoppingCart; badge?: number }[] = [
     { id: 'pos', label: 'Kasir', icon: ShoppingCart, badge: cartCount || undefined },
     { id: 'orders', label: 'Order Batch', icon: ClipboardList, badge: orderCount || undefined },
     { id: 'resume', label: 'Rekap Adonan', icon: ChefHat },
   ];
+
+  // Below `xl` only the active tab's panel is shown (display: none on the rest);
+  // at `xl`+ all three are always visible as grid columns. Centralized here so the
+  // three <section> elements below don't repeat near-identical template literals.
+  const panelClass = (tab: PosTab, xlColSpan: string) =>
+    `${activeTab === tab ? 'flex' : 'hidden'} xl:flex ${xlColSpan} bg-white rounded-2xl p-4 shadow-sm border border-amber-100 flex-col gap-3.5`;
 
   return (
     <div className="min-h-screen bg-amber-50/30 p-2 sm:p-4 flex flex-col">
@@ -383,10 +389,12 @@ export default function BatchPosLayoutClient({
       </div>
 
       <main className="max-w-[1700px] mx-auto w-full flex-1 grid grid-cols-1 xl:grid-cols-12 gap-5">
+        {/* Breakpoint intentionally raised from lg (1024px) to xl (1280px): most
+            tablets — including iPad landscape at 1024-1180px — are narrower than
+            1280px, so a 3-way lg:grid-cols-12 split still left each column too
+            cramped to use. The tab switcher above covers everything under xl. */}
         {/* COLUMN 1: POS INPUT */}
-        <section
-          className={`${activeTab === 'pos' ? 'flex' : 'hidden'} xl:flex xl:col-span-5 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 flex-col gap-3.5`}
-        >
+        <section className={panelClass('pos', 'xl:col-span-5')}>
           <CustomerShippingForm
             data={customerShipping}
             customerList={customerList}
@@ -406,9 +414,7 @@ export default function BatchPosLayoutClient({
         </section>
 
         {/* COLUMN 2: BATCH ORDERS LIST */}
-        <section
-          className={`${activeTab === 'orders' ? 'block' : 'hidden'} xl:block xl:col-span-4 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]`}
-        >
+        <section className={`${panelClass('orders', 'xl:col-span-4')} min-h-[500px]`}>
           <BatchOrdersList
             orders={batchOrders}
             isLoading={isLoadingOrders}
@@ -418,9 +424,7 @@ export default function BatchPosLayoutClient({
         </section>
 
         {/* COLUMN 3: BATCH & DOUGH RESUME */}
-        <section
-          className={`${activeTab === 'resume' ? 'block' : 'hidden'} xl:block xl:col-span-3 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]`}
-        >
+        <section className={`${panelClass('resume', 'xl:col-span-3')} min-h-[500px]`}>
           <BatchDoughResume orders={batchOrders} activeBatchName={activeBatch?.name ?? 'Belum ada Batch PO'} />
         </section>
       </main>

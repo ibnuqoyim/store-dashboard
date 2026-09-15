@@ -80,7 +80,11 @@ export default function BatchOrdersList({
         </select>
       </div>
 
-      {/* Order Cards Container */}
+      {/* Order Cards Container. On tablet/mobile (below xl) the scroll height is
+          viewport-relative since this panel is full-width and full-height in its
+          own tab: 260px accounts for the sticky header + tab bar + section
+          padding above it. At xl+ it sits beside the other two columns, so a
+          fixed height matches their layout instead. */}
       <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[calc(100vh-260px)] xl:max-h-[580px]">
         {isLoading ? (
           <div className="text-center py-8 text-xs text-gray-400">Memuat order...</div>
