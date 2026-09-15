@@ -6,7 +6,7 @@ import { ClipboardList, ShoppingCart, ChefHat } from 'lucide-react';
 import BatchPosHeader from './BatchPosHeader';
 import CustomerShippingForm from './CustomerShippingForm';
 import ProductPosCart from './ProductPosCart';
-import NewProductModal from './NewProductModal';
+import ProductModal from './ProductModal';
 import BatchOrdersList from './BatchOrdersList';
 import BatchDoughResume from './BatchDoughResume';
 import { createClient } from '@/utils/supabase/client';
@@ -18,7 +18,6 @@ import {
   CustomerShippingData,
   BatchOrder,
   PayStatus,
-  PayMethod,
   OrderStatus,
   BatchPO,
   Customer,
@@ -53,6 +52,7 @@ export default function BatchPosLayoutClient({
   const [catalog, setCatalog] = useState<CatalogProduct[]>(initialCatalog);
   const [batchOrders, setBatchOrders] = useState<BatchOrder[]>(initialOrders);
   const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<CatalogProduct | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [activeTab, setActiveTab] = useState<PosTab>('pos');
@@ -171,8 +171,16 @@ export default function BatchPosLayoutClient({
     });
   };
 
-  const handleSaveNewProduct = (newProduct: CatalogProduct) => {
-    setCatalog((prev) => [newProduct, ...prev]);
+  const handleSaveProduct = (savedProduct: CatalogProduct) => {
+    setCatalog((prev) => {
+      const idx = prev.findIndex((p) => p.id === savedProduct.id);
+      if (idx > -1) {
+        const updated = [...prev];
+        updated[idx] = savedProduct;
+        return updated;
+      }
+      return [savedProduct, ...prev];
+    });
   };
 
   const generateInvoiceNumber = async (): Promise<string> => {
@@ -195,7 +203,7 @@ export default function BatchPosLayoutClient({
     return `${currentYYYYMM}${String(maxSeq + 1).padStart(3, '0')}`;
   };
 
-  const handleSubmitOrder = async (payStatus: PayStatus, payMethod: PayMethod) => {
+  const handleSubmitOrder = async () => {
     const trimmedCustomerName = customerShipping.customerName.trim();
 
     if (!trimmedCustomerName) {
@@ -240,9 +248,9 @@ export default function BatchPosLayoutClient({
       const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
 
       // 2. Insert into the real orders table, linked to the active Batch PO.
-      // invoice_number is only unique-guaranteed by the DB constraint, so on a
-      // concurrent-write collision (Postgres 23505) we regenerate and retry
-      // rather than risk two operators silently colliding on the same number.
+      // Order directly saved with UNPAID / pending status.
+      // invoice_number is only unique-guaranteed by DB constraint, so on concurrent-write
+      // collision (Postgres 23505) we regenerate and retry.
       let newOrder: { id: string } | null = null;
       let invoiceNumber = '';
       const MAX_INVOICE_ATTEMPTS = 3;
@@ -256,12 +264,12 @@ export default function BatchPosLayoutClient({
             customer_id: customerId,
             customer_name: trimmedCustomerName,
             phone: customerShipping.customerPhone || null,
-            status: payStatus === 'PAID' ? 'paid' : 'pending',
+            status: 'pending',
             po_id: activeBatchId,
             shipping_method: customerShipping.shippingMethod,
             shipping_fee: customerShipping.shippingFee,
-            pay_status: payStatus,
-            pay_method: payMethod,
+            pay_status: 'UNPAID',
+            pay_method: null,
             order_status: 'PENDING',
           })
           .select('id')
@@ -328,6 +336,31 @@ export default function BatchPosLayoutClient({
     }
   };
 
+  const handleUpdatePayStatus = async (orderId: string, newPayStatus: PayStatus) => {
+    const previous = [...batchOrders];
+    setBatchOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              payStatus: newPayStatus,
+            }
+          : o
+      )
+    );
+
+    const updatePayload: { pay_status: PayStatus; status: string } = {
+      pay_status: newPayStatus,
+      status: newPayStatus === 'PAID' ? 'paid' : 'pending',
+    };
+
+    const { error } = await supabase.from('orders').update(updatePayload).eq('id', orderId);
+    if (error) {
+      setBatchOrders(previous);
+      alert('Gagal mengubah status pembayaran: ' + error.message);
+    }
+  };
+
   const orderCount = useMemo(() => batchOrders.length, [batchOrders]);
   const cartCount = useMemo(() => cart.reduce((sum, i) => sum + i.qty, 0), [cart]);
 
@@ -337,11 +370,9 @@ export default function BatchPosLayoutClient({
     { id: 'resume', label: 'Rekap Adonan', icon: ChefHat },
   ];
 
-  // Below `xl` only the active tab's panel is shown (display: none on the rest);
-  // at `xl`+ all three are always visible as grid columns. Centralized here so the
-  // three <section> elements below don't repeat near-identical template literals.
-  const panelClass = (tab: PosTab, xlColSpan: string) =>
-    `${activeTab === tab ? 'flex' : 'hidden'} xl:flex ${xlColSpan} bg-white rounded-2xl p-4 shadow-sm border border-amber-100 flex-col gap-3.5`;
+  // Only show active tab's panel across all screen sizes (mobile & desktop)
+  const panelClass = (tab: PosTab) =>
+    `${activeTab === tab ? 'flex' : 'hidden'} w-full bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-amber-100 flex-col gap-3.5`;
 
   return (
     <div className="min-h-screen bg-amber-50/30 p-2 sm:p-4 flex flex-col">
@@ -352,31 +383,32 @@ export default function BatchPosLayoutClient({
         onCreateNewBatch={handleCreateNewBatch}
         currentCapacity={batchOrders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.qty, 0), 0)}
         maxCapacity={activeBatch ? 100 : 100}
-        onOpenNewProductModal={() => setIsNewProductModalOpen(true)}
+        onOpenNewProductModal={() => {
+          setEditingProduct(null);
+          setIsNewProductModalOpen(true);
+        }}
         onRefresh={() => activeBatchId && fetchOrdersForBatch(activeBatchId)}
       />
 
-      {/* Tab switcher — only shown below the xl breakpoint (phones & tablets, incl.
-          iPad portrait/landscape) where 3 side-by-side columns don't fit comfortably.
-          Panels stay mounted (just hidden) so cart/form state survives tab switches. */}
-      <div className="xl:hidden sticky top-0 z-20 bg-amber-50/95 backdrop-blur -mx-2 sm:-mx-4 px-2 sm:px-4 py-2 mb-3 border-b border-amber-200">
-        <div className="max-w-[1700px] mx-auto grid grid-cols-3 gap-2">
+      {/* Tab switcher — shown for all devices (mobile, tablet & desktop) */}
+      <div className="bg-amber-50/95 backdrop-blur -mx-2 sm:-mx-4 px-2 sm:px-4 py-2 mb-3 border-b border-amber-200">
+        <div className="max-w-[1700px] mx-auto grid grid-cols-3 gap-2 sm:gap-3">
           {TABS.map(({ id, label, icon: Icon, badge }) => (
             <button
               key={id}
               type="button"
               onClick={() => setActiveTab(id)}
-              className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition relative ${
+              className={`flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition relative cursor-pointer ${
                 activeTab === id
                   ? 'bg-amber-800 text-white shadow-sm'
-                  : 'bg-white text-amber-900 border border-amber-200'
+                  : 'bg-white text-amber-900 border border-amber-200 hover:bg-amber-50'
               }`}
             >
               <Icon className="w-4 h-4 shrink-0" />
               <span className="truncate">{label}</span>
               {!!badge && (
                 <span
-                  className={`ml-0.5 text-[10px] font-extrabold rounded-full px-1.5 min-w-[18px] text-center ${
+                  className={`ml-0.5 text-[10px] sm:text-xs font-extrabold rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none ${
                     activeTab === id ? 'bg-amber-500 text-amber-950' : 'bg-amber-100 text-amber-800'
                   }`}
                 >
@@ -388,52 +420,63 @@ export default function BatchPosLayoutClient({
         </div>
       </div>
 
-      <main className="max-w-[1700px] mx-auto w-full flex-1 grid grid-cols-1 xl:grid-cols-12 gap-5">
-        {/* Breakpoint intentionally raised from lg (1024px) to xl (1280px): most
-            tablets — including iPad landscape at 1024-1180px — are narrower than
-            1280px, so a 3-way lg:grid-cols-12 split still left each column too
-            cramped to use. The tab switcher above covers everything under xl. */}
-        {/* COLUMN 1: POS INPUT */}
-        <section className={panelClass('pos', 'xl:col-span-5')}>
-          <CustomerShippingForm
-            data={customerShipping}
-            customerList={customerList}
-            onChange={setCustomerShipping}
-          />
-          <ProductPosCart
-            catalog={catalog}
-            cart={cart}
-            shippingFee={customerShipping.shippingFee}
-            onAddToCart={handleAddToCart}
-            onUpdateQty={handleUpdateQty}
-            onUpdateInlinePrice={handleUpdateInlinePrice}
-            onClearCart={handleClearCart}
-            onSubmitOrder={handleSubmitOrder}
-            isSubmitting={isSubmitting}
-          />
+      <main className="max-w-[1700px] mx-auto w-full flex-1 flex flex-col">
+        {/* TAB 1: POS INPUT */}
+        <section className={panelClass('pos')}>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div className="lg:col-span-4">
+              <CustomerShippingForm
+                data={customerShipping}
+                customerList={customerList}
+                onChange={setCustomerShipping}
+              />
+            </div>
+            <div className="lg:col-span-8">
+              <ProductPosCart
+                catalog={catalog}
+                cart={cart}
+                shippingFee={customerShipping.shippingFee}
+                onAddToCart={handleAddToCart}
+                onEditProduct={(p) => {
+                  setEditingProduct(p);
+                  setIsNewProductModalOpen(true);
+                }}
+                onUpdateQty={handleUpdateQty}
+                onUpdateInlinePrice={handleUpdateInlinePrice}
+                onClearCart={handleClearCart}
+                onSubmitOrder={handleSubmitOrder}
+                isSubmitting={isSubmitting}
+              />
+            </div>
+          </div>
         </section>
 
-        {/* COLUMN 2: BATCH ORDERS LIST */}
-        <section className={`${panelClass('orders', 'xl:col-span-4')} min-h-[500px]`}>
+        {/* TAB 2: BATCH ORDERS LIST */}
+        <section className={`${panelClass('orders')} min-h-[500px]`}>
           <BatchOrdersList
             orders={batchOrders}
             isLoading={isLoadingOrders}
             onUpdateOrderStatus={handleUpdateOrderStatus}
-            onPrintReceipt={(id) => router.push(`/orders/${id}`)}
+            onUpdatePayStatus={handleUpdatePayStatus}
           />
         </section>
 
-        {/* COLUMN 3: BATCH & DOUGH RESUME */}
-        <section className={`${panelClass('resume', 'xl:col-span-3')} min-h-[500px]`}>
+        {/* TAB 3: BATCH & DOUGH RESUME */}
+        <section className={`${panelClass('resume')} min-h-[500px]`}>
           <BatchDoughResume orders={batchOrders} activeBatchName={activeBatch?.name ?? 'Belum ada Batch PO'} />
         </section>
       </main>
 
-      <NewProductModal
+      <ProductModal
+        key={editingProduct?.id ?? 'new'}
         isOpen={isNewProductModalOpen}
-        onClose={() => setIsNewProductModalOpen(false)}
-        onSaveProduct={handleSaveNewProduct}
+        onClose={() => {
+          setIsNewProductModalOpen(false);
+          setEditingProduct(null);
+        }}
+        onSaveProduct={handleSaveProduct}
         doughs={doughs}
+        productToEdit={editingProduct}
       />
     </div>
   );

@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { ListChecks, Search, Printer } from 'lucide-react';
-import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
-import { BatchOrder, OrderStatus, ShippingMethod } from '@/lib/types/batch';
+import { ListChecks, Search, Printer, Loader2 } from 'lucide-react';
+import { formatCurrency } from '@/lib/config';
+import { useBusinessConfig } from '@/lib/business-config-context';
+import { generateInvoicePdf, mapBatchOrderToInvoicePdfOrder } from '@/lib/invoice-pdf';
+import { BatchOrder, OrderStatus, PayStatus, ShippingMethod } from '@/lib/types/batch';
 
 interface BatchOrdersListProps {
   orders: BatchOrder[];
   onUpdateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
-  onPrintReceipt?: (orderId: string) => void;
+  onUpdatePayStatus?: (orderId: string, newPayStatus: PayStatus) => void;
   isLoading?: boolean;
 }
 
@@ -22,13 +24,27 @@ const SHIPPING_BADGE_MAP: Record<ShippingMethod, string> = {
 export default function BatchOrdersList({
   orders,
   onUpdateOrderStatus,
-  onPrintReceipt,
+  onUpdatePayStatus,
   isLoading = false,
 }: BatchOrdersListProps) {
   const [searchVal, setSearchVal] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | OrderStatus>('ALL');
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
+  const config = useBusinessConfig();
+  const fc = (amount: number) => formatCurrency(amount, config);
+
+  const handleDownloadStruk = async (order: BatchOrder) => {
+    try {
+      setDownloadingId(order.id);
+      await generateInvoicePdf(mapBatchOrderToInvoicePdfOrder(order), config);
+    } catch (err) {
+      console.error('Error generating PDF struk:', err);
+      alert('Gagal mengunduh invoice PDF. Silakan coba lagi.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const filteredOrders = useMemo(() => {
     const query = searchVal.toLowerCase().trim();
@@ -149,25 +165,57 @@ export default function BatchOrdersList({
                   ))}
                 </div>
 
-                {/* Order Status Changer & Quick Action */}
-                <div className="flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-1 text-[11px]">
-                    <span className="text-gray-500">Status:</span>
-                    <select
-                      value={o.orderStatus}
-                      onChange={(e) => onUpdateOrderStatus(o.id, e.target.value as OrderStatus)}
-                      className="bg-white border border-gray-300 rounded font-semibold text-[11px] p-1.5 xl:p-1"
-                    >
-                      <option value="PENDING">PENDING ⏳</option>
-                      <option value="IN PREP">IN PREP 🥣</option>
-                      <option value="READY">READY 🟢</option>
-                    </select>
+                {/* Order Status & Pay Status Changer & Quick Action */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-100">
+                  <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-500">Status:</span>
+                      <select
+                        value={o.orderStatus}
+                        onChange={(e) => onUpdateOrderStatus(o.id, e.target.value as OrderStatus)}
+                        className="bg-white border border-gray-300 rounded font-semibold text-[11px] p-1.5 xl:p-1 cursor-pointer"
+                      >
+                        <option value="PENDING">PENDING ⏳</option>
+                        <option value="IN PREP">IN PREP 🥣</option>
+                        <option value="READY">READY 🟢</option>
+                      </select>
+                    </div>
+
+                    {onUpdatePayStatus && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-gray-500">Bayar:</span>
+                        <select
+                          value={o.payStatus}
+                          onChange={(e) => onUpdatePayStatus(o.id, e.target.value as PayStatus)}
+                          className={`border rounded font-bold text-[11px] p-1.5 xl:p-1 cursor-pointer ${
+                            o.payStatus === 'PAID'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                              : o.payStatus === 'DP'
+                              ? 'bg-amber-50 text-amber-800 border-amber-300'
+                              : 'bg-red-50 text-red-800 border-red-300'
+                          }`}
+                        >
+                          <option value="PAID">PAID (Lunas)</option>
+                          <option value="DP">DP (Uang Muka)</option>
+                          <option value="UNPAID">UNPAID (Belum)</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
+
                   <button
-                    onClick={() => onPrintReceipt && onPrintReceipt(o.id)}
-                    className="text-gray-500 hover:text-gray-700 text-[11px] flex items-center gap-1 font-medium"
+                    type="button"
+                    disabled={downloadingId === o.id}
+                    onClick={() => handleDownloadStruk(o)}
+                    className="text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-lg text-[11px] flex items-center gap-1 font-bold transition disabled:opacity-50 cursor-pointer"
+                    title="Download Invoice PDF"
                   >
-                    <Printer className="w-3.5 h-3.5" /> Struk
+                    {downloadingId === o.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-800" />
+                    ) : (
+                      <Printer className="w-3.5 h-3.5 text-amber-800" />
+                    )}
+                    <span>{downloadingId === o.id ? 'Mengunduh...' : 'Struk PDF'}</span>
                   </button>
                 </div>
               </div>
