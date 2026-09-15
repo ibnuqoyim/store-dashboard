@@ -116,6 +116,7 @@ export default function ProductPosCart({
                   {onEditProduct && (
                     <button
                       type="button"
+                      aria-label={`Edit produk ${p.name}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         onEditProduct(p);
