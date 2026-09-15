@@ -26,3 +26,5 @@ File-file di folder ini adalah **history perubahan schema** sejak awal proyek �
 | `2026_create_inventory.sql` | Buat tabel `inventory`, `inventory_transactions`, `operational_expenses` |
 | `2027_create_expense_trigger.sql` | Trigger: expense → insert financial transaction |
 | `2028_create_inventory_expense_trigger.sql` | Trigger: inventory purchase → insert expense transaction |
+| `20260915_create_batch_pos_schema.sql` | ⚠️ Superseded — introduced a standalone `batches` table never wired to the UI |
+| `20260916_batch_pos_integration.sql` | Batch POS now reuses `batch_po`; adds `orders.shipping_method/fee/pay_status/pay_method/order_status`, `order_items.is_custom_price` |

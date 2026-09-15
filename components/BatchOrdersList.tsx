@@ -9,6 +9,7 @@ interface BatchOrdersListProps {
   orders: BatchOrder[];
   onUpdateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
   onPrintReceipt?: (orderId: string) => void;
+  isLoading?: boolean;
 }
 
 const SHIPPING_BADGE_MAP: Record<ShippingMethod, string> = {
@@ -22,6 +23,7 @@ export default function BatchOrdersList({
   orders,
   onUpdateOrderStatus,
   onPrintReceipt,
+  isLoading = false,
 }: BatchOrdersListProps) {
   const [searchVal, setSearchVal] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | OrderStatus>('ALL');
@@ -34,7 +36,7 @@ export default function BatchOrdersList({
       const matchSearch =
         !query ||
         o.customerName.toLowerCase().includes(query) ||
-        o.id.toLowerCase().includes(query);
+        o.invoiceNumber.toLowerCase().includes(query);
       const matchStatus = statusFilter === 'ALL' || o.orderStatus === statusFilter;
       return matchSearch && matchStatus;
     });
@@ -80,7 +82,9 @@ export default function BatchOrdersList({
 
       {/* Order Cards Container */}
       <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[580px]">
-        {filteredOrders.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-8 text-xs text-gray-400">Memuat order...</div>
+        ) : filteredOrders.length === 0 ? (
           <div className="text-center py-8 text-xs text-gray-400">Tidak ada order yang cocok</div>
         ) : (
           filteredOrders.map((o) => {
@@ -100,7 +104,7 @@ export default function BatchOrdersList({
               >
                 <div className="flex items-center justify-between border-b border-gray-200/60 pb-1.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-gray-900">{o.id}</span>
+                    <span className="font-bold text-gray-900">{o.invoiceNumber}</span>
                     <span className="text-[10px] text-gray-400">• {o.time}</span>
                   </div>
                   <div className="flex items-center gap-1">

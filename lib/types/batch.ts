@@ -7,8 +7,8 @@ export interface CatalogProduct {
   id: string;
   name: string;
   price: number;
-  category: string;
-  doughRecipe?: string;
+  doughId?: string | null;
+  doughName?: string | null;
 }
 
 export interface CartItem {
@@ -30,6 +30,7 @@ export interface CustomerShippingData {
 
 export interface BatchOrder {
   id: string;
+  invoiceNumber: string;
   customerName: string;
   phone: string;
   shipping: ShippingMethod;
@@ -56,4 +57,9 @@ export interface BatchPO {
   name: string;
   description?: string | null;
   created_at?: string;
+}
+
+export interface Dough {
+  id: string;
+  name: string;
 }
