@@ -21,6 +21,7 @@ export interface CartItem {
 }
 
 export interface CustomerShippingData {
+  customerId?: string;
   customerName: string;
   customerPhone: string;
   shippingMethod: ShippingMethod;
@@ -40,4 +41,19 @@ export interface BatchOrder {
   payStatus: PayStatus;
   payMethod: PayMethod;
   orderStatus: OrderStatus;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone?: string | null;
+  address?: string | null;
+  default_courier?: string | null;
+}
+
+export interface BatchPO {
+  id: string;
+  name: string;
+  description?: string | null;
+  created_at?: string;
 }

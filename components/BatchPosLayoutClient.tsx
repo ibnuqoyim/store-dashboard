@@ -8,11 +8,13 @@ import NewProductModal from './NewProductModal';
 import BatchOrdersList from './BatchOrdersList';
 import BatchDoughResume from './BatchDoughResume';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
-import { CatalogProduct, CartItem, CustomerShippingData, BatchOrder, PayStatus, PayMethod, OrderStatus } from '@/lib/types/batch';
-import { INITIAL_CATALOG, INITIAL_ORDERS } from '@/lib/mock/batch-pos-mock';
+import { CatalogProduct, CartItem, CustomerShippingData, BatchOrder, PayStatus, PayMethod, OrderStatus, BatchPO, Customer } from '@/lib/types/batch';
+import { INITIAL_CATALOG, INITIAL_ORDERS, INITIAL_BATCH_POS, INITIAL_CUSTOMERS } from '@/lib/mock/batch-pos-mock';
 
 export default function BatchPosLayoutClient() {
-  const [activeBatch, setActiveBatch] = useState('BATCH-20260915-PAGI');
+  const [batchList, setBatchList] = useState<BatchPO[]>(INITIAL_BATCH_POS);
+  const [activeBatch, setActiveBatch] = useState(INITIAL_BATCH_POS[0].name);
+  const [customerList, setCustomerList] = useState<Customer[]>(INITIAL_CUSTOMERS);
   const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
 
   // Form & Cart States
@@ -28,6 +30,31 @@ export default function BatchPosLayoutClient() {
   const [batchOrders, setBatchOrders] = useState<BatchOrder[]>(INITIAL_ORDERS);
 
   const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
+
+  const handleCreateNewBatch = (newBatchName: string) => {
+    const trimmed = newBatchName.trim();
+    if (!trimmed) return;
+
+    const exists = batchList.some((b) => b.name.toLowerCase() === trimmed.toLowerCase());
+    if (exists) {
+      alert(`Batch PO "${trimmed}" sudah ada! Harap gunakan nama lain.`);
+      return;
+    }
+
+    const newPO: BatchPO = {
+      id: `po-${Date.now()}`,
+      name: trimmed,
+      description: 'Batch Pre-order Baru',
+    };
+
+    setBatchList((prev) => [newPO, ...prev]);
+    setActiveBatch(trimmed);
+    alert(`Batch Pre-Order baru "${trimmed}" berhasil dibuat dan dipilih!`);
+  };
+
+  const handleBatchChange = (batchName: string) => {
+    setActiveBatch(batchName);
+  };
 
   const handleAddToCart = (product: CatalogProduct) => {
     setCart((prev) => {
@@ -87,13 +114,29 @@ export default function BatchPosLayoutClient() {
   };
 
   const handleSubmitOrder = (payStatus: PayStatus, payMethod: PayMethod) => {
-    if (!customerShipping.customerName) {
+    const trimmedCustomerName = customerShipping.customerName.trim();
+
+    if (!trimmedCustomerName) {
       alert('Harap isi Nama Pembeli terlebih dahulu!');
       return;
     }
     if (cart.length === 0) {
       alert('Keranjang masih kosong!');
       return;
+    }
+
+    // Auto add customer to customerList if not exists (trimmed name compare)
+    const exists = customerList.some(
+      (c) => c.name.trim().toLowerCase() === trimmedCustomerName.toLowerCase()
+    );
+    if (!exists) {
+      const newCust: Customer = {
+        id: `c-${Date.now()}`,
+        name: trimmedCustomerName,
+        phone: customerShipping.customerPhone,
+        default_courier: customerShipping.shippingMethod,
+      };
+      setCustomerList((prev) => [newCust, ...prev]);
     }
 
     const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
@@ -103,7 +146,7 @@ export default function BatchPosLayoutClient() {
 
     const newOrder: BatchOrder = {
       id: orderId,
-      customerName: customerShipping.customerName,
+      customerName: trimmedCustomerName,
       phone: customerShipping.customerPhone || '-',
       shipping: customerShipping.shippingMethod,
       shippingFee: customerShipping.shippingFee,
@@ -131,7 +174,9 @@ export default function BatchPosLayoutClient() {
     <div className="min-h-screen bg-amber-50/30 p-2 sm:p-4 flex flex-col">
       <BatchPosHeader
         activeBatch={activeBatch}
-        onBatchChange={setActiveBatch}
+        batchList={batchList}
+        onBatchChange={handleBatchChange}
+        onCreateNewBatch={handleCreateNewBatch}
         currentCapacity={batchOrders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.qty, 0), 0)}
         maxCapacity={100}
         onOpenNewProductModal={() => setIsNewProductModalOpen(true)}
@@ -139,9 +184,13 @@ export default function BatchPosLayoutClient() {
       />
 
       <main className="max-w-[1700px] mx-auto w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* COLUMN 1: POS INPUT (Task 4, 5, 6) */}
+        {/* COLUMN 1: POS INPUT (Task 4, 5, 6 + Customer Autocomplete) */}
         <section className="lg:col-span-5 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 flex flex-col gap-3.5">
-          <CustomerShippingForm data={customerShipping} onChange={setCustomerShipping} />
+          <CustomerShippingForm
+            data={customerShipping}
+            customerList={customerList}
+            onChange={setCustomerShipping}
+          />
           <ProductPosCart
             catalog={catalog}
             cart={cart}
