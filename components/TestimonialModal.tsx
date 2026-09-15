@@ -65,7 +65,7 @@ export default function TestimonialModal({ testimonial, onClose, onSave }: Testi
       onSave()
       onClose()
     } catch (error) {
-      alert('Error saving testimonial: ' + (error as any).message)
+      alert('Error saving testimonial: ' + (error instanceof Error ? error.message : 'unknown error'))
     } finally {
       setIsLoading(false)
     }

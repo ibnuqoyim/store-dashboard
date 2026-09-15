@@ -7,7 +7,6 @@ import { createClient } from '@/utils/supabase/client'
 import DashboardCustomizer from '@/components/DashboardCustomizer'
 import { format } from 'date-fns'
 import Link from 'next/link'
-// @ts-ignore
 import { useRouter } from 'next/navigation'
 import {
     WidgetId,
@@ -30,13 +29,59 @@ type Store = {
     invoice_closing_sub: string | null
 }
 
+type DashboardProduct = {
+    id: string
+    name?: string
+    price?: number
+    weight?: number
+    adonan?: { name: string } | null
+}
+
+type DashboardAdonan = {
+    id: string
+    name: string
+    weight: number
+}
+
+type DashboardBatch = {
+    id: string
+    name: string
+}
+
+type DashboardOrderItem = {
+    product_id: string
+    quantity: number
+    price: number
+    products?: { name: string } | null
+}
+
+type DashboardDelivery = {
+    courier_name: string | null
+    shipping_cost: number | null
+    address: string | null
+    status: string | null
+}
+
+type DashboardOrder = {
+    id: string
+    invoice_number: string
+    date: string
+    customer_name: string
+    phone: string | null
+    status: string
+    store_id?: string | null
+    po_id?: string | null
+    order_items: DashboardOrderItem[]
+    deliveries?: DashboardDelivery[]
+}
+
 type DashboardProps = {
     storeInfoId: string
     initialWidgetConfig: WidgetConfig[] | null
-    orders: any[]
-    products: any[]
-    adonan: any[]
-    batches: any[]
+    orders: DashboardOrder[]
+    products: DashboardProduct[]
+    adonan: DashboardAdonan[]
+    batches: DashboardBatch[]
     stores?: Store[]
 }
 
@@ -94,7 +139,7 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
         }
     }
 
-    const [selectedOrder, setSelectedOrder] = useState<any>(null)
+    const [selectedOrder, setSelectedOrder] = useState<DashboardOrder | null>(null)
     const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
     const [paying, setPaying] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState<string>('')
@@ -124,12 +169,12 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
     }, [orders, selectedBatchId, searchQuery, sortOrder])
 
     const stats = useMemo(() => {
-        let totalOrders = filteredOrders.length
+        const totalOrders = filteredOrders.length
         let totalRevenue = 0
         let pendingCount = 0
 
-        const productMap = new Map<string, any>()
-        const adonanMap = new Map<string, any>()
+        const productMap = new Map<string, { name: string; totalQuantity: number; price: number; totalAmount: number }>()
+        const adonanMap = new Map<string, DashboardAdonan & { totalQuantity: number; totalWeight: number; weightPerBatch: number }>()
 
         adonan.forEach(a => {
             adonanMap.set(a.name, { ...a, totalQuantity: 0, totalWeight: 0, weightPerBatch: a.weight })
@@ -139,7 +184,7 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
             if (order.status === 'pending') pendingCount++
 
             let orderRevenue = 0
-            order.order_items.forEach((item: any) => {
+            order.order_items.forEach((item) => {
                 orderRevenue += (item.price || 0) * (item.quantity || 0)
 
                 const pName = item.products?.name || 'Unknown'
@@ -161,7 +206,7 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
                     if (adonanMap.has(aName)) {
                         const aEntry = adonanMap.get(aName)!
                         aEntry.totalQuantity += item.quantity
-                        aEntry.totalWeight += (productDef.weight * item.quantity)
+                        aEntry.totalWeight += ((productDef.weight ?? 0) * item.quantity)
                     }
                 }
             })
@@ -182,7 +227,7 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
         return { totalOrders, totalRevenue, pendingCount, productSummary, adonanSummary }
     }, [filteredOrders, products, adonan])
 
-    const handleMarkPaid = async (order: any) => {
+    const handleMarkPaid = async (order: DashboardOrder) => {
         if (!confirm(`Tandai order #${order.invoice_number} (${order.customer_name}) sebagai lunas?`)) return
         setPaying(order.id)
         const { error } = await supabase
@@ -197,14 +242,13 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
         }
     }
 
-    const handleGenerateInvoice = (order: any) => {
+    const handleGenerateInvoice = (order: DashboardOrder) => {
         setSelectedOrder(order)
         setInvoiceModalOpen(true)
     }
 
-    const handleDownloadInvoice = async (order: any) => {
+    const handleDownloadInvoice = async (order: DashboardOrder) => {
         try {
-            // @ts-ignore
             const jsPDF = (await import('jspdf')).default
 
             const doc = new jsPDF({
@@ -272,8 +316,8 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
                         const y = (pageHeight - renderHeight / 1.5) / 2
 
                         doc.saveGraphicsState()
-                        // @ts-ignore
-                        doc.setGState(new (doc as any).GState({ opacity: 0.2 }))
+                        interface JsPdfWithGState { GState: new (opts: { opacity: number }) => unknown }
+                        doc.setGState(new (doc as unknown as JsPdfWithGState).GState({ opacity: 0.2 }))
                         doc.addImage(cleanImageData, 'PNG', x, y, renderWidth / 1.5, renderHeight / 1.5)
                         doc.restoreGraphicsState()
                     }
@@ -320,7 +364,7 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
             doc.setFont('helvetica', 'normal')
             let subtotal = 0
 
-            order.order_items?.forEach((item: any) => {
+            order.order_items?.forEach((item) => {
                 const amount = item.price * item.quantity
                 subtotal += amount
                 doc.text(item.products?.name || 'Unknown', 12, yPos)
@@ -384,7 +428,7 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
         }
     }
 
-    const handleShareWhatsApp = async (order: any) => {
+    const handleShareWhatsApp = async (order: DashboardOrder) => {
         try {
             await handleDownloadInvoice(order)
 
@@ -395,12 +439,12 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
                 phone = '62' + phone
             }
 
-            const defaultMessage = `Halo ${order.customer_name},\n\nBerikut adalah invoice untuk pesanan Anda:\n\nInvoice: ${order.invoice_number}\nTanggal: ${format(new Date(order.date), 'dd MMM yyyy')}\nTotal: ${fc(order.order_items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0))}\n\nTerima kasih telah berbelanja di ${config.name}!`
+            const defaultMessage = `Halo ${order.customer_name},\n\nBerikut adalah invoice untuk pesanan Anda:\n\nInvoice: ${order.invoice_number}\nTanggal: ${format(new Date(order.date), 'dd MMM yyyy')}\nTotal: ${fc(order.order_items.reduce((sum, item) => sum + (item.price * item.quantity), 0))}\n\nTerima kasih telah berbelanja di ${config.name}!`
             const message = config.whatsapp_greeting_template
                 ? config.whatsapp_greeting_template
                     .replace('{name}', order.customer_name)
                     .replace('{invoice}', order.invoice_number)
-                    .replace('{total}', fc(order.order_items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)))
+                    .replace('{total}', fc(order.order_items.reduce((sum, item) => sum + (item.price * item.quantity), 0)))
                 : defaultMessage
 
             const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
@@ -411,7 +455,7 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
         }
     }
 
-    const handleCreateDelivery = async (order: any) => {
+    const handleCreateDelivery = async (order: DashboardOrder) => {
         if (order.deliveries && order.deliveries.length > 0) {
             router.push('/deliveries')
         } else {
@@ -502,8 +546,8 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {filteredOrders.map(order => {
-                                        let orderTotal = order.order_items.reduce((s: number, i: any) => s + (i.price * i.quantity), 0)
-                                        if (order.deliveries?.length > 0) orderTotal += (order.deliveries[0].shipping_cost || 0)
+                                        let orderTotal = order.order_items.reduce((s, i) => s + (i.price * i.quantity), 0)
+                                        if ((order.deliveries?.length ?? 0) > 0) orderTotal += (order.deliveries?.[0]?.shipping_cost || 0)
 
                                         return (
                                             <tr key={order.id} className="hover:bg-gray-50">

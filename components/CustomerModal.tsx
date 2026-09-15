@@ -78,9 +78,9 @@ export default function CustomerModal({ isOpen, onClose, onSave, customer }: Cus
             }
 
             onSave(result)
-        } catch (err: any) {
+        } catch (err) {
             console.error('Error saving customer:', err)
-            setError(err.message || 'Failed to save customer')
+            setError(err instanceof Error ? err.message : 'Failed to save customer')
         } finally {
             setIsLoading(false)
         }

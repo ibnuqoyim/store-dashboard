@@ -250,8 +250,8 @@ export default function RecipeManager({
 
             setFormOpen(false)
             await fetchRecipes()
-        } catch (err: any) {
-            alert('Gagal menyimpan resep: ' + err.message)
+        } catch (err) {
+            alert('Gagal menyimpan resep: ' + (err instanceof Error ? err.message : 'unknown error'))
         } finally {
             setSaving(false)
         }
@@ -740,7 +740,7 @@ export default function RecipeManager({
 
                                 {tempIngredients.length === 0 ? (
                                     <p className="text-sm text-gray-400 italic text-center py-4 border border-dashed border-gray-200 rounded-lg">
-                                        Belum ada bahan. Klik "Tambah Bahan" untuk mulai.
+                                        Belum ada bahan. Klik &quot;Tambah Bahan&quot; untuk mulai.
                                     </p>
                                 ) : (
                                     <div className="space-y-2">

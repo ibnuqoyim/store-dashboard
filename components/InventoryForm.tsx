@@ -248,9 +248,9 @@ export default function InventoryForm() {
             if (error) throw error
             setEditingItem(null)
             fetchItems()
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error updating inventory item:', error)
-            alert('Gagal menyimpan: ' + error.message)
+            alert('Gagal menyimpan: ' + (error instanceof Error ? error.message : 'unknown error'))
         } finally {
             setLoading(false)
         }
@@ -270,8 +270,8 @@ export default function InventoryForm() {
                 return
             }
             fetchItems()
-        } catch (error: any) {
-            alert('Gagal hapus: ' + error.message)
+        } catch (error) {
+            alert('Gagal hapus: ' + (error instanceof Error ? error.message : 'unknown error'))
         } finally {
             setLoading(false)
         }
@@ -430,7 +430,7 @@ export default function InventoryForm() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
                                 <select
                                     value={newItem.category}
-                                    onChange={(e) => setNewItem({...newItem, category: e.target.value as any})}
+                                    onChange={(e) => setNewItem({...newItem, category: e.target.value as 'bahan_baku' | 'packaging'})}
                                     className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="bahan_baku">Bahan Baku</option>
@@ -547,7 +547,7 @@ export default function InventoryForm() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Tipe Transaksi</label>
                                 <select
                                     value={newTransaction.transaction_type}
-                                    onChange={(e) => setNewTransaction({...newTransaction, transaction_type: e.target.value as any})}
+                                    onChange={(e) => setNewTransaction({...newTransaction, transaction_type: e.target.value as 'in' | 'out'})}
                                     className="text-gray-700 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="in">Masuk</option>
@@ -830,7 +830,7 @@ export default function InventoryForm() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
                                 <select
                                     value={editFormData.category}
-                                    onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value as any })}
+                                    onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value as 'bahan_baku' | 'packaging' })}
                                     className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="bahan_baku">Bahan Baku</option>

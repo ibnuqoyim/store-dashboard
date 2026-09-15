@@ -20,6 +20,15 @@ export type Customer = {
     created_at?: string
 }
 
+type OrderItemAggregate = {
+    price: number | null
+    quantity: number | null
+}
+
+type OrderWithItems = {
+    order_items: OrderItemAggregate[] | null
+}
+
 export default function CustomerList({ initialCustomers }: { initialCustomers: Customer[] }) {
     const [customers, setCustomers] = useState<Customer[]>(initialCustomers)
     const [searchTerm, setSearchTerm] = useState('')
@@ -51,9 +60,9 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: C
 
             // Sum all order items
             let totalPurchases = 0
-            orders.forEach((order: any) => {
+            ;(orders as OrderWithItems[]).forEach((order) => {
                 if (order.order_items) {
-                    order.order_items.forEach((item: any) => {
+                    order.order_items.forEach((item) => {
                         totalPurchases += (item.price || 0) * (item.quantity || 0)
                     })
                 }
@@ -102,9 +111,9 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: C
 
                 // Sum all order items
                 let totalPurchases = 0
-                orders.forEach((order: any) => {
+                ;(orders as OrderWithItems[]).forEach((order) => {
                     if (order.order_items) {
-                        order.order_items.forEach((item: any) => {
+                        order.order_items.forEach((item) => {
                             totalPurchases += (item.price || 0) * (item.quantity || 0)
                         })
                     }

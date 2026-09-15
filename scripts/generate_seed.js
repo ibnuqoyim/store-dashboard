@@ -1,4 +1,5 @@
 
+/* eslint-disable @typescript-eslint/no-require-imports -- standalone Node/CommonJS script, not part of the Next.js app bundle */
 const fs = require('fs');
 const path = require('path');
 const Papa = require('papaparse');

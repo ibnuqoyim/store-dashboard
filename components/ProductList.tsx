@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, X, Loader2, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
-import { CldUploadWidget } from 'next-cloudinary'
+import { CldUploadWidget, CloudinaryUploadWidgetResults } from 'next-cloudinary'
 import { useBusinessConfig } from '@/lib/business-config-context'
 import { formatCurrency } from '@/lib/config'
 
@@ -578,8 +578,11 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                                         <div className="flex gap-2">
                                             <CldUploadWidget
                                                 uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'products'}
-                                                onSuccess={(result: any) => {
-                                                    setFormData({ ...formData, image_url: result.info.secure_url })
+                                                onSuccess={(result: CloudinaryUploadWidgetResults) => {
+                                                    const info = result.info
+                                                    if (info && typeof info === 'object' && 'secure_url' in info) {
+                                                        setFormData({ ...formData, image_url: info.secure_url as string })
+                                                    }
                                                 }}
                                             >
                                                 {({ open }) => (
