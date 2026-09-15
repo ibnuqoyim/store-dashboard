@@ -20,8 +20,8 @@ export default async function BatchPosPage() {
     supabase.from('batch_po').select('id, name, description, created_at').order('created_at', { ascending: false }),
     supabase.from('customers').select('id, name, phone, address, default_courier').order('name'),
     hasAdonan
-      ? supabase.from('products').select('id, name, price, image_url, dough_id, adonan(name)').eq('is_active', true).order('name')
-      : supabase.from('products').select('id, name, price, image_url').eq('is_active', true).order('name'),
+      ? supabase.from('products').select('id, name, price, image_url, dough_id, adonan(name)').neq('is_active', false).order('name')
+      : supabase.from('products').select('id, name, price, image_url').neq('is_active', false).order('name'),
     hasAdonan
       ? supabase.from('adonan').select('id, name').order('name')
       : Promise.resolve({ data: [] }),
