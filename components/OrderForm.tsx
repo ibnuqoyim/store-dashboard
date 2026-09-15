@@ -93,6 +93,10 @@ type InitialOrder = {
     deliveries?: InitialOrderDelivery[]
 }
 
+type CustomerOrderAggregate = {
+    order_items: { price: number | null; quantity: number | null }[] | null
+}
+
 export default function OrderForm({
     products,
     batches = [],
@@ -278,7 +282,7 @@ export default function OrderForm({
 
             // Sum all order items
             let totalPurchases = 0
-            ;(orders as { order_items: { price: number | null; quantity: number | null }[] | null }[]).forEach((order) => {
+            ;(orders as CustomerOrderAggregate[]).forEach((order) => {
                 if (order.order_items) {
                     order.order_items.forEach((item) => {
                         totalPurchases += (item.price || 0) * (item.quantity || 0)
