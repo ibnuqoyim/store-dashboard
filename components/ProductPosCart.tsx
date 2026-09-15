@@ -76,10 +76,11 @@ export default function ProductPosCart({
           filteredCatalog.map((p) => {
             const thumb = getResizedImageUrl(p.imageUrl, 160, 160);
             return (
-              <div
+              <button
                 key={p.id}
+                type="button"
                 onClick={() => onAddToCart(p)}
-                className="bg-white hover:bg-amber-50/60 border border-amber-200/80 rounded-xl overflow-hidden transition flex flex-col cursor-pointer group shadow-2xs active:scale-[0.98]"
+                className="bg-white hover:bg-amber-50/60 border border-amber-200/80 rounded-xl overflow-hidden transition flex flex-col text-left cursor-pointer group shadow-2xs active:scale-[0.98]"
               >
                 <div className="aspect-square w-full bg-amber-50 relative overflow-hidden">
                   {thumb ? (
@@ -100,16 +101,16 @@ export default function ProductPosCart({
                     </span>
                   )}
                 </div>
-                <div className="p-2 xl:p-1.5 flex flex-col gap-1 flex-1">
+                <div className="p-2 xl:p-1.5 flex flex-col gap-1 flex-1 w-full">
                   <h4 className="font-bold text-xs text-gray-800 line-clamp-1 group-hover:text-amber-900">{p.name}</h4>
                   <div className="flex items-center justify-between mt-auto gap-1">
                     <p className="text-[11px] font-semibold text-amber-700">{fc(p.price)}</p>
-                    <button className="text-[10px] bg-amber-100 group-hover:bg-amber-600 group-hover:text-white text-amber-900 font-bold p-1 rounded-full transition flex items-center justify-center shrink-0">
+                    <span className="text-[10px] bg-amber-100 group-hover:bg-amber-600 group-hover:text-white text-amber-900 font-bold p-1 rounded-full transition flex items-center justify-center shrink-0">
                       <Plus className="w-3 h-3" />
-                    </button>
+                    </span>
                   </div>
                 </div>
-              </div>
+              </button>
             );
           })
         )}

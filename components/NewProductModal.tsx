@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { PlusCircle, X, Save, Info, Loader2, ImagePlus, Trash2 } from 'lucide-react';
 import { CldUploadWidget } from 'next-cloudinary';
 import { createClient } from '@/utils/supabase/client';
-import { getResizedImageUrl } from '@/lib/cloudinary-image';
+import { getResizedImageUrl, isTrustedCloudinaryUrl } from '@/lib/cloudinary-image';
 import { CatalogProduct, Dough } from '@/lib/types/batch';
 
 interface NewProductModalProps {
@@ -142,8 +142,11 @@ export default function NewProductModal({ isOpen, onClose, onSaveProduct, doughs
                   uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'products'}
                   onSuccess={(result) => {
                     const info = result.info;
-                    if (info && typeof info === 'object' && 'secure_url' in info) {
-                      setImageUrl(info.secure_url as string);
+                    const url = info && typeof info === 'object' && 'secure_url' in info ? (info.secure_url as string) : null;
+                    if (isTrustedCloudinaryUrl(url)) {
+                      setImageUrl(url);
+                    } else {
+                      alert('Upload gagal: URL gambar tidak dikenali. Coba lagi.');
                     }
                   }}
                 >
