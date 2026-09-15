@@ -32,14 +32,28 @@ export default function BatchPosLayoutClient() {
   const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
 
   const handleCreateNewBatch = (newBatchName: string) => {
+    const trimmed = newBatchName.trim();
+    if (!trimmed) return;
+
+    const exists = batchList.some((b) => b.name.toLowerCase() === trimmed.toLowerCase());
+    if (exists) {
+      alert(`Batch PO "${trimmed}" sudah ada! Harap gunakan nama lain.`);
+      return;
+    }
+
     const newPO: BatchPO = {
       id: `po-${Date.now()}`,
-      name: newBatchName,
+      name: trimmed,
       description: 'Batch Pre-order Baru',
     };
+
     setBatchList((prev) => [newPO, ...prev]);
-    setActiveBatch(newBatchName);
-    alert(`Batch Pre-Order baru "${newBatchName}" berhasil dibuat dan dipilih!`);
+    setActiveBatch(trimmed);
+    alert(`Batch Pre-Order baru "${trimmed}" berhasil dibuat dan dipilih!`);
+  };
+
+  const handleBatchChange = (batchName: string) => {
+    setActiveBatch(batchName);
   };
 
   const handleAddToCart = (product: CatalogProduct) => {
@@ -100,7 +114,9 @@ export default function BatchPosLayoutClient() {
   };
 
   const handleSubmitOrder = (payStatus: PayStatus, payMethod: PayMethod) => {
-    if (!customerShipping.customerName) {
+    const trimmedCustomerName = customerShipping.customerName.trim();
+
+    if (!trimmedCustomerName) {
       alert('Harap isi Nama Pembeli terlebih dahulu!');
       return;
     }
@@ -109,14 +125,14 @@ export default function BatchPosLayoutClient() {
       return;
     }
 
-    // Auto add customer to customerList if not exists
+    // Auto add customer to customerList if not exists (trimmed name compare)
     const exists = customerList.some(
-      (c) => c.name.toLowerCase() === customerShipping.customerName.toLowerCase()
+      (c) => c.name.trim().toLowerCase() === trimmedCustomerName.toLowerCase()
     );
     if (!exists) {
       const newCust: Customer = {
         id: `c-${Date.now()}`,
-        name: customerShipping.customerName,
+        name: trimmedCustomerName,
         phone: customerShipping.customerPhone,
         default_courier: customerShipping.shippingMethod,
       };
@@ -130,7 +146,7 @@ export default function BatchPosLayoutClient() {
 
     const newOrder: BatchOrder = {
       id: orderId,
-      customerName: customerShipping.customerName,
+      customerName: trimmedCustomerName,
       phone: customerShipping.customerPhone || '-',
       shipping: customerShipping.shippingMethod,
       shippingFee: customerShipping.shippingFee,
@@ -159,7 +175,7 @@ export default function BatchPosLayoutClient() {
       <BatchPosHeader
         activeBatch={activeBatch}
         batchList={batchList}
-        onBatchChange={setActiveBatch}
+        onBatchChange={handleBatchChange}
         onCreateNewBatch={handleCreateNewBatch}
         currentCapacity={batchOrders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.qty, 0), 0)}
         maxCapacity={100}
