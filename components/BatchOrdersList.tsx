@@ -80,8 +80,12 @@ export default function BatchOrdersList({
         </select>
       </div>
 
-      {/* Order Cards Container */}
-      <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[580px]">
+      {/* Order Cards Container. On tablet/mobile (below xl) the scroll height is
+          viewport-relative since this panel is full-width and full-height in its
+          own tab: 260px accounts for the sticky header + tab bar + section
+          padding above it. At xl+ it sits beside the other two columns, so a
+          fixed height matches their layout instead. */}
+      <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[calc(100vh-260px)] xl:max-h-[580px]">
         {isLoading ? (
           <div className="text-center py-8 text-xs text-gray-400">Memuat order...</div>
         ) : filteredOrders.length === 0 ? (
@@ -152,7 +156,7 @@ export default function BatchOrdersList({
                     <select
                       value={o.orderStatus}
                       onChange={(e) => onUpdateOrderStatus(o.id, e.target.value as OrderStatus)}
-                      className="bg-white border border-gray-300 rounded font-semibold text-[11px] p-1"
+                      className="bg-white border border-gray-300 rounded font-semibold text-[11px] p-1.5 xl:p-1"
                     >
                       <option value="PENDING">PENDING ⏳</option>
                       <option value="IN PREP">IN PREP 🥣</option>

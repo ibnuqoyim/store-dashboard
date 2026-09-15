@@ -152,7 +152,7 @@ export default function BatchDoughResume({ orders, activeBatchName }: BatchDough
           <span>Resume Per Produk</span>
         </h3>
 
-        <div className="border rounded-xl bg-gray-50/50 p-2 text-xs space-y-1.5 max-h-[220px] overflow-y-auto">
+        <div className="border rounded-xl bg-gray-50/50 p-2 text-xs space-y-1.5 max-h-[320px] xl:max-h-[220px] overflow-y-auto">
           {productSummary.length === 0 ? (
             <div className="text-center py-4 text-gray-400 text-xs">Belum ada item di batch ini</div>
           ) : (

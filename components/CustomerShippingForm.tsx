@@ -69,7 +69,7 @@ export default function CustomerShippingForm({
               }}
               onFocus={() => setIsOpenSuggestions(true)}
               placeholder="Ketik nama (autocomplete)..."
-              className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 font-bold text-gray-800"
+              className="w-full px-2.5 py-2.5 xl:py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 font-bold text-gray-800"
             />
             <Search className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-2" />
           </div>
@@ -112,7 +112,7 @@ export default function CustomerShippingForm({
             value={data.customerPhone}
             onChange={(e) => onChange({ ...data, customerPhone: e.target.value })}
             placeholder="087722732214"
-            className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+            className="w-full px-2.5 py-2.5 xl:py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
           />
         </div>
       </div>
@@ -124,7 +124,7 @@ export default function CustomerShippingForm({
           <select
             value={data.shippingMethod}
             onChange={(e) => onChange({ ...data, shippingMethod: e.target.value as ShippingMethod })}
-            className="w-full bg-white border border-amber-300 text-gray-800 font-bold text-xs rounded-lg p-1.5 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+            className="w-full bg-white border border-amber-300 text-gray-800 font-bold text-xs rounded-lg p-2.5 xl:p-1.5 focus:ring-2 focus:ring-amber-500 focus:outline-none"
           >
             <option value="Ahsan">Ahsan Express (Kurir)</option>
             <option value="TIKI">TIKI (Regular/ONS)</option>
@@ -139,7 +139,7 @@ export default function CustomerShippingForm({
             value={data.shippingFee || ''}
             onChange={(e) => onChange({ ...data, shippingFee: Number(e.target.value) || 0 })}
             placeholder="0"
-            className="w-full px-2 py-1.5 text-xs bg-white border border-amber-300 font-bold text-amber-900 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+            className="w-full px-2 py-2.5 xl:py-1.5 text-xs bg-white border border-amber-300 font-bold text-amber-900 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
           />
         </div>
       </div>
