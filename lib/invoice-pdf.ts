@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { BusinessConfig, formatCurrency } from './config';
+import { isTrustedCloudinaryUrl } from './cloudinary-image';
 
 export interface InvoicePdfOrder {
   id?: string;
@@ -77,7 +78,8 @@ export async function generateInvoicePdf(
     const invoiceClosingSub = store?.invoice_closing_sub || config.invoice_closing_sub || '';
     const logoUrl = store?.logo_url || config.logo_url || null;
 
-    if (logoUrl) {
+    const isLocalPath = typeof logoUrl === 'string' && logoUrl.startsWith('/');
+    if (logoUrl && (isTrustedCloudinaryUrl(logoUrl) || isLocalPath)) {
       try {
         const response = await fetch(logoUrl);
         if (response.ok) {
