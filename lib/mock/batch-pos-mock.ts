@@ -1,5 +1,18 @@
 // DUMMY DATA FOR BATCH POS DEMO — Remove or replace with Supabase sync in production
-import { CatalogProduct, BatchOrder } from '@/lib/types/batch';
+import { CatalogProduct, BatchOrder, Customer, BatchPO } from '@/lib/types/batch';
+
+export const INITIAL_CUSTOMERS: Customer[] = [
+  { id: 'c1', name: 'Pak Ahmad (Subang)', phone: '087722732214', address: 'Jl. Raya Subang No. 12', default_courier: 'Ahsan' },
+  { id: 'c2', name: 'Ibu Siska (Bandung)', phone: '081234567890', address: 'Jl. Dago Atas No. 45', default_courier: 'TIKI' },
+  { id: 'c3', name: 'Mas Budi (Jakarta)', phone: '081987654321', address: 'Jl. Sudirman Kav 5', default_courier: 'COD' },
+  { id: 'c4', name: 'Teh Rina (Bogor)', phone: '085678901234', address: 'Jl. Pajajaran No. 8', default_courier: 'Ambil Sendiri' },
+];
+
+export const INITIAL_BATCH_POS: BatchPO[] = [
+  { id: 'b1', name: '#BATCH-20260915-PAGI (Utama)', description: 'Batch Sourdough Pagi Subang' },
+  { id: 'b2', name: '#BATCH-20260915-SIANG (Siang)', description: 'Batch Sweet Bread Siang' },
+  { id: 'b3', name: '#BATCH-20260916-PAGI (Besok)', description: 'Pre-order Besok Pagi' },
+];
 
 export const INITIAL_CATALOG: CatalogProduct[] = [
   { id: '1', name: 'Milk Bread', price: 40000, category: 'Sourdough', doughRecipe: 'Soft Bread Base (120g/unit)' },
@@ -13,8 +26,8 @@ export const INITIAL_CATALOG: CatalogProduct[] = [
 export const INITIAL_ORDERS: BatchOrder[] = [
   {
     id: 'ORD-101',
-    customerName: 'Pelanggan Demo A',
-    phone: '081234567890',
+    customerName: 'Pak Ahmad (Subang)',
+    phone: '087722732214',
     shipping: 'Ahsan',
     shippingFee: 15000,
     time: '08:30 WIB',
@@ -30,8 +43,8 @@ export const INITIAL_ORDERS: BatchOrder[] = [
   },
   {
     id: 'ORD-102',
-    customerName: 'Pelanggan Demo B',
-    phone: '087722732214',
+    customerName: 'Ibu Siska (Bandung)',
+    phone: '081234567890',
     shipping: 'TIKI',
     shippingFee: 20000,
     time: '09:15 WIB',
@@ -46,7 +59,7 @@ export const INITIAL_ORDERS: BatchOrder[] = [
   },
   {
     id: 'ORD-103',
-    customerName: 'Pelanggan Demo C',
+    customerName: 'Mas Budi (Jakarta)',
     phone: '081987654321',
     shipping: 'COD',
     shippingFee: 0,
