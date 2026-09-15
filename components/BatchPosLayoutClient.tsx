@@ -248,7 +248,9 @@ export default function BatchPosLayoutClient({
       const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
 
       // 2. Insert into the real orders table, linked to the active Batch PO.
-      // Order directly saved with UNPAID / pending status
+      // Order directly saved with UNPAID / pending status.
+      // invoice_number is only unique-guaranteed by DB constraint, so on concurrent-write
+      // collision (Postgres 23505) we regenerate and retry.
       let newOrder: { id: string } | null = null;
       let invoiceNumber = '';
       const MAX_INVOICE_ATTEMPTS = 3;
@@ -267,7 +269,7 @@ export default function BatchPosLayoutClient({
             shipping_method: customerShipping.shippingMethod,
             shipping_fee: customerShipping.shippingFee,
             pay_status: 'UNPAID',
-            pay_method: 'Cash',
+            pay_method: null,
             order_status: 'PENDING',
           })
           .select('id')
@@ -335,7 +337,7 @@ export default function BatchPosLayoutClient({
   };
 
   const handleUpdatePayStatus = async (orderId: string, newPayStatus: PayStatus) => {
-    const previous = batchOrders;
+    const previous = [...batchOrders];
     setBatchOrders((prev) =>
       prev.map((o) =>
         o.id === orderId
@@ -347,14 +349,10 @@ export default function BatchPosLayoutClient({
       )
     );
 
-    const updatePayload: { pay_status: string; status?: string } = {
+    const updatePayload: { pay_status: PayStatus; status: string } = {
       pay_status: newPayStatus,
+      status: newPayStatus === 'PAID' ? 'paid' : 'pending',
     };
-    if (newPayStatus === 'PAID') {
-      updatePayload.status = 'paid';
-    } else if (newPayStatus === 'UNPAID') {
-      updatePayload.status = 'pending';
-    }
 
     const { error } = await supabase.from('orders').update(updatePayload).eq('id', orderId);
     if (error) {

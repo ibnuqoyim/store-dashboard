@@ -218,6 +218,6 @@ export async function generateInvoicePdf(
     doc.save(`Invoice-${order.invoice_number}-${order.customer_name}.pdf`);
   } catch (error) {
     console.error('Error generating PDF:', error);
-    alert('Failed to generate PDF. Please try again.');
+    throw error;
   }
 }

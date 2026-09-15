@@ -55,6 +55,7 @@ export default function BatchOrdersList({
       );
     } catch (err) {
       console.error('Error generating PDF struk:', err);
+      alert('Gagal mengunduh invoice PDF. Silakan coba lagi.');
     } finally {
       setDownloadingId(null);
     }
