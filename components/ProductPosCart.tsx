@@ -1,20 +1,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PackageSearch, Search, Plus, ShoppingBag, Trash2, CheckCircle2, Loader2, ImageOff } from 'lucide-react';
+import { PackageSearch, Search, Plus, ShoppingBag, Trash2, CheckCircle2, Loader2, ImageOff, Pencil } from 'lucide-react';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
 import { getResizedImageUrl } from '@/lib/cloudinary-image';
-import { CatalogProduct, CartItem, PayStatus, PayMethod } from '@/lib/types/batch';
+import { CatalogProduct, CartItem } from '@/lib/types/batch';
 
 interface ProductPosCartProps {
   catalog: CatalogProduct[];
   cart: CartItem[];
   shippingFee: number;
   onAddToCart: (product: CatalogProduct) => void;
+  onEditProduct?: (product: CatalogProduct) => void;
   onUpdateQty: (index: number, delta: number) => void;
   onUpdateInlinePrice: (index: number, newPrice: number) => void;
   onClearCart: () => void;
-  onSubmitOrder: (payStatus: PayStatus, payMethod: PayMethod) => void;
+  onSubmitOrder: () => void;
   isSubmitting?: boolean;
 }
 
@@ -23,6 +24,7 @@ export default function ProductPosCart({
   cart,
   shippingFee,
   onAddToCart,
+  onEditProduct,
   onUpdateQty,
   onUpdateInlinePrice,
   onClearCart,
@@ -30,8 +32,6 @@ export default function ProductPosCart({
   isSubmitting = false,
 }: ProductPosCartProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [payStatus, setPayStatus] = useState<PayStatus>('PAID');
-  const [payMethod, setPayMethod] = useState<PayMethod>('QRIS');
 
   const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
 
@@ -69,7 +69,7 @@ export default function ProductPosCart({
       {/* Product Catalog Grid — photo-first cards so items are recognizable at a
           glance instead of scanning names, closer to how the bakery staff
           already picks products visually off the counter. */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-3 gap-2.5 max-h-[380px] xl:max-h-[260px] overflow-y-auto pr-1">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-3 gap-2.5 max-h-[380px] xl:max-h-[320px] overflow-y-auto pr-1">
         {filteredCatalog.length === 0 ? (
           <div className="col-span-full text-center py-8 text-xs text-gray-400">
             {catalog.length === 0 ? 'Belum ada produk di katalog' : 'Tidak ada produk yang cocok'}
@@ -89,7 +89,7 @@ export default function ProductPosCart({
                     onAddToCart(p);
                   }
                 }}
-                className="bg-white hover:bg-amber-50/70 border border-amber-200/90 hover:border-amber-300 rounded-xl overflow-hidden transition-all shadow-xs hover:shadow-md cursor-pointer flex flex-col justify-between active:scale-[0.98] select-none text-left group min-h-[160px]"
+                className="bg-white hover:bg-amber-50/70 border border-amber-200/90 hover:border-amber-300 rounded-xl overflow-hidden transition-all shadow-xs hover:shadow-md cursor-pointer flex flex-col justify-between active:scale-[0.98] select-none text-left group min-h-[170px]"
               >
                 {/* Photo container with fixed height so it never collapses */}
                 <div className="h-24 sm:h-28 w-full bg-amber-50/80 relative overflow-hidden shrink-0 flex items-center justify-center border-b border-amber-100/60">
@@ -107,9 +107,22 @@ export default function ProductPosCart({
                     </div>
                   )}
                   {p.doughName && (
-                    <span className="absolute top-1.5 left-1.5 text-[9px] font-bold text-amber-900 bg-amber-100/95 border border-amber-300/60 px-1.5 py-0.5 rounded shadow-2xs max-w-[85%] truncate">
+                    <span className="absolute top-1.5 left-1.5 text-[9px] font-bold text-amber-900 bg-amber-100/95 border border-amber-300/60 px-1.5 py-0.5 rounded shadow-2xs max-w-[70%] truncate z-10">
                       {p.doughName}
                     </span>
+                  )}
+                  {onEditProduct && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditProduct(p);
+                      }}
+                      className="absolute top-1.5 right-1.5 p-1 bg-white/90 hover:bg-amber-600 hover:text-white text-gray-700 rounded-lg shadow-xs transition z-10 border border-gray-200 hover:border-amber-600 cursor-pointer"
+                      title={`Edit ${p.name}`}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
                   )}
                 </div>
 
@@ -118,9 +131,9 @@ export default function ProductPosCart({
                   <h4 className="font-bold text-xs text-gray-900 line-clamp-2 leading-snug group-hover:text-amber-950" title={p.name}>
                     {p.name}
                   </h4>
-                  <div className="flex items-center justify-between mt-auto pt-1 border-t border-gray-100">
-                    <p className="text-xs font-extrabold text-amber-800">{fc(p.price)}</p>
-                    <span className="text-[10px] bg-amber-100 group-hover:bg-amber-600 group-hover:text-white text-amber-900 font-bold px-2 py-0.5 rounded-full transition-colors flex items-center gap-0.5 shrink-0 shadow-2xs">
+                  <div className="flex items-center justify-between gap-1 mt-auto pt-1.5 border-t border-gray-100">
+                    <p className="text-xs font-extrabold text-amber-800 shrink-0">{fc(p.price)}</p>
+                    <span className="text-[10px] bg-amber-100 group-hover:bg-amber-600 group-hover:text-white text-amber-900 font-bold px-2 py-0.5 rounded-full transition-colors flex items-center gap-0.5 shrink-0 shadow-2xs whitespace-nowrap">
                       <Plus className="w-3 h-3" /> Tambah
                     </span>
                   </div>
@@ -200,40 +213,13 @@ export default function ProductPosCart({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <label className="block text-[10px] font-semibold text-gray-600 mb-0.5">Status Pembayaran</label>
-              <select
-                value={payStatus}
-                onChange={(e) => setPayStatus(e.target.value as PayStatus)}
-                className="w-full bg-white border border-gray-300 rounded p-1 text-xs font-bold"
-              >
-                <option value="PAID">Lunas (Paid)</option>
-                <option value="DP">DP / Uang Muka</option>
-                <option value="UNPAID">Belum Bayar (Unpaid)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-semibold text-gray-600 mb-0.5">Cara Bayar</label>
-              <select
-                value={payMethod}
-                onChange={(e) => setPayMethod(e.target.value as PayMethod)}
-                className="w-full bg-white border border-gray-300 rounded p-1 text-xs"
-              >
-                <option value="QRIS">QRIS / Instant</option>
-                <option value="Transfer BCA">Transfer BCA</option>
-                <option value="Cash">Cash / Tunai</option>
-              </select>
-            </div>
-          </div>
-
           <button
-            onClick={() => onSubmitOrder(payStatus, payMethod)}
+            onClick={() => onSubmitOrder()}
             disabled={isSubmitting}
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 xl:py-2 rounded-xl text-sm xl:text-xs shadow-md transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 xl:py-2.5 rounded-xl text-sm xl:text-xs shadow-md transition flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Order ke Batch Ini'}</span>
+            <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Order (Unpaid)'}</span>
           </button>
         </div>
       </div>
