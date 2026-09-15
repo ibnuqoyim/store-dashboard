@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ClipboardList, ShoppingCart, ChefHat } from 'lucide-react';
 import BatchPosHeader from './BatchPosHeader';
 import CustomerShippingForm from './CustomerShippingForm';
 import ProductPosCart from './ProductPosCart';
@@ -23,6 +24,8 @@ import {
   Customer,
   Dough,
 } from '@/lib/types/batch';
+
+type PosTab = 'pos' | 'orders' | 'resume';
 
 interface BatchPosLayoutClientProps {
   initialBatchList: BatchPO[];
@@ -52,6 +55,7 @@ export default function BatchPosLayoutClient({
   const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [activeTab, setActiveTab] = useState<PosTab>('pos');
 
   const activeBatch = batchList.find((b) => b.id === activeBatchId);
 
@@ -302,6 +306,7 @@ export default function BatchPosLayoutClient({
       await fetchOrdersForBatch(activeBatchId);
       handleClearCart();
       router.refresh();
+      setActiveTab('orders');
       alert(`Order ${invoiceNumber} berhasil ditambahkan ke ${activeBatch?.name ?? 'batch ini'}!\nTotal: ${fc(subtotal + customerShipping.shippingFee)}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Terjadi kesalahan tidak dikenal';
@@ -323,6 +328,15 @@ export default function BatchPosLayoutClient({
     }
   };
 
+  const orderCount = batchOrders.length;
+  const cartCount = cart.reduce((sum, i) => sum + i.qty, 0);
+
+  const TABS: { id: PosTab; label: string; icon: typeof ShoppingCart; badge?: number }[] = [
+    { id: 'pos', label: 'Kasir', icon: ShoppingCart, badge: cartCount || undefined },
+    { id: 'orders', label: 'Order Batch', icon: ClipboardList, badge: orderCount || undefined },
+    { id: 'resume', label: 'Rekap Adonan', icon: ChefHat },
+  ];
+
   return (
     <div className="min-h-screen bg-amber-50/30 p-2 sm:p-4 flex flex-col">
       <BatchPosHeader
@@ -336,9 +350,43 @@ export default function BatchPosLayoutClient({
         onRefresh={() => activeBatchId && fetchOrdersForBatch(activeBatchId)}
       />
 
-      <main className="max-w-[1700px] mx-auto w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5">
+      {/* Tab switcher — only shown below the xl breakpoint (phones & tablets, incl.
+          iPad portrait/landscape) where 3 side-by-side columns don't fit comfortably.
+          Panels stay mounted (just hidden) so cart/form state survives tab switches. */}
+      <div className="xl:hidden sticky top-0 z-20 bg-amber-50/95 backdrop-blur -mx-2 sm:-mx-4 px-2 sm:px-4 py-2 mb-3 border-b border-amber-200">
+        <div className="max-w-[1700px] mx-auto grid grid-cols-3 gap-2">
+          {TABS.map(({ id, label, icon: Icon, badge }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setActiveTab(id)}
+              className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition relative ${
+                activeTab === id
+                  ? 'bg-amber-800 text-white shadow-sm'
+                  : 'bg-white text-amber-900 border border-amber-200'
+              }`}
+            >
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="truncate">{label}</span>
+              {!!badge && (
+                <span
+                  className={`ml-0.5 text-[10px] font-extrabold rounded-full px-1.5 min-w-[18px] text-center ${
+                    activeTab === id ? 'bg-amber-500 text-amber-950' : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  {badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <main className="max-w-[1700px] mx-auto w-full flex-1 grid grid-cols-1 xl:grid-cols-12 gap-5">
         {/* COLUMN 1: POS INPUT */}
-        <section className="lg:col-span-5 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 flex flex-col gap-3.5">
+        <section
+          className={`${activeTab === 'pos' ? 'flex' : 'hidden'} xl:flex xl:col-span-5 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 flex-col gap-3.5`}
+        >
           <CustomerShippingForm
             data={customerShipping}
             customerList={customerList}
@@ -358,7 +406,9 @@ export default function BatchPosLayoutClient({
         </section>
 
         {/* COLUMN 2: BATCH ORDERS LIST */}
-        <section className="lg:col-span-4 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]">
+        <section
+          className={`${activeTab === 'orders' ? 'block' : 'hidden'} xl:block xl:col-span-4 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]`}
+        >
           <BatchOrdersList
             orders={batchOrders}
             isLoading={isLoadingOrders}
@@ -368,7 +418,9 @@ export default function BatchPosLayoutClient({
         </section>
 
         {/* COLUMN 3: BATCH & DOUGH RESUME */}
-        <section className="lg:col-span-3 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]">
+        <section
+          className={`${activeTab === 'resume' ? 'block' : 'hidden'} xl:block xl:col-span-3 bg-white rounded-2xl p-4 shadow-sm border border-amber-100 min-h-[500px]`}
+        >
           <BatchDoughResume orders={batchOrders} activeBatchName={activeBatch?.name ?? 'Belum ada Batch PO'} />
         </section>
       </main>

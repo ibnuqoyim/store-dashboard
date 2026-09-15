@@ -66,7 +66,7 @@ export default function ProductPosCart({
       </div>
 
       {/* Product Catalog Grid */}
-      <div className="grid grid-cols-3 gap-2 max-h-[150px] overflow-y-auto pr-1">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-3 gap-2 max-h-[220px] xl:max-h-[150px] overflow-y-auto pr-1">
         {filteredCatalog.length === 0 ? (
           <div className="col-span-full text-center py-4 text-xs text-gray-400">Tidak ada produk</div>
         ) : (
@@ -74,7 +74,7 @@ export default function ProductPosCart({
             <div
               key={p.id}
               onClick={() => onAddToCart(p)}
-              className="bg-amber-50/40 hover:bg-amber-100/60 border border-amber-200/80 rounded-lg p-2 transition flex flex-col justify-between cursor-pointer group shadow-2xs"
+              className="bg-amber-50/40 hover:bg-amber-100/60 border border-amber-200/80 rounded-lg p-2.5 xl:p-2 transition flex flex-col justify-between cursor-pointer group shadow-2xs active:scale-[0.98]"
             >
               <div>
                 {p.doughName && (
@@ -83,7 +83,7 @@ export default function ProductPosCart({
                 <h4 className="font-bold text-xs text-gray-800 mt-0.5 line-clamp-1 group-hover:text-amber-900">{p.name}</h4>
                 <p className="text-[11px] font-semibold text-amber-700">{fc(p.price)}</p>
               </div>
-              <button className="mt-1 text-[10px] bg-white hover:bg-amber-600 hover:text-white border border-amber-300 text-amber-900 font-bold py-0.5 px-1.5 rounded transition flex items-center justify-center gap-0.5 w-full">
+              <button className="mt-1.5 xl:mt-1 text-[10px] bg-white hover:bg-amber-600 hover:text-white border border-amber-300 text-amber-900 font-bold py-1.5 xl:py-0.5 px-1.5 rounded transition flex items-center justify-center gap-0.5 w-full">
                 <Plus className="w-3 h-3" /> Tambah
               </button>
             </div>
@@ -104,7 +104,7 @@ export default function ProductPosCart({
         </div>
 
         {/* Cart List */}
-        <div className="max-h-[170px] overflow-y-auto space-y-1.5 pr-1 border rounded-xl p-2 bg-gray-50/50 min-h-[85px] flex flex-col justify-center">
+        <div className="max-h-[260px] xl:max-h-[170px] overflow-y-auto space-y-1.5 pr-1 border rounded-xl p-2 bg-gray-50/50 min-h-[85px] flex flex-col justify-center">
           {cart.length === 0 ? (
             <div className="text-center py-3 text-xs text-gray-400 flex flex-col items-center gap-1">
               <ShoppingBag className="w-5 h-5 stroke-1 text-gray-300" />
@@ -130,9 +130,9 @@ export default function ProductPosCart({
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center border rounded overflow-hidden bg-gray-50">
-                    <button onClick={() => onUpdateQty(idx, -1)} className="px-1.5 py-0.5 hover:bg-gray-200 font-bold">-</button>
+                    <button onClick={() => onUpdateQty(idx, -1)} className="px-2.5 py-1.5 xl:px-1.5 xl:py-0.5 hover:bg-gray-200 font-bold">-</button>
                     <span className="px-2 py-0.5 font-bold text-xs">{item.qty}</span>
-                    <button onClick={() => onUpdateQty(idx, 1)} className="px-1.5 py-0.5 hover:bg-gray-200 font-bold">+</button>
+                    <button onClick={() => onUpdateQty(idx, 1)} className="px-2.5 py-1.5 xl:px-1.5 xl:py-0.5 hover:bg-gray-200 font-bold">+</button>
                   </div>
                   <span className="font-extrabold text-amber-800 min-w-[65px] text-right">
                     {fc(item.price * item.qty)}
@@ -190,7 +190,7 @@ export default function ProductPosCart({
           <button
             onClick={() => onSubmitOrder(payStatus, payMethod)}
             disabled={isSubmitting}
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-xl text-xs shadow-md transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 xl:py-2 rounded-xl text-sm xl:text-xs shadow-md transition flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
             <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Order ke Batch Ini'}</span>
