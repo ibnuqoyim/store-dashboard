@@ -18,20 +18,9 @@ type InventoryItem = {
     description?: string
 }
 
-type InventoryTransaction = {
-    inventory_id: string
-    transaction_type: 'in' | 'out'
-    quantity: number
-    unit_cost?: number
-    total_cost?: number
-    reference?: string
-    notes?: string
-}
-
 export default function InventoryForm() {
     const config = useBusinessConfig()
     const [items, setItems] = useState<InventoryItem[]>([])
-    const [transactions, setTransactions] = useState<InventoryTransaction[]>([])
     const [loading, setLoading] = useState(false)
     const [showAddForm, setShowAddForm] = useState(false)
     const [showTransactionForm, setShowTransactionForm] = useState(false)

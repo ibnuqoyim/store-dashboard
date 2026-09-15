@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { Plus, Trash2, Save, Receipt, Zap, Globe, CreditCard, Building, Users } from 'lucide-react'
+import { Plus, Trash2, Receipt, Zap, Globe, Building, Users } from 'lucide-react'
 import { useBusinessConfig } from '@/lib/business-config-context'
 import { formatCurrency } from '@/lib/config'
 

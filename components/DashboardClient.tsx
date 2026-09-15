@@ -139,8 +139,6 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
         }
     }
 
-    const [selectedOrder, setSelectedOrder] = useState<DashboardOrder | null>(null)
-    const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
     const [paying, setPaying] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState<string>('')
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
@@ -240,11 +238,6 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
         } else {
             router.refresh()
         }
-    }
-
-    const handleGenerateInvoice = (order: DashboardOrder) => {
-        setSelectedOrder(order)
-        setInvoiceModalOpen(true)
     }
 
     const handleDownloadInvoice = async (order: DashboardOrder) => {
@@ -425,56 +418,6 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
         } catch (error) {
             console.error('Error generating PDF:', error)
             alert('Failed to generate PDF. Please try again.')
-        }
-    }
-
-    const handleShareWhatsApp = async (order: DashboardOrder) => {
-        try {
-            await handleDownloadInvoice(order)
-
-            let phone = order.phone?.replace(/\D/g, '') || ''
-            if (phone.startsWith('0')) {
-                phone = '62' + phone.substring(1)
-            } else if (!phone.startsWith('62')) {
-                phone = '62' + phone
-            }
-
-            const defaultMessage = `Halo ${order.customer_name},\n\nBerikut adalah invoice untuk pesanan Anda:\n\nInvoice: ${order.invoice_number}\nTanggal: ${format(new Date(order.date), 'dd MMM yyyy')}\nTotal: ${fc(order.order_items.reduce((sum, item) => sum + (item.price * item.quantity), 0))}\n\nTerima kasih telah berbelanja di ${config.name}!`
-            const message = config.whatsapp_greeting_template
-                ? config.whatsapp_greeting_template
-                    .replace('{name}', order.customer_name)
-                    .replace('{invoice}', order.invoice_number)
-                    .replace('{total}', fc(order.order_items.reduce((sum, item) => sum + (item.price * item.quantity), 0)))
-                : defaultMessage
-
-            const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-            window.open(whatsappUrl, '_blank')
-        } catch (error) {
-            console.error('Error sharing to WhatsApp:', error)
-            alert('Failed to share to WhatsApp. Please try again.')
-        }
-    }
-
-    const handleCreateDelivery = async (order: DashboardOrder) => {
-        if (order.deliveries && order.deliveries.length > 0) {
-            router.push('/deliveries')
-        } else {
-            const confirmed = window.confirm(`Create delivery for Invoice #${order.invoice_number}?`)
-            if (confirmed) {
-                const { error } = await supabase.from('deliveries').insert({
-                    order_id: order.id,
-                    courier_name: 'TBD',
-                    shipping_cost: 0,
-                    status: 'pending'
-                })
-
-                if (error) {
-                    alert('Failed to create delivery: ' + error.message)
-                } else {
-                    alert('Delivery created!')
-                    router.refresh()
-                }
-            }
         }
     }
 

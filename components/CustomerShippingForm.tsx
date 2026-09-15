@@ -1,21 +1,19 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { UserCheck, Search, UserPlus } from 'lucide-react';
+import { UserCheck, Search } from 'lucide-react';
 import { CustomerShippingData, ShippingMethod, Customer } from '@/lib/types/batch';
 
 interface CustomerShippingFormProps {
   data: CustomerShippingData;
   customerList: Customer[];
   onChange: (updated: CustomerShippingData) => void;
-  onAddNewCustomer?: (name: string, phone: string, courier?: ShippingMethod) => void;
 }
 
 export default function CustomerShippingForm({
   data,
   customerList,
   onChange,
-  onAddNewCustomer,
 }: CustomerShippingFormProps) {
   const [isOpenSuggestions, setIsOpenSuggestions] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
