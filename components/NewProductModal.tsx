@@ -52,11 +52,16 @@ export default function ProductModal({
     setImageUrl('');
   };
 
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsedPrice = Number(price);
     if (!name.trim() || isNaN(parsedPrice) || parsedPrice <= 0) {
-      alert('Harap isi Nama dan Harga produk secara benar!');
+      alert('Harap isi Nama dan Harga produk secara benar (angka positif)!');
       return;
     }
 
@@ -113,8 +118,7 @@ export default function ProductModal({
         });
       }
 
-      resetForm();
-      onClose();
+      handleClose();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       alert('Gagal menyimpan produk: ' + message);
@@ -124,8 +128,14 @@ export default function ProductModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-      <div className="bg-white rounded-2xl p-5 max-w-lg w-full mx-4 shadow-xl border border-amber-100">
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
+      onClick={handleClose}
+    >
+      <div
+        className="bg-white rounded-2xl p-5 max-w-lg w-full mx-4 shadow-xl border border-amber-100"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b pb-3 mb-4">
           <h3 className="font-bold text-gray-800 text-base flex items-center gap-2">
             {productToEdit ? (
@@ -135,7 +145,7 @@ export default function ProductModal({
             )}
             <span>{productToEdit ? 'Edit Produk' : 'Buat Produk Baru Instan (On-the-Fly)'}</span>
           </h3>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 cursor-pointer">
+          <button type="button" onClick={handleClose} className="text-gray-400 hover:text-gray-600 cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -238,7 +248,7 @@ export default function ProductModal({
           <div className="flex justify-end gap-2 mt-5 border-t pt-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg text-xs cursor-pointer"
             >
               Batal

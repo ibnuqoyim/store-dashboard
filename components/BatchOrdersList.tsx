@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { ListChecks, Search, Printer, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/config';
 import { useBusinessConfig } from '@/lib/business-config-context';
-import { generateInvoicePdf } from '@/lib/invoice-pdf';
+import { generateInvoicePdf, mapBatchOrderToInvoicePdfOrder } from '@/lib/invoice-pdf';
 import { BatchOrder, OrderStatus, PayStatus, ShippingMethod } from '@/lib/types/batch';
 
 interface BatchOrdersListProps {
@@ -37,22 +37,7 @@ export default function BatchOrdersList({
   const handleDownloadStruk = async (order: BatchOrder) => {
     try {
       setDownloadingId(order.id);
-      await generateInvoicePdf(
-        {
-          id: order.id,
-          invoice_number: order.invoiceNumber,
-          customer_name: order.customerName,
-          phone: order.phone,
-          date: order.date,
-          shipping_fee: order.shippingFee,
-          order_items: order.items.map((it) => ({
-            name: it.name,
-            price: it.price,
-            quantity: it.qty,
-          })),
-        },
-        config
-      );
+      await generateInvoicePdf(mapBatchOrderToInvoicePdfOrder(order), config);
     } catch (err) {
       console.error('Error generating PDF struk:', err);
       alert('Gagal mengunduh invoice PDF. Silakan coba lagi.');

@@ -21,6 +21,30 @@ export interface InvoicePdfOrder {
   }[];
 }
 
+export function mapBatchOrderToInvoicePdfOrder(order: {
+  id: string;
+  invoiceNumber: string;
+  customerName: string;
+  phone?: string | null;
+  date?: string;
+  shippingFee?: number | null;
+  items: { name: string; price: number; qty: number }[];
+}): InvoicePdfOrder {
+  return {
+    id: order.id,
+    invoice_number: order.invoiceNumber,
+    customer_name: order.customerName,
+    phone: order.phone,
+    date: order.date,
+    shipping_fee: order.shippingFee,
+    order_items: order.items.map((it) => ({
+      name: it.name,
+      price: it.price,
+      quantity: it.qty,
+    })),
+  };
+}
+
 export async function generateInvoicePdf(
   order: InvoicePdfOrder,
   config: BusinessConfig,
