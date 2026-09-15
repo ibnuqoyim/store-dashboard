@@ -1,24 +1,33 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PlusCircle, X, Save, Info } from 'lucide-react';
-import { CatalogProduct } from '@/lib/types/batch';
+import { PlusCircle, X, Save, Info, Loader2 } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
+import { CatalogProduct, Dough } from '@/lib/types/batch';
 
 interface NewProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveProduct: (newProduct: CatalogProduct) => void;
+  doughs: Dough[];
 }
 
-export default function NewProductModal({ isOpen, onClose, onSaveProduct }: NewProductModalProps) {
+export default function NewProductModal({ isOpen, onClose, onSaveProduct, doughs }: NewProductModalProps) {
+  const supabase = createClient();
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('Sourdough');
   const [price, setPrice] = useState('');
-  const [doughRecipe, setDoughRecipe] = useState('Soft Bread Base (120g/unit)');
+  const [doughId, setDoughId] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const resetForm = () => {
+    setName('');
+    setPrice('');
+    setDoughId('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsedPrice = Number(price);
     if (!name.trim() || isNaN(parsedPrice) || parsedPrice <= 0) {
@@ -26,19 +35,34 @@ export default function NewProductModal({ isOpen, onClose, onSaveProduct }: NewP
       return;
     }
 
-    const newProduct: CatalogProduct = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      price: parsedPrice,
-      category: category,
-      doughRecipe: doughRecipe,
-    };
+    setIsSaving(true);
+    const { data, error } = await supabase
+      .from('products')
+      .insert({
+        name: name.trim(),
+        price: parsedPrice,
+        dough_id: doughId || null,
+        is_active: true,
+        is_ready: true,
+      })
+      .select('id, name, price, dough_id')
+      .single();
+    setIsSaving(false);
 
-    onSaveProduct(newProduct);
-    setName('');
-    setPrice('');
-    setCategory('Sourdough');
-    setDoughRecipe('Soft Bread Base (120g/unit)');
+    if (error || !data) {
+      alert('Gagal menyimpan produk: ' + (error?.message ?? 'unknown error'));
+      return;
+    }
+
+    const dough = doughs.find((d) => d.id === data.dough_id);
+    onSaveProduct({
+      id: data.id,
+      name: data.name,
+      price: data.price,
+      doughId: data.dough_id,
+      doughName: dough?.name ?? null,
+    });
+    resetForm();
     onClose();
   };
 
@@ -69,18 +93,6 @@ export default function NewProductModal({ isOpen, onClose, onSaveProduct }: NewP
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-gray-600 mb-1">Kategori *</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-amber-500"
-              >
-                <option value="Sourdough">Sourdough</option>
-                <option value="Sweet Bread">Sweet Bread</option>
-                <option value="Paket">Paket Mini</option>
-              </select>
-            </div>
-            <div>
               <label className="block font-semibold text-gray-600 mb-1">Harga Jual (Rp) *</label>
               <input
                 type="number"
@@ -90,24 +102,24 @@ export default function NewProductModal({ isOpen, onClose, onSaveProduct }: NewP
                 className="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-gray-600 mb-1">Pilih Resep Adonan Dasar (Kalkulasi Dapur)</label>
-            <select
-              value={doughRecipe}
-              onChange={(e) => setDoughRecipe(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-amber-500"
-            >
-              <option value="Soft Bread Base (120g/unit)">Soft Bread Base (120g flour/unit)</option>
-              <option value="Sourdough Classic Base (350g/unit)">Sourdough Classic Base (350g flour/unit)</option>
-              <option value="Sweet Dough Base (90g/unit)">Sweet Dough Base (90g flour/unit)</option>
-            </select>
+            <div>
+              <label className="block font-semibold text-gray-600 mb-1">Resep Adonan (Modul Adonan)</label>
+              <select
+                value={doughId}
+                onChange={(e) => setDoughId(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="">Tanpa resep</option>
+                {doughs.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-amber-800 text-[11px]">
             <Info className="w-3.5 h-3.5 inline mr-1 text-amber-600" />
-            Produk baru tersimpan di Master Data catalog dan langsung dapat dipilih di grid POS ini.
+            Produk baru tersimpan langsung di Master Data (modul Products) dan langsung dapat dipilih di grid POS ini.
           </div>
 
           <div className="flex justify-end gap-2 mt-5 border-t pt-3">
@@ -120,9 +132,10 @@ export default function NewProductModal({ isOpen, onClose, onSaveProduct }: NewP
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs flex items-center gap-1"
+              disabled={isSaving}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs flex items-center gap-1 disabled:opacity-50"
             >
-              <Save className="w-4 h-4" />
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               <span>Simpan & Munculkan di POS</span>
             </button>
           </div>

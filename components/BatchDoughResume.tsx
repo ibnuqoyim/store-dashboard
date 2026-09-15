@@ -8,17 +8,17 @@ import { BatchDoughCalculatorService, OrderCreatePayload } from '@/lib/batch-dou
 
 interface BatchDoughResumeProps {
   orders: BatchOrder[];
-  activeBatch: string;
+  activeBatchName: string;
 }
 
 // Move formatCurrency helper to module scope to avoid re-allocation on every render
 const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
 
-export default function BatchDoughResume({ orders, activeBatch }: BatchDoughResumeProps) {
+export default function BatchDoughResume({ orders, activeBatchName }: BatchDoughResumeProps) {
   // Transform BatchOrder array to OrderCreatePayload for BatchDoughCalculatorService
   const reqSummary = useMemo(() => {
     const payloadOrders: OrderCreatePayload[] = orders.map((o) => ({
-      batchId: activeBatch,
+      batchId: activeBatchName,
       customerName: o.customerName,
       customerPhone: o.phone,
       shippingMethod: o.shipping,
@@ -35,7 +35,7 @@ export default function BatchDoughResume({ orders, activeBatch }: BatchDoughResu
     }));
 
     return BatchDoughCalculatorService.calculateBatchRequirements(payloadOrders);
-  }, [orders, activeBatch]);
+  }, [orders, activeBatchName]);
 
   // Summarize Product Item Totals aggregated by productId for accuracy
   const productSummary = useMemo(() => {
@@ -73,7 +73,7 @@ export default function BatchDoughResume({ orders, activeBatch }: BatchDoughResu
           </div>
           <div>
             <h2 className="font-bold text-gray-800 text-base">3. Rekap Batch & Adonan</h2>
-            <span className="text-xs text-amber-800 font-semibold">{activeBatch}</span>
+            <span className="text-xs text-amber-800 font-semibold">{activeBatchName}</span>
           </div>
         </div>
       </div>

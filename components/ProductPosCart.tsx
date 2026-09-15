@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PackageSearch, Search, Plus, ShoppingBag, Trash2, CheckCircle2 } from 'lucide-react';
+import { PackageSearch, Search, Plus, ShoppingBag, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
 import { CatalogProduct, CartItem, PayStatus, PayMethod } from '@/lib/types/batch';
 
@@ -14,6 +14,7 @@ interface ProductPosCartProps {
   onUpdateInlinePrice: (index: number, newPrice: number) => void;
   onClearCart: () => void;
   onSubmitOrder: (payStatus: PayStatus, payMethod: PayMethod) => void;
+  isSubmitting?: boolean;
 }
 
 export default function ProductPosCart({
@@ -25,19 +26,17 @@ export default function ProductPosCart({
   onUpdateInlinePrice,
   onClearCart,
   onSubmitOrder,
+  isSubmitting = false,
 }: ProductPosCartProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [payStatus, setPayStatus] = useState<PayStatus>('PAID');
   const [payMethod, setPayMethod] = useState<PayMethod>('QRIS');
 
   const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
 
-  const filteredCatalog = catalog.filter((p) => {
-    const matchCat = selectedCategory === 'all' || p.category === selectedCategory;
-    const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchCat && matchSearch;
-  });
+  const filteredCatalog = catalog.filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const grandTotal = subtotal + (shippingFee || 0);
@@ -64,19 +63,6 @@ export default function ProductPosCart({
             className="w-full pl-9 pr-4 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-amber-500 focus:bg-white transition"
           />
         </div>
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px]">
-          {['all', 'Sourdough', 'Sweet Bread', 'Paket'].map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-2.5 py-1 rounded-md font-medium whitespace-nowrap transition ${
-                selectedCategory === cat ? 'bg-amber-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {cat === 'all' ? 'Semua' : cat}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Product Catalog Grid */}
@@ -91,7 +77,9 @@ export default function ProductPosCart({
               className="bg-amber-50/40 hover:bg-amber-100/60 border border-amber-200/80 rounded-lg p-2 transition flex flex-col justify-between cursor-pointer group shadow-2xs"
             >
               <div>
-                <span className="text-[9px] text-amber-800 font-semibold bg-amber-100 px-1 py-0.2 rounded">{p.category}</span>
+                {p.doughName && (
+                  <span className="text-[9px] text-amber-800 font-semibold bg-amber-100 px-1 py-0.2 rounded">{p.doughName}</span>
+                )}
                 <h4 className="font-bold text-xs text-gray-800 mt-0.5 line-clamp-1 group-hover:text-amber-900">{p.name}</h4>
                 <p className="text-[11px] font-semibold text-amber-700">{fc(p.price)}</p>
               </div>
@@ -201,10 +189,11 @@ export default function ProductPosCart({
 
           <button
             onClick={() => onSubmitOrder(payStatus, payMethod)}
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-xl text-xs shadow-md transition flex items-center justify-center gap-1.5"
+            disabled={isSubmitting}
+            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-xl text-xs shadow-md transition flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Simpan Order ke Batch Ini</span>
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Order ke Batch Ini'}</span>
           </button>
         </div>
       </div>

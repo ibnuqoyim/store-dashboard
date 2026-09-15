@@ -23,3 +23,18 @@ CREATE POLICY "Authenticated access batch_po" ON batch_po
 -- ---------------------------------------------------------------------------
 ALTER TABLE orders
   ADD COLUMN IF NOT EXISTS po_id uuid REFERENCES batch_po(id) ON DELETE SET NULL;
+
+-- ---------------------------------------------------------------------------
+-- Batch POS checkout fields (see migrations/20260916_batch_pos_integration.sql)
+-- ---------------------------------------------------------------------------
+ALTER TABLE orders
+  ADD COLUMN IF NOT EXISTS shipping_method text DEFAULT 'Ambil Sendiri',
+  ADD COLUMN IF NOT EXISTS shipping_fee numeric(12,2) DEFAULT 0.00,
+  ADD COLUMN IF NOT EXISTS pay_status text DEFAULT 'UNPAID' CHECK (pay_status IN ('PAID', 'DP', 'UNPAID')),
+  ADD COLUMN IF NOT EXISTS pay_method text CHECK (pay_method IN ('QRIS', 'Transfer BCA', 'Cash')),
+  ADD COLUMN IF NOT EXISTS order_status text DEFAULT 'PENDING' CHECK (order_status IN ('PENDING', 'IN PREP', 'READY'));
+
+CREATE INDEX IF NOT EXISTS idx_orders_order_status ON orders(order_status);
+
+ALTER TABLE order_items
+  ADD COLUMN IF NOT EXISTS is_custom_price boolean DEFAULT false;
