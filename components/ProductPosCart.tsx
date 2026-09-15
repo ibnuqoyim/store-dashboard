@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PackageSearch, Search, Plus, ShoppingBag, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
+import { PackageSearch, Search, Plus, ShoppingBag, Trash2, CheckCircle2, Loader2, ImageOff } from 'lucide-react';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
+import { getResizedImageUrl } from '@/lib/cloudinary-image';
 import { CatalogProduct, CartItem, PayStatus, PayMethod } from '@/lib/types/batch';
 
 interface ProductPosCartProps {
@@ -65,29 +66,53 @@ export default function ProductPosCart({
         </div>
       </div>
 
-      {/* Product Catalog Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-3 gap-2 max-h-[220px] xl:max-h-[150px] overflow-y-auto pr-1">
+      {/* Product Catalog Grid — photo-first cards so items are recognizable at a
+          glance instead of scanning names, closer to how the bakery staff
+          already picks products visually off the counter. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-3 gap-2.5 max-h-[280px] xl:max-h-[210px] overflow-y-auto pr-1">
         {filteredCatalog.length === 0 ? (
           <div className="col-span-full text-center py-4 text-xs text-gray-400">Tidak ada produk</div>
         ) : (
-          filteredCatalog.map((p) => (
-            <div
-              key={p.id}
-              onClick={() => onAddToCart(p)}
-              className="bg-amber-50/40 hover:bg-amber-100/60 border border-amber-200/80 rounded-lg p-2.5 xl:p-2 transition flex flex-col justify-between cursor-pointer group shadow-2xs active:scale-[0.98]"
-            >
-              <div>
-                {p.doughName && (
-                  <span className="text-[9px] text-amber-800 font-semibold bg-amber-100 px-1 py-0.2 rounded">{p.doughName}</span>
-                )}
-                <h4 className="font-bold text-xs text-gray-800 mt-0.5 line-clamp-1 group-hover:text-amber-900">{p.name}</h4>
-                <p className="text-[11px] font-semibold text-amber-700">{fc(p.price)}</p>
-              </div>
-              <button className="mt-1.5 xl:mt-1 text-[10px] bg-white hover:bg-amber-600 hover:text-white border border-amber-300 text-amber-900 font-bold py-1.5 xl:py-0.5 px-1.5 rounded transition flex items-center justify-center gap-0.5 w-full">
-                <Plus className="w-3 h-3" /> Tambah
+          filteredCatalog.map((p) => {
+            const thumb = getResizedImageUrl(p.imageUrl, 160, 160);
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onAddToCart(p)}
+                className="bg-white hover:bg-amber-50/60 border border-amber-200/80 rounded-xl overflow-hidden transition flex flex-col text-left cursor-pointer group shadow-2xs active:scale-[0.98]"
+              >
+                <div className="aspect-square w-full bg-amber-50 relative overflow-hidden">
+                  {thumb ? (
+                    <img
+                      src={thumb}
+                      alt={p.name}
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-amber-200">
+                      <ImageOff className="w-6 h-6" />
+                    </div>
+                  )}
+                  {p.doughName && (
+                    <span className="absolute top-1 left-1 text-[9px] text-amber-900 font-semibold bg-white/90 px-1.5 py-0.5 rounded shadow-sm">
+                      {p.doughName}
+                    </span>
+                  )}
+                </div>
+                <div className="p-2 xl:p-1.5 flex flex-col gap-1 flex-1 w-full">
+                  <h4 className="font-bold text-xs text-gray-800 line-clamp-1 group-hover:text-amber-900">{p.name}</h4>
+                  <div className="flex items-center justify-between mt-auto gap-1">
+                    <p className="text-[11px] font-semibold text-amber-700">{fc(p.price)}</p>
+                    <span className="text-[10px] bg-amber-100 group-hover:bg-amber-600 group-hover:text-white text-amber-900 font-bold p-1 rounded-full transition flex items-center justify-center shrink-0">
+                      <Plus className="w-3 h-3" />
+                    </span>
+                  </div>
+                </div>
               </button>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

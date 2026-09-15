@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PlusCircle, X, Save, Info, Loader2 } from 'lucide-react';
+import { PlusCircle, X, Save, Info, Loader2, ImagePlus, Trash2 } from 'lucide-react';
+import { CldUploadWidget } from 'next-cloudinary';
 import { createClient } from '@/utils/supabase/client';
+import { getResizedImageUrl, isTrustedCloudinaryUrl } from '@/lib/cloudinary-image';
 import { CatalogProduct, Dough } from '@/lib/types/batch';
 
 interface NewProductModalProps {
@@ -17,6 +19,7 @@ export default function NewProductModal({ isOpen, onClose, onSaveProduct, doughs
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [doughId, setDoughId] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   if (!isOpen) return null;
@@ -25,6 +28,7 @@ export default function NewProductModal({ isOpen, onClose, onSaveProduct, doughs
     setName('');
     setPrice('');
     setDoughId('');
+    setImageUrl('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,10 +46,11 @@ export default function NewProductModal({ isOpen, onClose, onSaveProduct, doughs
         name: name.trim(),
         price: parsedPrice,
         dough_id: doughId || null,
+        image_url: imageUrl || null,
         is_active: true,
         is_ready: true,
       })
-      .select('id, name, price, dough_id')
+      .select('id, name, price, image_url, dough_id')
       .single();
     setIsSaving(false);
 
@@ -59,6 +64,7 @@ export default function NewProductModal({ isOpen, onClose, onSaveProduct, doughs
       id: data.id,
       name: data.name,
       price: data.price,
+      imageUrl: data.image_url,
       doughId: data.dough_id,
       doughName: dough?.name ?? null,
     });
@@ -114,6 +120,58 @@ export default function NewProductModal({ isOpen, onClose, onSaveProduct, doughs
                   <option key={d.id} value={d.id}>{d.name}</option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-gray-600 mb-1">Foto Produk</label>
+            <div className="flex items-center gap-3">
+              {imageUrl ? (
+                <img
+                  src={getResizedImageUrl(imageUrl, 64, 64) || imageUrl}
+                  alt="Preview produk"
+                  className="h-16 w-16 object-cover rounded-lg border border-gray-300 shrink-0"
+                />
+              ) : (
+                <div className="h-16 w-16 rounded-lg border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center text-gray-300 shrink-0">
+                  <ImagePlus className="w-5 h-5" />
+                </div>
+              )}
+              <div className="flex gap-2">
+                <CldUploadWidget
+                  uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'products'}
+                  onSuccess={(result) => {
+                    const info = result.info;
+                    const url = info && typeof info === 'object' && 'secure_url' in info ? (info.secure_url as string) : null;
+                    if (isTrustedCloudinaryUrl(url)) {
+                      setImageUrl(url);
+                    } else {
+                      alert('Upload gagal: URL gambar tidak dikenali. Coba lagi.');
+                    }
+                  }}
+                >
+                  {({ open }) => (
+                    <button
+                      type="button"
+                      onClick={() => open()}
+                      className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                    >
+                      <ImagePlus className="w-3.5 h-3.5" />
+                      {imageUrl ? 'Ganti Foto' : 'Upload Foto'}
+                    </button>
+                  )}
+                </CldUploadWidget>
+                {imageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl('')}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Hapus
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
