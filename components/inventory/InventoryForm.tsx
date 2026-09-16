@@ -135,7 +135,14 @@ export default function InventoryForm() {
         setLoading(true)
 
         try {
-            const { error } = await supabase.from('inventory').insert([newItem])
+            const payload = {
+                ...newItem,
+                name: newItem.name.trim(),
+                unit: newItem.unit.trim(),
+                supplier: newItem.supplier?.trim() || null,
+                description: newItem.description?.trim() || null,
+            }
+            const { error } = await supabase.from('inventory').insert([payload])
             if (error) throw error
 
             setNewItem({
@@ -169,11 +176,13 @@ export default function InventoryForm() {
             const selectedItem = items.find(item => item.id === newTransaction.inventory_id)
             const unitCost = newTransaction.unit_cost || selectedItem?.unit_cost || 0
             const rawCost = newTransaction.quantity * unitCost
-            const totalCost = Math.round(rawCost * 100) / 100
+            const totalCost = Number(rawCost.toFixed(2))
 
             const { error } = await supabase.from('inventory_transactions').insert([
                 {
                     ...newTransaction,
+                    reference: newTransaction.reference.trim() || null,
+                    notes: newTransaction.notes.trim() || null,
                     total_cost: totalCost,
                 },
             ])
