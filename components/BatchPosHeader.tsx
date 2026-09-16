@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Store, Layers, RefreshCw, PlusCircle, CalendarPlus, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Store, Layers, RefreshCw, PlusCircle, Loader2, Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { BatchPO } from '@/lib/types/batch';
 
 interface BatchPosHeaderProps {
@@ -25,21 +25,90 @@ export default function BatchPosHeader({
   onOpenNewProductModal,
   onRefresh,
 }: BatchPosHeaderProps) {
-  const [isCreatingBatch, setIsCreatingBatch] = useState(false);
-  const [newBatchInput, setNewBatchInput] = useState('');
+  const [query, setQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const activeBatch = useMemo(
+    () => batchList.find((b) => b.id === activeBatchId),
+    [batchList, activeBatchId]
+  );
+
+  // Sync input with active batch name when not actively searching/opened
+  useEffect(() => {
+    if (!isOpen) {
+      setQuery(activeBatch?.name || '');
+    }
+  }, [activeBatch, isOpen]);
+
+  // Handle outside click to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setQuery(activeBatch?.name || '');
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeBatch]);
 
   const percentage = Math.min(Math.round((currentCapacity / maxCapacity) * 100), 100);
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newBatchInput.trim()) return;
-    const name = newBatchInput.startsWith('#') ? newBatchInput.trim() : `#${newBatchInput.trim()}`;
+  const { filteredBatches, exactMatch, showCreateOption } = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const trimmed = query.trim();
+    const filtered = q ? batchList.filter((b) => b.name.toLowerCase().includes(q)) : batchList;
+    const exact = trimmed
+      ? batchList.find(
+          (b) =>
+            b.name.toLowerCase() === q ||
+            b.name.toLowerCase() === `#${q}`
+        )
+      : null;
+    return {
+      filteredBatches: filtered,
+      exactMatch: exact,
+      showCreateOption: trimmed.length > 0 && !exact,
+    };
+  }, [batchList, query]);
+
+  const handleSelectBatch = (batchId: string) => {
+    onBatchChange(batchId);
+    setIsOpen(false);
+  };
+
+  const handleCreateBatch = async (batchNameToCreate: string) => {
+    const raw = batchNameToCreate.trim();
+    if (!raw || isSaving) return;
+    const formattedName = raw.startsWith('#') ? raw : `#${raw}`;
     setIsSaving(true);
-    await onCreateNewBatch(name);
-    setIsSaving(false);
-    setNewBatchInput('');
-    setIsCreatingBatch(false);
+    try {
+      await onCreateNewBatch(formattedName);
+      setQuery(formattedName);
+      setIsOpen(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isSaving) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (exactMatch) {
+        handleSelectBatch(exactMatch.id);
+      } else if (filteredBatches.length > 0) {
+        handleSelectBatch(filteredBatches[0].id);
+      } else if (showCreateOption) {
+        handleCreateBatch(query);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      setQuery(activeBatch?.name || '');
+    }
   };
 
   return (
@@ -89,69 +158,117 @@ export default function BatchPosHeader({
         {/* Center/Right: Target Batch Selector & Kapasitas Widget */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 flex-1 lg:justify-end min-w-0">
           <div className="bg-amber-800/80 px-3 py-2 rounded-xl border border-amber-700/80 flex items-center justify-between gap-2.5 sm:gap-3 flex-1 lg:max-w-xl min-w-0">
-            {/* Batch Selector */}
-            <div className="flex items-center gap-2 min-w-0 flex-1">
+            {/* Batch Autocomplete Search & Create */}
+            <div className="flex items-center gap-2 min-w-0 flex-1 relative" ref={dropdownRef}>
               <Layers className="w-4 h-4 text-amber-300 shrink-0" />
               <span className="text-xs text-amber-200 font-semibold shrink-0 hidden sm:inline">
                 Target:
               </span>
 
-              {isCreatingBatch ? (
-                <form onSubmit={handleCreateSubmit} className="flex items-center gap-1.5 flex-1 min-w-0">
+              <div className="relative flex-1 min-w-0">
+                <div className="relative flex items-center">
                   <input
+                    ref={inputRef}
                     type="text"
-                    autoFocus
-                    value={newBatchInput}
-                    onChange={(e) => setNewBatchInput(e.target.value)}
-                    placeholder="Nama Batch Baru (mis: #BATCH-SABTU)..."
-                    className="bg-white text-gray-900 font-bold text-xs px-2.5 py-1.5 rounded-lg focus:outline-none flex-1 min-w-[120px]"
+                    role="combobox"
+                    aria-expanded={isOpen}
+                    aria-autocomplete="list"
+                    aria-haspopup="listbox"
+                    aria-controls="batch-pos-listbox"
+                    disabled={isSaving}
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      if (!isOpen) setIsOpen(true);
+                    }}
+                    onFocus={() => {
+                      setIsOpen(true);
+                      inputRef.current?.select();
+                    }}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ketik cari atau nama batch baru..."
+                    className="w-full bg-amber-950/80 text-white font-bold text-xs pl-2.5 pr-7 py-1.5 rounded-lg border border-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-amber-950 placeholder:text-amber-300/50 truncate disabled:opacity-60"
                   />
                   <button
-                    type="submit"
+                    type="button"
+                    tabIndex={-1}
                     disabled={isSaving}
-                    className="bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold text-xs px-2.5 py-1.5 rounded-lg disabled:opacity-50 flex items-center gap-1 shrink-0"
-                  >
-                    {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Simpan'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsCreatingBatch(false)}
-                    className="text-amber-200 text-xs px-1.5 hover:text-white shrink-0"
-                  >
-                    Batal
-                  </button>
-                </form>
-              ) : (
-                <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                  <select
-                    value={activeBatchId ?? ''}
-                    onChange={(e) => {
-                      if (e.target.value === '__CREATE_NEW__') {
-                        setIsCreatingBatch(true);
-                      } else {
-                        onBatchChange(e.target.value);
-                      }
+                    onClick={() => {
+                      setIsOpen((prev) => !prev);
+                      if (!isOpen) inputRef.current?.focus();
                     }}
-                    className="bg-amber-900 text-white font-bold text-xs px-2.5 py-1.5 rounded-lg border border-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400 flex-1 min-w-0 truncate"
+                    className="absolute right-1 text-amber-300 hover:text-amber-100 p-1 cursor-pointer disabled:opacity-50"
                   >
-                    {batchList.length === 0 && <option value="">Belum ada Batch PO</option>}
-                    {batchList.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                    <option value="__CREATE_NEW__">+ Buat Batch PO Baru...</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setIsCreatingBatch(true)}
-                    className="p-1.5 bg-amber-700/60 hover:bg-amber-600 rounded-lg text-amber-200 transition shrink-0"
-                    title="Tambah Batch PO Baru"
-                  >
-                    <CalendarPlus className="w-4 h-4" />
+                    {isSaving ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5" />
+                    )}
                   </button>
                 </div>
-              )}
+
+                {/* Autocomplete Dropdown List */}
+                {isOpen && (
+                  <div
+                    id="batch-pos-listbox"
+                    role="listbox"
+                    className="absolute left-0 right-0 top-full mt-1.5 bg-white text-gray-900 rounded-xl shadow-xl border border-amber-200 py-1.5 z-50 max-h-60 overflow-y-auto"
+                  >
+                    {/* Option to create new batch if typed text not found */}
+                    {showCreateOption && (
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={false}
+                        disabled={isSaving}
+                        onClick={() => handleCreateBatch(query)}
+                        className="w-full px-3 py-2 text-left text-xs bg-amber-50 hover:bg-amber-100 text-amber-900 font-semibold flex items-center justify-between gap-2 border-b border-amber-100 cursor-pointer transition"
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Plus className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span className="truncate">
+                            Buat Batch Baru:{' '}
+                            <span className="font-bold text-amber-800">
+                              {query.trim().startsWith('#') ? query.trim() : `#${query.trim()}`}
+                            </span>
+                          </span>
+                        </div>
+                        <span className="text-[10px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded-md font-medium shrink-0">
+                          Enter
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Filtered Existing Batches */}
+                    {filteredBatches.length > 0 ? (
+                      filteredBatches.map((b) => {
+                        const isSelected = b.id === activeBatchId;
+                        return (
+                          <button
+                            key={b.id}
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            onClick={() => handleSelectBatch(b.id)}
+                            className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between gap-2 transition cursor-pointer ${
+                              isSelected
+                                ? 'bg-amber-600 text-white font-bold'
+                                : 'hover:bg-amber-50 text-gray-800'
+                            }`}
+                          >
+                            <span className="truncate">{b.name}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+                          </button>
+                        );
+                      })
+                    ) : !showCreateOption ? (
+                      <div className="px-3 py-2 text-xs text-gray-500 text-center">
+                        Tidak ada Batch PO yang cocok.
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="h-6 w-px bg-amber-700 shrink-0"></div>
@@ -179,7 +296,7 @@ export default function BatchPosHeader({
               <button
                 type="button"
                 onClick={onOpenNewProductModal}
-                className="bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold px-3 py-2 rounded-lg text-xs sm:text-sm flex items-center gap-1.5 transition shadow-sm whitespace-nowrap"
+                className="bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold px-3 py-2 rounded-lg text-xs sm:text-sm flex items-center gap-1.5 transition shadow-sm whitespace-nowrap cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4" />
                 <span>+ Produk Baru</span>
@@ -189,7 +306,7 @@ export default function BatchPosHeader({
               <button
                 type="button"
                 onClick={onRefresh}
-                className="bg-amber-800 hover:bg-amber-700 text-amber-100 p-2 rounded-lg transition shrink-0"
+                className="bg-amber-800 hover:bg-amber-700 text-amber-100 p-2 rounded-lg transition shrink-0 cursor-pointer"
                 title="Refresh Data"
               >
                 <RefreshCw className="w-4 h-4" />
