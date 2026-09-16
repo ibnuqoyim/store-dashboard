@@ -51,7 +51,7 @@ AS $$
 $$;
 
 -- ---------------------------------------------------------------------------
--- 3. Granular RLS for store_members (no cross-store leaks or updates)
+-- 3. Granular RLS for store_members (no privilege escalation or cross-store leaks)
 -- ---------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Authenticated read store_members" ON public.store_members;
 DROP POLICY IF EXISTS "Members view store_members" ON public.store_members;
@@ -64,20 +64,14 @@ CREATE POLICY "Members view store_members" ON public.store_members
 
 DROP POLICY IF EXISTS "Store owners manage members" ON public.store_members;
 DROP POLICY IF EXISTS "Store owners insert members" ON public.store_members;
+-- Only existing store owner/admin can insert new members (initial ownership handled by SECURITY DEFINER trigger)
 CREATE POLICY "Store owners insert members" ON public.store_members
   FOR INSERT WITH CHECK (
-    auth.role() = 'authenticated' AND (
-      EXISTS (
-        SELECT 1 FROM public.store_members sm
-        WHERE sm.store_id = store_members.store_id
-          AND sm.user_id = auth.uid()
-          AND sm.role IN ('owner', 'admin')
-      )
-      OR NOT EXISTS (
-        -- Permit initial creator assignment if no members exist yet for this store
-        SELECT 1 FROM public.store_members sm
-        WHERE sm.store_id = store_members.store_id
-      )
+    auth.role() = 'authenticated' AND EXISTS (
+      SELECT 1 FROM public.store_members sm
+      WHERE sm.store_id = store_members.store_id
+        AND sm.user_id = auth.uid()
+        AND sm.role IN ('owner', 'admin')
     )
   );
 
@@ -136,36 +130,57 @@ CREATE TRIGGER tr_new_store_creator
   EXECUTE FUNCTION public.handle_new_store_creator();
 
 -- ---------------------------------------------------------------------------
--- 5. Tenant-scoped RLS policies
+-- 5. Backfill legacy NULL store_id to default store if exists
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE
+  default_store_id uuid;
+BEGIN
+  SELECT id INTO default_store_id FROM public.stores ORDER BY created_at ASC LIMIT 1;
+  IF default_store_id IS NOT NULL THEN
+    UPDATE public.orders SET store_id = default_store_id WHERE store_id IS NULL;
+    UPDATE public.products SET store_id = default_store_id WHERE store_id IS NULL;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'batch_po') THEN
+      UPDATE public.batch_po SET store_id = default_store_id WHERE store_id IS NULL;
+    END IF;
+  END IF;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- 6. Strict Tenant-scoped RLS policies (Strict Isolation)
 -- ---------------------------------------------------------------------------
 
--- Orders: accessible if unassigned (single-store legacy) OR user belongs to store
+-- Orders: strictly require store membership (or NULL only if no stores configured yet)
 DROP POLICY IF EXISTS "Tenant scoped orders" ON public.orders;
 CREATE POLICY "Tenant scoped orders" ON public.orders
   FOR ALL USING (
     auth.role() = 'authenticated' AND (
-      store_id IS NULL OR public.is_store_member(store_id)
+      public.is_store_member(store_id)
+      OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
     )
   ) WITH CHECK (
     auth.role() = 'authenticated' AND (
-      store_id IS NULL OR public.is_store_member(store_id)
+      public.is_store_member(store_id)
+      OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
     )
   );
 
--- Products: accessible if unassigned (single-store legacy) OR user belongs to store
+-- Products: strictly require store membership (or NULL only if no stores configured yet)
 DROP POLICY IF EXISTS "Tenant scoped products" ON public.products;
 CREATE POLICY "Tenant scoped products" ON public.products
   FOR ALL USING (
     auth.role() = 'authenticated' AND (
-      store_id IS NULL OR public.is_store_member(store_id)
+      public.is_store_member(store_id)
+      OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
     )
   ) WITH CHECK (
     auth.role() = 'authenticated' AND (
-      store_id IS NULL OR public.is_store_member(store_id)
+      public.is_store_member(store_id)
+      OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
     )
   );
 
--- Batch PO: accessible if unassigned OR user belongs to store
+-- Batch PO: strictly require store membership (or NULL only if no stores configured yet)
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'batch_po') THEN
@@ -173,11 +188,13 @@ BEGIN
     EXECUTE 'CREATE POLICY "Tenant scoped batch_po" ON public.batch_po
       FOR ALL USING (
         auth.role() = ''authenticated'' AND (
-          store_id IS NULL OR public.is_store_member(store_id)
+          public.is_store_member(store_id)
+          OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
         )
       ) WITH CHECK (
         auth.role() = ''authenticated'' AND (
-          store_id IS NULL OR public.is_store_member(store_id)
+          public.is_store_member(store_id)
+          OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
         )
       )';
   END IF;
