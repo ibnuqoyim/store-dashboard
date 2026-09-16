@@ -108,7 +108,7 @@ export default function ProductionManager({ initialRecipes }: { initialRecipes: 
             .order('date', { ascending: false })
         setRuns((data as ProductionRun[]) ?? [])
         setLoading(false)
-    }, [])
+    }, [supabase])
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch on mount; fetchRuns sets loading state before its await, which is the standard fetch-on-mount pattern
     useEffect(() => { fetchRuns() }, [fetchRuns])

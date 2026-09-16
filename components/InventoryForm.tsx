@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Plus, Trash2, Pencil, Package, Wheat, AlertTriangle, Search, Filter, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react'
 import { useBusinessConfig } from '@/lib/business-config-context'
@@ -18,20 +18,9 @@ type InventoryItem = {
     description?: string
 }
 
-type InventoryTransaction = {
-    inventory_id: string
-    transaction_type: 'in' | 'out'
-    quantity: number
-    unit_cost?: number
-    total_cost?: number
-    reference?: string
-    notes?: string
-}
-
 export default function InventoryForm() {
     const config = useBusinessConfig()
     const [items, setItems] = useState<InventoryItem[]>([])
-    const [transactions, setTransactions] = useState<InventoryTransaction[]>([])
     const [loading, setLoading] = useState(false)
     const [showAddForm, setShowAddForm] = useState(false)
     const [showTransactionForm, setShowTransactionForm] = useState(false)
@@ -73,9 +62,23 @@ export default function InventoryForm() {
         notes: ''
     })
 
+    const fetchItems = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('inventory')
+                .select('*')
+                .order('name')
+
+            if (error) throw error
+            setItems(data || [])
+        } catch (error) {
+            console.error('Error fetching inventory items:', error)
+        }
+    }, [supabase])
+
     useEffect(() => {
         fetchItems()
-    }, [])
+    }, [fetchItems])
 
     // Reset page when filters change
     useEffect(() => {
@@ -129,20 +132,6 @@ export default function InventoryForm() {
 
     const totalPages = Math.ceil(filteredItems.length / itemsPerPage)
     const totalItems = filteredItems.length
-
-    const fetchItems = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('inventory')
-                .select('*')
-                .order('name')
-
-            if (error) throw error
-            setItems(data || [])
-        } catch (error) {
-            console.error('Error fetching inventory items:', error)
-        }
-    }
 
     const handleAddItem = async (e: React.FormEvent) => {
         e.preventDefault()

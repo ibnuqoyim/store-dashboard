@@ -6,10 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "bot:dev": "cd bot && npm run dev",
-    "bot:start": "cd bot && npm run start",
-    "bot:install": "cd bot && npm install"
+    "lint": "eslint"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
