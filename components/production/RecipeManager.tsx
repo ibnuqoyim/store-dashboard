@@ -4,77 +4,23 @@ import { useState, useCallback, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import {
-    Plus, Pencil, Trash2, Copy, X, Loader2, BookOpen,
-    ChevronRight, AlertTriangle, RefreshCw, Package,
+    Plus, Loader2, BookOpen, AlertTriangle, RefreshCw,
 } from 'lucide-react'
 import { useBusinessConfig } from '@/lib/business-config-context'
 import { formatCurrency } from '@/lib/config'
+import RecipeCard from './RecipeCard'
+import RecipeHppModal from './RecipeHppModal'
+import RecipeFormModal from './RecipeFormModal'
+import {
+    computeHPP,
+    type Product,
+    type InventoryItem,
+    type Recipe,
+    type TempIngredient,
+    type RecipeFormData,
+} from './recipe-types'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type Product = { id: string; name: string }
-
-type InventoryItem = {
-    id: string
-    name: string
-    unit: string
-    unit_cost: number
-    category: string
-}
-
-type Ingredient = {
-    id: string
-    recipe_id: string
-    inventory_id: string
-    quantity: number
-    notes: string
-    inventory: InventoryItem | null
-}
-
-type Recipe = {
-    id: string
-    product_id: string | null
-    name: string
-    yield_quantity: number
-    yield_unit: string
-    labor_cost_per_batch: number
-    overhead_cost_per_batch: number
-    notes: string
-    products: { name: string } | null
-    recipe_ingredients: Ingredient[]
-}
-
-type HPPResult = {
-    materialCost: number
-    laborCost: number
-    overheadCost: number
-    totalPerBatch: number
-    hppPerUnit: number
-}
-
-type TempIngredient = {
-    tempId: string       // client-side only key
-    id?: string          // real DB id (set for existing rows)
-    inventory_id: string
-    quantity: string
-    notes: string
-}
-
-// ─── HPP calculation ──────────────────────────────────────────────────────────
-
-function computeHPP(recipe: Recipe): HPPResult {
-    const materialCost = (recipe.recipe_ingredients ?? []).reduce((sum, ing) => {
-        const unitCost = ing.inventory?.unit_cost ?? 0
-        return sum + ing.quantity * unitCost
-    }, 0)
-    const laborCost = recipe.labor_cost_per_batch ?? 0
-    const overheadCost = recipe.overhead_cost_per_batch ?? 0
-    const totalPerBatch = materialCost + laborCost + overheadCost
-    const hppPerUnit = recipe.yield_quantity > 0 ? totalPerBatch / recipe.yield_quantity : 0
-    return { materialCost, laborCost, overheadCost, totalPerBatch, hppPerUnit }
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
+export type { Recipe, Product, InventoryItem, Ingredient, HPPResult } from './recipe-types'
 
 export default function RecipeManager({
     initialProducts,
@@ -97,14 +43,12 @@ export default function RecipeManager({
     const [syncing, setSyncing] = useState<string | null>(null)
     const [syncingAll, setSyncingAll] = useState(false)
 
-    // HPP detail modal
+    // Modals state
     const [hppRecipe, setHPPRecipe] = useState<Recipe | null>(null)
-
-    // Form modal
     const [formOpen, setFormOpen] = useState(false)
     const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<RecipeFormData>({
         name: '',
         product_id: '',
         yield_quantity: '1',
@@ -205,13 +149,13 @@ export default function RecipeManager({
                 const { error } = await supabase
                     .from('recipes')
                     .update({
-                        name: formData.name,
+                        name: formData.name.trim(),
                         product_id: formData.product_id || null,
                         yield_quantity: Number(formData.yield_quantity),
-                        yield_unit: formData.yield_unit,
+                        yield_unit: formData.yield_unit.trim() || 'pcs',
                         labor_cost_per_batch: Number(formData.labor_cost_per_batch),
                         overhead_cost_per_batch: Number(formData.overhead_cost_per_batch),
-                        notes: formData.notes || null,
+                        notes: formData.notes?.trim() || null,
                     })
                     .eq('id', editingRecipe.id)
                 if (error) throw error
@@ -220,13 +164,13 @@ export default function RecipeManager({
                 const { data, error } = await supabase
                     .from('recipes')
                     .insert({
-                        name: formData.name,
+                        name: formData.name.trim(),
                         product_id: formData.product_id || null,
                         yield_quantity: Number(formData.yield_quantity),
-                        yield_unit: formData.yield_unit,
+                        yield_unit: formData.yield_unit.trim() || 'pcs',
                         labor_cost_per_batch: Number(formData.labor_cost_per_batch),
                         overhead_cost_per_batch: Number(formData.overhead_cost_per_batch),
-                        notes: formData.notes || null,
+                        notes: formData.notes?.trim() || null,
                     })
                     .select('id')
                     .single()
@@ -234,18 +178,21 @@ export default function RecipeManager({
                 recipeId = data.id
             }
 
-            // Sync ingredients: delete all then re-insert
+            // Sync recipe_ingredients: delete old, re-insert valid
             await supabase.from('recipe_ingredients').delete().eq('recipe_id', recipeId)
+
             if (validIngredients.length > 0) {
-                const { error } = await supabase.from('recipe_ingredients').insert(
-                    validIngredients.map(ing => ({
-                        recipe_id: recipeId,
-                        inventory_id: ing.inventory_id,
-                        quantity: Number(ing.quantity),
-                        notes: ing.notes || null,
-                    }))
-                )
-                if (error) throw error
+                const { error: ingError } = await supabase
+                    .from('recipe_ingredients')
+                    .insert(
+                        validIngredients.map(ing => ({
+                            recipe_id: recipeId,
+                            inventory_id: ing.inventory_id,
+                            quantity: Number(ing.quantity),
+                            notes: ing.notes?.trim() || null,
+                        }))
+                    )
+                if (ingError) throw ingError
             }
 
             setFormOpen(false)
@@ -264,7 +211,7 @@ export default function RecipeManager({
             .from('recipes')
             .insert({
                 name: `${recipe.name} (Salinan)`,
-                product_id: null, // don't link copy to same product
+                product_id: null,
                 yield_quantity: recipe.yield_quantity,
                 yield_unit: recipe.yield_unit,
                 labor_cost_per_batch: recipe.labor_cost_per_batch,
@@ -345,8 +292,6 @@ export default function RecipeManager({
         alert(`HPP berhasil disinkronkan ke produk "${recipe.products?.name}": ${fc(Math.round(hppPerUnit))} / unit`)
     }
 
-    // ─── Render ───────────────────────────────────────────────────────────────
-
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -359,22 +304,24 @@ export default function RecipeManager({
                 </div>
                 <div className="flex gap-2">
                     <button
+                        type="button"
                         onClick={handleSyncAll}
                         disabled={syncingAll || recipes.filter(r => r.product_id).length === 0}
-                        className="flex items-center gap-2 border border-green-600 text-green-700 px-4 py-2 rounded-md hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 border border-green-600 text-green-700 px-4 py-2 rounded-md hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                         title={`Sync HPP ke semua produk (${recipes.filter(r => r.product_id).length} resep tertaut)`}
                     >
                         {syncingAll
                             ? <Loader2 size={16} className="animate-spin" />
-                            : <RefreshCw size={16} />
-                        }
-                        Sync All HPP
+                            : <RefreshCw size={16} />}
+                        Sync Semua HPP
                     </button>
                     <button
+                        type="button"
                         onClick={openCreate}
-                        className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
+                        className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 cursor-pointer"
                     >
-                        <Plus size={18} /> Buat Resep
+                        <Plus size={18} />
+                        Buat Resep
                     </button>
                 </div>
             </div>
@@ -390,7 +337,7 @@ export default function RecipeManager({
                 </div>
             )}
 
-            {/* Recipe cards */}
+            {/* Recipe cards grid */}
             {loading ? (
                 <div className="text-center py-16 text-gray-400">Memuat resep...</div>
             ) : recipes.length === 0 ? (
@@ -401,447 +348,46 @@ export default function RecipeManager({
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {recipes.map(recipe => {
-                        const hpp = computeHPP(recipe)
-                        const missingCosts = (recipe.recipe_ingredients ?? []).some(
-                            ing => !ing.inventory?.unit_cost
-                        )
-                        return (
-                            <div key={recipe.id} className="bg-white rounded-lg shadow p-5 flex flex-col gap-3">
-                                {/* Title */}
-                                <div>
-                                    <h3 className="font-bold text-gray-900">{recipe.name}</h3>
-                                    {recipe.products && (
-                                        <p className="text-xs text-indigo-600 mt-0.5">
-                                            Produk: {recipe.products.name}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Quick stats */}
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                    <div className="bg-gray-50 rounded p-2">
-                                        <p className="text-gray-500 text-xs">Yield</p>
-                                        <p className="font-semibold text-gray-800">
-                                            {recipe.yield_quantity} {recipe.yield_unit}
-                                        </p>
-                                    </div>
-                                    <div className="bg-gray-50 rounded p-2">
-                                        <p className="text-gray-500 text-xs">Bahan</p>
-                                        <p className="font-semibold text-gray-800">
-                                            {(recipe.recipe_ingredients ?? []).length} item
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* HPP per unit */}
-                                <div className={`rounded-lg p-3 ${missingCosts ? 'bg-amber-50 border border-amber-200' : 'bg-green-50 border border-green-200'}`}>
-                                    <p className="text-xs text-gray-500">HPP per unit</p>
-                                    <p className={`text-xl font-bold ${missingCosts ? 'text-amber-700' : 'text-green-700'}`}>
-                                        {fc(hpp.hppPerUnit)}
-                                    </p>
-                                    {missingCosts && (
-                                        <p className="text-xs text-amber-600 mt-1">
-                                            ⚠ Beberapa bahan belum punya unit cost
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Actions */}
-                                <div className="flex gap-2 pt-1">
-                                    <button
-                                        onClick={() => setHPPRecipe(recipe)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 border border-gray-300 text-gray-700 text-sm py-1.5 rounded hover:bg-gray-50"
-                                    >
-                                        <ChevronRight size={14} /> Detail HPP
-                                    </button>
-                                    <button
-                                        onClick={() => handleDuplicate(recipe)}
-                                        className="p-1.5 text-gray-500 hover:bg-gray-100 rounded"
-                                        title="Duplikasi resep"
-                                    >
-                                        <Copy size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => openEdit(recipe)}
-                                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                                        title="Edit resep"
-                                    >
-                                        <Pencil size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(recipe)}
-                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                                        title="Hapus resep"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        )
-                    })}
+                    {recipes.map(recipe => (
+                        <RecipeCard
+                            key={recipe.id}
+                            recipe={recipe}
+                            onViewHpp={setHPPRecipe}
+                            onDuplicate={handleDuplicate}
+                            onEdit={openEdit}
+                            onDelete={handleDelete}
+                            fc={fc}
+                        />
+                    ))}
                 </div>
             )}
 
-            {/* ── HPP Detail Modal ──────────────────────────────────────────────────── */}
-            {hppRecipe && (() => {
-                const hpp = computeHPP(hppRecipe)
-                return (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-start rounded-t-xl">
-                                <div>
-                                    <h2 className="text-lg font-bold text-gray-900">{hppRecipe.name}</h2>
-                                    <p className="text-sm text-gray-500">
-                                        Yield: {hppRecipe.yield_quantity} {hppRecipe.yield_unit} per batch
-                                    </p>
-                                </div>
-                                <button onClick={() => setHPPRecipe(null)} className="text-gray-400 hover:text-gray-600">
-                                    <X size={22} />
-                                </button>
-                            </div>
+            {/* HPP Detail Modal */}
+            <RecipeHppModal
+                recipe={hppRecipe}
+                onClose={() => setHPPRecipe(null)}
+                onSync={syncHPPToProduct}
+                syncing={syncing === hppRecipe?.id}
+                fc={fc}
+            />
 
-                            <div className="px-6 py-4 space-y-4">
-                                {/* Ingredients table */}
-                                <div>
-                                    <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
-                                        <Package size={14} /> Bahan Baku (per batch)
-                                    </h3>
-                                    {(hppRecipe.recipe_ingredients ?? []).length === 0 ? (
-                                        <p className="text-sm text-gray-400 italic">Belum ada bahan</p>
-                                    ) : (
-                                        <table className="w-full text-sm">
-                                            <thead>
-                                                <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
-                                                    <th className="pb-1.5 font-medium">Bahan</th>
-                                                    <th className="pb-1.5 font-medium text-right">Qty</th>
-                                                    <th className="pb-1.5 font-medium text-right">Unit Cost</th>
-                                                    <th className="pb-1.5 font-medium text-right">Subtotal</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-50">
-                                                {(hppRecipe.recipe_ingredients ?? []).map(ing => {
-                                                    const unitCost = ing.inventory?.unit_cost ?? 0
-                                                    const sub = ing.quantity * unitCost
-                                                    return (
-                                                        <tr key={ing.id}>
-                                                            <td className="py-1.5 text-gray-800">
-                                                                {ing.inventory?.name ?? '—'}
-                                                            </td>
-                                                            <td className="py-1.5 text-right text-gray-600">
-                                                                {ing.quantity} {ing.inventory?.unit}
-                                                            </td>
-                                                            <td className="py-1.5 text-right text-gray-600">
-                                                                {unitCost ? fc(unitCost) : (
-                                                                    <span className="text-amber-500 text-xs">—</span>
-                                                                )}
-                                                            </td>
-                                                            <td className="py-1.5 text-right font-medium text-gray-800">
-                                                                {fc(sub)}
-                                                            </td>
-                                                        </tr>
-                                                    )
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    )}
-                                </div>
-
-                                {/* Cost summary */}
-                                <div className="border-t border-gray-200 pt-3 space-y-2 text-sm">
-                                    <div className="flex justify-between text-gray-600">
-                                        <span>Total Bahan Baku</span>
-                                        <span className="font-medium">{fc(hpp.materialCost)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-gray-600">
-                                        <span>Biaya Kerja</span>
-                                        <span className="font-medium">{fc(hpp.laborCost)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-gray-600">
-                                        <span>Biaya Lainnya (overhead)</span>
-                                        <span className="font-medium">{fc(hpp.overheadCost)}</span>
-                                    </div>
-                                    <div className="flex justify-between font-semibold text-gray-800 border-t border-gray-200 pt-2">
-                                        <span>Total per Batch</span>
-                                        <span>{fc(hpp.totalPerBatch)}</span>
-                                    </div>
-                                </div>
-
-                                {/* HPP per unit result */}
-                                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                                    <p className="text-sm text-indigo-700 font-medium">
-                                        HPP per Unit ({hppRecipe.yield_unit})
-                                    </p>
-                                    <p className="text-3xl font-bold text-indigo-800 mt-1">
-                                        {fc(hpp.hppPerUnit)}
-                                    </p>
-                                    <p className="text-xs text-indigo-600 mt-1">
-                                        {fc(hpp.totalPerBatch)} ÷ {hppRecipe.yield_quantity} {hppRecipe.yield_unit}
-                                    </p>
-                                </div>
-
-                                {/* Sync button */}
-                                {hppRecipe.product_id && (
-                                    <button
-                                        onClick={() => syncHPPToProduct(hppRecipe)}
-                                        disabled={syncing === hppRecipe.id}
-                                        className="w-full flex items-center justify-center gap-2 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium"
-                                    >
-                                        {syncing === hppRecipe.id ? (
-                                            <Loader2 className="animate-spin" size={16} />
-                                        ) : (
-                                            <RefreshCw size={16} />
-                                        )}
-                                        Sync HPP ke Produk: {hppRecipe.products?.name}
-                                    </button>
-                                )}
-                                {!hppRecipe.product_id && (
-                                    <p className="text-center text-xs text-gray-400">
-                                        Tautkan ke produk untuk mengaktifkan sync HPP
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )
-            })()}
-
-            {/* ── Form Modal ────────────────────────────────────────────────────────── */}
-            {formOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center rounded-t-xl">
-                            <h2 className="text-lg font-bold text-gray-900">
-                                {editingRecipe ? 'Edit Resep' : 'Buat Resep Baru'}
-                            </h2>
-                            <button onClick={() => setFormOpen(false)} className="text-gray-400 hover:text-gray-600">
-                                <X size={22} />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSave} className="px-6 py-5 space-y-5">
-                            {/* Basic info */}
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Nama Resep <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        required
-                                        type="text"
-                                        value={formData.name}
-                                        onChange={e => setFormData(d => ({ ...d, name: e.target.value }))}
-                                        placeholder="Cth: Sourdough Basic"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Tautkan ke Produk
-                                        <span className="ml-1 text-xs text-gray-400 font-normal">opsional — untuk sync HPP</span>
-                                    </label>
-                                    <select
-                                        value={formData.product_id}
-                                        onChange={e => setFormData(d => ({ ...d, product_id: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    >
-                                        <option value="">— Tidak ditautkan —</option>
-                                        {products.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Yield per Batch <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            required
-                                            type="number"
-                                            min="0.01"
-                                            step="any"
-                                            value={formData.yield_quantity}
-                                            onChange={e => setFormData(d => ({ ...d, yield_quantity: e.target.value }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Satuan Yield
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.yield_unit}
-                                            onChange={e => setFormData(d => ({ ...d, yield_unit: e.target.value }))}
-                                            placeholder="pcs / loaf / box"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Biaya Kerja / Batch (IDR)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            step="any"
-                                            value={formData.labor_cost_per_batch}
-                                            onChange={e => setFormData(d => ({ ...d, labor_cost_per_batch: e.target.value }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Biaya Lainnya / Batch (IDR)
-                                            <span className="block text-xs text-gray-400 font-normal">listrik, gas, dll</span>
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            step="any"
-                                            value={formData.overhead_cost_per_batch}
-                                            onChange={e => setFormData(d => ({ ...d, overhead_cost_per_batch: e.target.value }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
-                                    <textarea
-                                        rows={2}
-                                        value={formData.notes}
-                                        onChange={e => setFormData(d => ({ ...d, notes: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Ingredients section */}
-                            <div>
-                                <div className="flex justify-between items-center mb-3">
-                                    <h3 className="text-sm font-semibold text-gray-800">
-                                        Bahan Baku
-                                    </h3>
-                                    <button
-                                        type="button"
-                                        onClick={addIngredientRow}
-                                        className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800"
-                                    >
-                                        <Plus size={14} /> Tambah Bahan
-                                    </button>
-                                </div>
-
-                                {tempIngredients.length === 0 ? (
-                                    <p className="text-sm text-gray-400 italic text-center py-4 border border-dashed border-gray-200 rounded-lg">
-                                        Belum ada bahan. Klik &quot;Tambah Bahan&quot; untuk mulai.
-                                    </p>
-                                ) : (
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 px-1">
-                                            <span className="col-span-5">Bahan (dari inventory)</span>
-                                            <span className="col-span-3">Qty per batch</span>
-                                            <span className="col-span-3">Unit cost saat ini</span>
-                                            <span className="col-span-1"></span>
-                                        </div>
-                                        {tempIngredients.map(ing => {
-                                            const inv = inventory.find(i => i.id === ing.inventory_id)
-                                            return (
-                                                <div key={ing.tempId} className="grid grid-cols-12 gap-2 items-center">
-                                                    <div className="col-span-5">
-                                                        <select
-                                                            value={ing.inventory_id}
-                                                            onChange={e => updateIngredientRow(ing.tempId, 'inventory_id', e.target.value)}
-                                                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                                        >
-                                                            <option value="">Pilih bahan...</option>
-                                                            {inventory.map(item => (
-                                                                <option key={item.id} value={item.id}>
-                                                                    {item.name} ({item.unit})
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                    <div className="col-span-3">
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            step="any"
-                                                            placeholder={`dalam ${inv?.unit ?? 'unit'}`}
-                                                            value={ing.quantity}
-                                                            onChange={e => updateIngredientRow(ing.tempId, 'quantity', e.target.value)}
-                                                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-3 text-sm text-gray-500">
-                                                        {inv ? fc(inv.unit_cost) + '/' + inv.unit : '—'}
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeIngredientRow(ing.tempId)}
-                                                        className="col-span-1 text-red-400 hover:text-red-600 flex justify-center"
-                                                    >
-                                                        <X size={16} />
-                                                    </button>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                )}
-
-                                {/* Live HPP preview in form */}
-                                {tempIngredients.some(i => i.inventory_id && i.quantity) && (
-                                    <div className="mt-3 bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-sm">
-                                        {(() => {
-                                            const materialCost = tempIngredients.reduce((sum, ing) => {
-                                                const inv = inventory.find(i => i.id === ing.inventory_id)
-                                                return sum + (Number(ing.quantity) || 0) * (inv?.unit_cost ?? 0)
-                                            }, 0)
-                                            const labor = Number(formData.labor_cost_per_batch) || 0
-                                            const overhead = Number(formData.overhead_cost_per_batch) || 0
-                                            const total = materialCost + labor + overhead
-                                            const yield_ = Number(formData.yield_quantity) || 1
-                                            return (
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-indigo-700">Preview HPP per unit:</span>
-                                                    <span className="font-bold text-indigo-800 text-base">
-                                                        {fc(total / yield_)}
-                                                    </span>
-                                                </div>
-                                            )
-                                        })()}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Form actions */}
-                            <div className="flex gap-3 pt-2 border-t border-gray-100">
-                                <button
-                                    type="button"
-                                    onClick={() => setFormOpen(false)}
-                                    className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="flex-1 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {saving && <Loader2 className="animate-spin" size={16} />}
-                                    {editingRecipe ? 'Simpan Perubahan' : 'Buat Resep'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            {/* Form Modal */}
+            <RecipeFormModal
+                isOpen={formOpen}
+                isEditing={Boolean(editingRecipe)}
+                onClose={() => setFormOpen(false)}
+                onSubmit={handleSave}
+                formData={formData}
+                setFormData={setFormData}
+                tempIngredients={tempIngredients}
+                addIngredientRow={addIngredientRow}
+                updateIngredientRow={updateIngredientRow}
+                removeIngredientRow={removeIngredientRow}
+                products={products}
+                inventory={inventory}
+                saving={saving}
+                fc={fc}
+            />
         </div>
     )
 }
