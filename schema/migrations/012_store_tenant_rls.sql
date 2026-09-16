@@ -23,17 +23,25 @@ CREATE INDEX IF NOT EXISTS idx_store_members_user_id ON public.store_members(use
 CREATE INDEX IF NOT EXISTS idx_store_members_store_id ON public.store_members(store_id);
 
 -- ---------------------------------------------------------------------------
--- 2. Backfill existing stores and users into store_members
--- Prevents lockout for existing deployments upon migration
+-- 2. Backfill primary user as owner for unassigned existing stores
+-- Prevents lockout while avoiding cross-user leaks in multi-user environments
 -- ---------------------------------------------------------------------------
 DO $$
+DECLARE
+  primary_user_id uuid;
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'stores') THEN
-    INSERT INTO public.store_members (store_id, user_id, role)
-    SELECT s.id, u.id, 'owner'
-    FROM public.stores s
-    CROSS JOIN auth.users u
-    ON CONFLICT (store_id, user_id) DO NOTHING;
+    -- Pick the earliest created user as the initial store owner
+    SELECT id INTO primary_user_id FROM auth.users ORDER BY created_at ASC LIMIT 1;
+    IF primary_user_id IS NOT NULL THEN
+      INSERT INTO public.store_members (store_id, user_id, role)
+      SELECT s.id, primary_user_id, 'owner'
+      FROM public.stores s
+      WHERE NOT EXISTS (
+        SELECT 1 FROM public.store_members sm WHERE sm.store_id = s.id
+      )
+      ON CONFLICT (store_id, user_id) DO NOTHING;
+    END IF;
   END IF;
 END $$;
 
