@@ -1,97 +1,25 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Save, ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useBusinessConfig } from '@/lib/business-config-context'
 import { formatCurrency } from '@/lib/config'
-
-type Product = {
-    id: string
-    name: string
-    price: number
-}
-
-type OrderItem = {
-    product_id: string
-    quantity: number
-    price: number
-}
-
-type Delivery = {
-    courier_name: string
-    shipping_cost: number
-    address: string
-    status: string
-}
-
-type Store = {
-    id: string
-    name: string
-    invoice_prefix: string | null
-}
-
-type OrderFormData = {
-    invoice_number: string
-    date: string
-    customer_id: string | null
-    customer_name: string
-    phone: string
-    status: string
-    po_id: string
-    store_id: string
-    items: OrderItem[]
-    delivery: Delivery | null
-}
-
-type Customer = {
-    id: string
-    name: string
-    phone: string | null
-    address: string | null
-}
-
-type BatchOption = {
-    id: string
-    name: string
-}
-
-type ShippingRate = {
-    id: string
-    courier_name: string
-    description?: string | null
-    cost: number
-}
-
-type InitialOrderItem = {
-    product_id: string
-    quantity: number
-    price: number
-}
-
-type InitialOrderDelivery = {
-    courier_name: string | null
-    shipping_cost: number | null
-    address: string | null
-    status: string | null
-}
-
-type InitialOrder = {
-    id: string
-    invoice_number: string
-    date: string
-    customer_id: string | null
-    customer_name: string
-    phone: string | null
-    status: string | null
-    po_id: string | null
-    store_id: string | null
-    order_items: InitialOrderItem[]
-    deliveries?: InitialOrderDelivery[]
-}
+import OrderDetailsSection from './OrderDetailsSection'
+import OrderItemsSection from './OrderItemsSection'
+import OrderDeliverySection from './OrderDeliverySection'
+import type {
+    Product,
+    OrderItem,
+    Store,
+    OrderFormData,
+    Customer,
+    BatchOption,
+    ShippingRate,
+    InitialOrder,
+} from './types'
 
 type CustomerOrderAggregate = {
     order_items: { price: number | null; quantity: number | null }[] | null
@@ -101,11 +29,11 @@ export default function OrderForm({
     products,
     batches = [],
     stores = [],
-    initialOrder
+    initialOrder,
 }: {
-    products: Product[],
-    batches?: BatchOption[],
-    stores?: Store[],
+    products: Product[]
+    batches?: BatchOption[]
+    stores?: Store[]
     initialOrder?: InitialOrder
 }) {
     const router = useRouter()
@@ -129,7 +57,7 @@ export default function OrderForm({
         po_id: '',
         store_id: '',
         items: [],
-        delivery: null
+        delivery: null,
     })
 
     const [shippingRates, setShippingRates] = useState<ShippingRate[]>([])
@@ -150,12 +78,12 @@ export default function OrderForm({
 
             let maxSeq = 0
             if (orders && orders.length > 0) {
-                for (const order of orders) {
-                    const num = order.invoice_number as string
-                    const numPart = prefixStr && num.startsWith(prefixStr) ? num.slice(prefixStr.length) : num
-                    if (numPart.startsWith(currentYYYYMM)) {
-                        const seq = parseInt(numPart.slice(6), 10)
-                        if (!isNaN(seq) && seq > maxSeq) maxSeq = seq
+                const regex = new RegExp(`^${prefixStr}${currentYYYYMM}(\\d{3})$`)
+                for (const o of orders) {
+                    const match = o.invoice_number ? o.invoice_number.match(regex) : null
+                    if (match) {
+                        const seq = parseInt(match[1], 10)
+                        if (seq > maxSeq) maxSeq = seq
                     }
                 }
             }
@@ -213,7 +141,7 @@ export default function OrderForm({
                 }
             })
             setProductSearch(productSearchMap)
-            
+
             setFormData({
                 invoice_number: initialOrder.invoice_number,
                 date: initialOrder.date,
@@ -223,53 +151,55 @@ export default function OrderForm({
                 status: initialOrder.status || 'pending',
                 po_id: initialOrder.po_id || '',
                 store_id: initialOrder.store_id || '',
-                items: initialOrder.order_items.map((item) => ({
+                items: initialOrder.order_items.map(item => ({
                     product_id: item.product_id,
                     quantity: item.quantity,
-                    price: item.price
+                    price: item.price,
                 })),
-                delivery: initialOrder.deliveries?.[0] ? {
-                    courier_name: initialOrder.deliveries[0].courier_name || '',
-                    shipping_cost: initialOrder.deliveries[0].shipping_cost || 0,
-                    address: initialOrder.deliveries[0].address || '',
-                    status: initialOrder.deliveries[0].status || 'pending'
-                } : null
+                delivery: initialOrder.deliveries?.[0]
+                    ? {
+                          courier_name: initialOrder.deliveries[0].courier_name || '',
+                          shipping_cost: initialOrder.deliveries[0].shipping_cost || 0,
+                          address: initialOrder.deliveries[0].address || '',
+                          status: initialOrder.deliveries[0].status || 'pending',
+                      }
+                    : null,
             })
             if (initialOrder.deliveries?.[0]) {
                 setHasDelivery(true)
             }
-            // Set customer search to customer name when editing
             setCustomerSearch(initialOrder.customer_name || '')
         }
     }, [initialOrder, products])
 
     const addItem = () => {
-        setFormData({
-            ...formData,
-            items: [...formData.items, { product_id: '', quantity: 1, price: 0 }]
-        })
+        setFormData(prev => ({
+            ...prev,
+            items: [...prev.items, { product_id: '', quantity: 1, price: 0 }],
+        }))
     }
 
     const removeItem = (index: number) => {
-        const newItems = [...formData.items]
-        newItems.splice(index, 1)
-        setFormData({ ...formData, items: newItems })
+        setFormData(prev => {
+            const newItems = [...prev.items]
+            newItems.splice(index, 1)
+            return { ...prev, items: newItems }
+        })
     }
 
-    const updateItem = (index: number, field: keyof OrderItem, value: string | number) => {
-        const newItems = [...formData.items]
-        const item = { ...newItems[index], [field]: value }
-
-        // Auto-update price if product changes
-        if (field === 'product_id') {
-            const product = products.find(p => p.id === value)
-            if (product) {
-                item.price = product.price
+    const updateItem = (index: number, field: keyof OrderItem, value: number) => {
+        setFormData(prev => {
+            const newItems = [...prev.items]
+            const item = { ...newItems[index], [field]: value }
+            if (field === 'product_id') {
+                const product = products.find(p => p.id === (value as unknown as string))
+                if (product) {
+                    item.price = product.price
+                }
             }
-        }
-
-        newItems[index] = item
-        setFormData({ ...formData, items: newItems })
+            newItems[index] = item
+            return { ...prev, items: newItems }
+        })
     }
 
     const recalculateCustomerTotalPurchases = async (customerId: string) => {
@@ -281,17 +211,15 @@ export default function OrderForm({
 
             if (ordersError) throw ordersError
 
-            // Sum all order items
             let totalPurchases = 0
-            ;(orders as CustomerOrderAggregate[]).forEach((order) => {
+            ;(orders as CustomerOrderAggregate[]).forEach(order => {
                 if (order.order_items) {
-                    order.order_items.forEach((item) => {
+                    order.order_items.forEach(item => {
                         totalPurchases += (item.price || 0) * (item.quantity || 0)
                     })
                 }
             })
 
-            // Update customer with new total
             const { error: updateError } = await supabase
                 .from('customers')
                 .update({ total_purchases: totalPurchases })
@@ -306,54 +234,54 @@ export default function OrderForm({
     const toggleDelivery = (enable: boolean) => {
         setHasDelivery(enable)
         if (enable && !formData.delivery) {
-            // Check if customer has address/courier
-            const defaultCourier = ''
             let defaultAddress = ''
-
             if (formData.customer_id) {
                 const customer = customers.find(c => c.id === formData.customer_id)
                 if (customer && customer.address) defaultAddress = customer.address
             }
 
-            setFormData({
-                ...formData,
-                delivery: { courier_name: defaultCourier, shipping_cost: 0, address: defaultAddress, status: 'pending' }
-            })
+            setFormData(prev => ({
+                ...prev,
+                delivery: { courier_name: '', shipping_cost: 0, address: defaultAddress, status: 'pending' },
+            }))
         } else if (!enable) {
-            setFormData({ ...formData, delivery: null })
+            setFormData(prev => ({ ...prev, delivery: null }))
         }
     }
 
     const handleCustomerSearch = (value: string) => {
         setCustomerSearch(value)
-        setFormData({
-            ...formData,
+        setFormData(prev => ({
+            ...prev,
             customer_name: value,
-            customer_id: null // Clear ID when typing to allow new customers
-        })
+            customer_id: null,
+        }))
         setShowCustomerSuggestions(value.length > 0)
     }
 
     const handleSelectCustomer = (customer: Customer) => {
         setCustomerSearch(customer.name)
-        setFormData({
-            ...formData,
+        setFormData(prev => ({
+            ...prev,
             customer_id: customer.id,
             customer_name: customer.name,
             phone: customer.phone || '',
-            // If delivery is enabled, update address
-            delivery: hasDelivery && formData.delivery ? {
-                ...formData.delivery,
-                address: customer.address || formData.delivery.address
-            } : formData.delivery
-        })
+            delivery:
+                hasDelivery && prev.delivery
+                    ? {
+                          ...prev.delivery,
+                          address: customer.address || prev.delivery.address,
+                      }
+                    : prev.delivery,
+        }))
         setShowCustomerSuggestions(false)
     }
 
     const filteredCustomers = customerSearch
-        ? customers.filter(c =>
-            c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-            c.phone?.includes(customerSearch)
+        ? customers.filter(
+              c =>
+                  c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+                  c.phone?.includes(customerSearch)
           )
         : []
 
@@ -364,33 +292,31 @@ export default function OrderForm({
 
     const handleSelectProduct = (index: number, product: Product) => {
         setProductSearch(prev => ({ ...prev, [index]: product.name }))
-        updateItem(index, 'product_id', product.id)
+        updateItem(index, 'product_id', product.id as unknown as number)
         setShowProductSuggestions(prev => ({ ...prev, [index]: false }))
     }
 
     const getFilteredProducts = (index: number): Product[] => {
         const search = productSearch[index] || ''
         return search.length > 0
-            ? products.filter(p =>
-                p.name.toLowerCase().includes(search.toLowerCase())
-              )
+            ? products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
             : []
     }
 
     const handleCourierChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedRate = shippingRates.find(r => r.courier_name === e.target.value)
-        setFormData({
-            ...formData,
+        setFormData(prev => ({
+            ...prev,
             delivery: {
-                ...formData.delivery!,
+                ...prev.delivery!,
                 courier_name: e.target.value,
-                shipping_cost: selectedRate ? selectedRate.cost : 0
-            }
-        })
+                shipping_cost: selectedRate ? selectedRate.cost : 0,
+            },
+        }))
     }
 
     const calculateTotal = () => {
-        const itemsTotal = formData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+        const itemsTotal = formData.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
         const shipping = hasDelivery && formData.delivery ? Number(formData.delivery.shipping_cost) : 0
         return itemsTotal + shipping
     }
@@ -402,20 +328,18 @@ export default function OrderForm({
         try {
             let customerId = formData.customer_id
 
-            // 1. Create new customer if doesn't exist
             if (!customerId && formData.customer_name.trim()) {
                 const { data, error } = await supabase
                     .from('customers')
                     .insert({
                         name: formData.customer_name,
                         phone: formData.phone || null,
-                        address: null // Will be set during delivery if needed
+                        address: null,
                     })
                     .select()
                     .single()
 
                 if (error) {
-                    // If customer already exists (unique constraint), try to find it
                     const { data: existingCustomer, error: findError } = await supabase
                         .from('customers')
                         .select('id')
@@ -430,7 +354,6 @@ export default function OrderForm({
                 }
             }
 
-            // 2. Upsert Order
             const orderPayload = {
                 invoice_number: formData.invoice_number,
                 date: formData.date,
@@ -453,7 +376,6 @@ export default function OrderForm({
                 orderId = data.id
             }
 
-            // 3. Manage Items (Delete all and re-insert for simplicity)
             if (initialOrder) {
                 await supabase.from('order_items').delete().eq('order_id', orderId)
             }
@@ -463,13 +385,12 @@ export default function OrderForm({
                     order_id: orderId,
                     product_id: item.product_id,
                     quantity: item.quantity,
-                    price: item.price
+                    price: item.price,
                 }))
                 const { error } = await supabase.from('order_items').insert(itemsPayload)
                 if (error) throw error
             }
 
-            // 4. Manage Delivery
             if (initialOrder) {
                 await supabase.from('deliveries').delete().eq('order_id', orderId)
             }
@@ -480,19 +401,17 @@ export default function OrderForm({
                     courier_name: formData.delivery.courier_name,
                     shipping_cost: formData.delivery.shipping_cost,
                     address: formData.delivery.address,
-                    status: formData.delivery.status
+                    status: formData.delivery.status,
                 })
                 if (error) throw error
             }
 
-            // 5. Recalculate customer total purchases
             if (customerId) {
                 await recalculateCustomerTotalPurchases(customerId)
             }
 
             router.refresh()
             router.push('/')
-
         } catch (error) {
             alert('Error saving order: ' + (error instanceof Error ? error.message : 'unknown error'))
         } finally {
@@ -510,269 +429,46 @@ export default function OrderForm({
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Order Details */}
-                <div className="bg-white p-6 rounded-lg shadow">
-                    <h2 className="text-lg font-bold mb-4 text-gray-900">Order Details</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.invoice_number}
-                                onChange={e => setFormData({ ...formData, invoice_number: e.target.value })}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                            <input
-                                type="date"
-                                required
-                                value={formData.date}
-                                onChange={e => setFormData({ ...formData, date: e.target.value })}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                            />
-                        </div>
-                        <div className="relative">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-                            <input
-                                type="text"
-                                required
-                                value={customerSearch}
-                                onChange={e => handleCustomerSearch(e.target.value)}
-                                onFocus={() => customerSearch && setShowCustomerSuggestions(true)}
-                                onBlur={() => setTimeout(() => setShowCustomerSuggestions(false), 200)}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                                placeholder="Search customer by name or phone..."
-                            />
-                            {showCustomerSuggestions && filteredCustomers.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-1 border border-gray-300 rounded-md bg-white shadow-lg z-10 max-h-48 overflow-y-auto">
-                                    {filteredCustomers.map(customer => (
-                                        <div
-                                            key={customer.id}
-                                            onClick={() => handleSelectCustomer(customer)}
-                                            className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
-                                        >
-                                            <div className="font-medium text-gray-900">{customer.name}</div>
-                                            <div className="text-sm text-gray-500">{customer.phone}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                            <input
-                                type="text"
-                                value={formData.phone}
-                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                            <select
-                                value={formData.status}
-                                onChange={e => setFormData({ ...formData, status: e.target.value })}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                            >
-                                <option value="pending">Pending</option>
-                                <option value="paid">Paid</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Batch (PO)</label>
-                            <select
-                                value={formData.po_id}
-                                onChange={e => setFormData({ ...formData, po_id: e.target.value })}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                            >
-                                <option value="">Select Batch...</option>
-                                {batches.map(b => (
-                                    <option key={b.id} value={b.id}>{b.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                        {stores.length > 0 && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Store</label>
-                                <select
-                                    value={formData.store_id}
-                                    onChange={e => {
-                                        const storeId = e.target.value
-                                        setFormData(prev => ({ ...prev, store_id: storeId }))
-                                        generateAndSetInvoiceNumber(storeId || null)
-                                    }}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                                >
-                                    <option value="">No Store</option>
-                                    {stores.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                <OrderDetailsSection
+                    formData={formData}
+                    setFormData={setFormData}
+                    customerSearch={customerSearch}
+                    handleCustomerSearch={handleCustomerSearch}
+                    showCustomerSuggestions={showCustomerSuggestions}
+                    setShowCustomerSuggestions={setShowCustomerSuggestions}
+                    filteredCustomers={filteredCustomers}
+                    handleSelectCustomer={handleSelectCustomer}
+                    batches={batches}
+                    stores={stores}
+                    onStoreChange={storeId => {
+                        setFormData(prev => ({ ...prev, store_id: storeId }))
+                        generateAndSetInvoiceNumber(storeId || null)
+                    }}
+                />
 
-                {/* Order Items */}
-                <div className="bg-white p-6 rounded-lg shadow">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-bold text-gray-900">Items</h2>
-                        <button type="button" onClick={addItem} className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1">
-                            <Plus size={16} /> Add Item
-                        </button>
-                    </div>
+                <OrderItemsSection
+                    items={formData.items}
+                    productSearch={productSearch}
+                    showProductSuggestions={showProductSuggestions}
+                    getFilteredProducts={getFilteredProducts}
+                    handleProductSearch={handleProductSearch}
+                    handleSelectProduct={handleSelectProduct}
+                    setShowProductSuggestions={setShowProductSuggestions}
+                    addItem={addItem}
+                    updateItem={updateItem}
+                    removeItem={removeItem}
+                    config={config}
+                />
 
-                    <div className="space-y-4">
-                        {formData.items.map((item, index) => (
-                            <div key={index} className="flex gap-4 items-end border-b pb-4">
-                                <div className="flex-1 relative">
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Product</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={productSearch[index] || ''}
-                                        onChange={e => handleProductSearch(index, e.target.value)}
-                                        onFocus={() => (productSearch[index] || '').length > 0 && setShowProductSuggestions(prev => ({ ...prev, [index]: true }))}
-                                        onBlur={() => setTimeout(() => setShowProductSuggestions(prev => ({ ...prev, [index]: false })), 200)}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                                        placeholder="Search product..."
-                                    />
-                                    {showProductSuggestions[index] && getFilteredProducts(index).length > 0 && (
-                                        <div className="absolute top-full left-0 right-0 mt-1 border border-gray-300 rounded-md bg-white shadow-lg z-10 max-h-40 overflow-y-auto">
-                                            {getFilteredProducts(index).map(product => (
-                                                <div
-                                                    key={product.id}
-                                                    onClick={() => handleSelectProduct(index, product)}
-                                                    className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
-                                                >
-                                                    <div className="font-medium text-gray-900">{product.name}</div>
-                                                    <div className="text-sm text-gray-500">{formatCurrency(product.price, config)}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="w-24">
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Qty</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        required
-                                        value={item.quantity}
-                                        onChange={e => updateItem(index, 'quantity', Number(e.target.value))}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                                    />
-                                </div>
-                                <div className="w-32">
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Price</label>
-                                    <input
-                                        type="number"
-                                        required
-                                        value={item.price}
-                                        onChange={e => updateItem(index, 'price', Number(e.target.value))}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-50 text-gray-900"
-                                        readOnly
-                                    />
-                                </div>
-                                <button type="button" onClick={() => removeItem(index)} className="text-red-500 hover:text-red-700 pb-3">
-                                    <Trash2 size={18} />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                <OrderDeliverySection
+                    hasDelivery={hasDelivery}
+                    toggleDelivery={toggleDelivery}
+                    delivery={formData.delivery}
+                    setFormData={setFormData}
+                    shippingRates={shippingRates}
+                    handleCourierChange={handleCourierChange}
+                />
 
-                {/* Delivery */}
-                <div className="bg-white p-6 rounded-lg shadow">
-                    <div className="flex items-center gap-2 mb-4">
-                        <input
-                            type="checkbox"
-                            id="hasDelivery"
-                            checked={hasDelivery}
-                            onChange={e => toggleDelivery(e.target.checked)}
-                            className="h-4 w-4 text-blue-600 rounded"
-                        />
-                        <label htmlFor="hasDelivery" className="text-lg font-bold cursor-pointer text-gray-900">Include Delivery</label>
-                    </div>
-
-                    {hasDelivery && formData.delivery && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Courier Name</label>
-                                <select
-                                    value={formData.delivery.courier_name}
-                                    onChange={handleCourierChange}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                                >
-                                    <option value="">Select Courier...</option>
-                                    {shippingRates.map(rate => (
-                                        <option key={rate.id} value={rate.courier_name}>
-                                            {rate.courier_name} - {rate.description} ({rate.cost})
-                                        </option>
-                                    ))}
-                                    <option value="Manual">Manual Input</option>
-                                </select>
-                            </div>
-                            {formData.delivery.courier_name === 'Manual' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Manual Courier Name</label>
-                                    <input
-                                        type="text"
-                                        value={formData.delivery.courier_name === 'Manual' ? '' : formData.delivery.courier_name}
-                                        onChange={e => setFormData({ ...formData, delivery: { ...formData.delivery!, courier_name: e.target.value } })}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                                        placeholder="Enter courier name"
-                                    />
-                                </div>
-                            )}
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Cost</label>
-                                <input
-                                    type="number"
-                                    value={formData.delivery.shipping_cost}
-                                    onChange={e => setFormData({
-                                        ...formData,
-                                        delivery: { ...formData.delivery!, shipping_cost: Number(e.target.value) }
-                                    })}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                                />
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                                <textarea
-                                    value={formData.delivery.address}
-                                    onChange={e => setFormData({
-                                        ...formData,
-                                        delivery: { ...formData.delivery!, address: e.target.value }
-                                    })}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                                    rows={2}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
-                                <select
-                                    value={formData.delivery.status}
-                                    onChange={e => setFormData({
-                                        ...formData,
-                                        delivery: { ...formData.delivery!, status: e.target.value }
-                                    })}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                                >
-                                    <option value="pending">Pending</option>
-                                    <option value="shipped">Shipped</option>
-                                    <option value="delivered">Delivered</option>
-                                </select>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Summary Footer */}
                 <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-200 sticky bottom-0">
                     <div className="text-xl font-bold text-gray-900">
                         Total: {formatCurrency(calculateTotal(), config)}
