@@ -74,7 +74,7 @@ export default function InventoryEditModal({
                                 min="0"
                                 step="any"
                                 value={editFormData.unit_cost}
-                                onChange={(e) => setEditFormData(prev => ({ ...prev, unit_cost: Number(e.target.value) }))}
+                                onChange={(e) => setEditFormData(prev => ({ ...prev, unit_cost: Math.max(0, Number(e.target.value) || 0) }))}
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -92,7 +92,7 @@ export default function InventoryEditModal({
                             min="0"
                             step="any"
                             value={editFormData.min_stock}
-                            onChange={(e) => setEditFormData(prev => ({ ...prev, min_stock: Number(e.target.value) }))}
+                            onChange={(e) => setEditFormData(prev => ({ ...prev, min_stock: Math.max(0, Number(e.target.value) || 0) }))}
                             className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>

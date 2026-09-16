@@ -68,7 +68,7 @@ export default function InventoryAddModal({
                                 min="0"
                                 step="any"
                                 value={newItem.unit_cost}
-                                onChange={(e) => setNewItem(prev => ({ ...prev, unit_cost: Number(e.target.value) }))}
+                                onChange={(e) => setNewItem(prev => ({ ...prev, unit_cost: Math.max(0, Number(e.target.value) || 0) }))}
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -82,7 +82,7 @@ export default function InventoryAddModal({
                                 min="0"
                                 step="any"
                                 value={newItem.current_stock}
-                                onChange={(e) => setNewItem(prev => ({ ...prev, current_stock: Number(e.target.value) }))}
+                                onChange={(e) => setNewItem(prev => ({ ...prev, current_stock: Math.max(0, Number(e.target.value) || 0) }))}
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -94,7 +94,7 @@ export default function InventoryAddModal({
                                 min="0"
                                 step="any"
                                 value={newItem.min_stock}
-                                onChange={(e) => setNewItem(prev => ({ ...prev, min_stock: Number(e.target.value) }))}
+                                onChange={(e) => setNewItem(prev => ({ ...prev, min_stock: Math.max(0, Number(e.target.value) || 0) }))}
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
