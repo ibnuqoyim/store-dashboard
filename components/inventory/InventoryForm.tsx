@@ -159,11 +159,17 @@ export default function InventoryForm() {
 
     const handleAddTransaction = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (newTransaction.quantity <= 0) {
+            alert('Quantity transaksi harus lebih dari 0')
+            return
+        }
         setLoading(true)
 
         try {
             const selectedItem = items.find(item => item.id === newTransaction.inventory_id)
-            const totalCost = newTransaction.quantity * (newTransaction.unit_cost || selectedItem?.unit_cost || 0)
+            const unitCost = newTransaction.unit_cost || selectedItem?.unit_cost || 0
+            const rawCost = newTransaction.quantity * unitCost
+            const totalCost = Math.round(rawCost * 100) / 100
 
             const { error } = await supabase.from('inventory_transactions').insert([
                 {

@@ -33,7 +33,7 @@ export default function InventoryAddModal({
                             type="text"
                             required
                             value={newItem.name}
-                            onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                            onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
                             className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
@@ -41,7 +41,7 @@ export default function InventoryAddModal({
                         <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
                         <select
                             value={newItem.category}
-                            onChange={(e) => setNewItem({ ...newItem, category: e.target.value as 'bahan_baku' | 'packaging' })}
+                            onChange={(e) => setNewItem(prev => ({ ...prev, category: e.target.value as 'bahan_baku' | 'packaging' }))}
                             className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="bahan_baku">Bahan Baku</option>
@@ -55,7 +55,7 @@ export default function InventoryAddModal({
                                 type="text"
                                 required
                                 value={newItem.unit}
-                                onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
+                                onChange={(e) => setNewItem(prev => ({ ...prev, unit: e.target.value }))}
                                 placeholder="kg, pcs, liter"
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
@@ -68,7 +68,7 @@ export default function InventoryAddModal({
                                 min="0"
                                 step="any"
                                 value={newItem.unit_cost}
-                                onChange={(e) => setNewItem({ ...newItem, unit_cost: Number(e.target.value) })}
+                                onChange={(e) => setNewItem(prev => ({ ...prev, unit_cost: Number(e.target.value) }))}
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -82,7 +82,7 @@ export default function InventoryAddModal({
                                 min="0"
                                 step="any"
                                 value={newItem.current_stock}
-                                onChange={(e) => setNewItem({ ...newItem, current_stock: Number(e.target.value) })}
+                                onChange={(e) => setNewItem(prev => ({ ...prev, current_stock: Number(e.target.value) }))}
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -94,7 +94,7 @@ export default function InventoryAddModal({
                                 min="0"
                                 step="any"
                                 value={newItem.min_stock}
-                                onChange={(e) => setNewItem({ ...newItem, min_stock: Number(e.target.value) })}
+                                onChange={(e) => setNewItem(prev => ({ ...prev, min_stock: Number(e.target.value) }))}
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -104,7 +104,7 @@ export default function InventoryAddModal({
                         <input
                             type="text"
                             value={newItem.supplier}
-                            onChange={(e) => setNewItem({ ...newItem, supplier: e.target.value })}
+                            onChange={(e) => setNewItem(prev => ({ ...prev, supplier: e.target.value }))}
                             className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
@@ -112,7 +112,7 @@ export default function InventoryAddModal({
                         <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
                         <textarea
                             value={newItem.description}
-                            onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                            onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
                             rows={3}
                             className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />

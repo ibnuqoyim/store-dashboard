@@ -39,7 +39,7 @@ export default function InventoryEditModal({
                             type="text"
                             required
                             value={editFormData.name}
-                            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                            onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
                             className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
@@ -47,7 +47,7 @@ export default function InventoryEditModal({
                         <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
                         <select
                             value={editFormData.category}
-                            onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value as 'bahan_baku' | 'packaging' })}
+                            onChange={(e) => setEditFormData(prev => ({ ...prev, category: e.target.value as 'bahan_baku' | 'packaging' }))}
                             className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="bahan_baku">Bahan Baku</option>
@@ -61,7 +61,7 @@ export default function InventoryEditModal({
                                 type="text"
                                 required
                                 value={editFormData.unit}
-                                onChange={(e) => setEditFormData({ ...editFormData, unit: e.target.value })}
+                                onChange={(e) => setEditFormData(prev => ({ ...prev, unit: e.target.value }))}
                                 placeholder="kg, pcs, liter"
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
@@ -74,7 +74,7 @@ export default function InventoryEditModal({
                                 min="0"
                                 step="any"
                                 value={editFormData.unit_cost}
-                                onChange={(e) => setEditFormData({ ...editFormData, unit_cost: Number(e.target.value) })}
+                                onChange={(e) => setEditFormData(prev => ({ ...prev, unit_cost: Number(e.target.value) }))}
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -92,7 +92,7 @@ export default function InventoryEditModal({
                             min="0"
                             step="any"
                             value={editFormData.min_stock}
-                            onChange={(e) => setEditFormData({ ...editFormData, min_stock: Number(e.target.value) })}
+                            onChange={(e) => setEditFormData(prev => ({ ...prev, min_stock: Number(e.target.value) }))}
                             className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
@@ -101,7 +101,7 @@ export default function InventoryEditModal({
                         <input
                             type="text"
                             value={editFormData.supplier}
-                            onChange={(e) => setEditFormData({ ...editFormData, supplier: e.target.value })}
+                            onChange={(e) => setEditFormData(prev => ({ ...prev, supplier: e.target.value }))}
                             className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
@@ -110,7 +110,7 @@ export default function InventoryEditModal({
                         <textarea
                             rows={2}
                             value={editFormData.description}
-                            onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                            onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
                             className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
