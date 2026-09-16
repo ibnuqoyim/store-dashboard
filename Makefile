@@ -1,4 +1,4 @@
-.PHONY: all lint typecheck verify build
+.PHONY: all lint typecheck test verify build
 
 all: verify
 
@@ -8,8 +8,11 @@ lint:
 typecheck:
 	npx tsc --noEmit
 
+test:
+	npm run test:coverage
+
 build:
 	npm run build
 
-verify: lint typecheck build
+verify: lint typecheck test build
 	@echo "=== All quality gate checks passed successfully! ==="
