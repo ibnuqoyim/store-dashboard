@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import type { Delivery, ShippingRate } from './types'
 
 interface OrderDeliverySectionProps {
@@ -20,6 +20,22 @@ export default function OrderDeliverySection({
     handleCourierChange,
     updateDelivery,
 }: OrderDeliverySectionProps) {
+    const [manualSelected, setManualSelected] = useState(false)
+
+    // Derived: manual if user explicitly toggled manual OR if courier is not in predefined shipping rates
+    const isKnownCourier = shippingRates.some(r => r.courier_name === delivery?.courier_name)
+    const isManualCourier = manualSelected || Boolean(delivery?.courier_name && !isKnownCourier)
+
+    const onSelectCourier = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        if (e.target.value === 'Manual') {
+            setManualSelected(true)
+            updateDelivery('courier_name', '')
+        } else {
+            setManualSelected(false)
+            handleCourierChange(e)
+        }
+    }
+
     return (
         <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center gap-2 mb-4">
@@ -40,8 +56,8 @@ export default function OrderDeliverySection({
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Courier Name</label>
                         <select
-                            value={delivery.courier_name}
-                            onChange={handleCourierChange}
+                            value={isManualCourier ? 'Manual' : (delivery.courier_name || '')}
+                            onChange={onSelectCourier}
                             className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
                         >
                             <option value="">Select Courier...</option>
@@ -53,12 +69,12 @@ export default function OrderDeliverySection({
                             <option value="Manual">Manual Input</option>
                         </select>
                     </div>
-                    {delivery.courier_name === 'Manual' && (
+                    {isManualCourier && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Manual Courier Name</label>
                             <input
                                 type="text"
-                                value={delivery.courier_name === 'Manual' ? '' : delivery.courier_name}
+                                value={delivery.courier_name}
                                 onChange={e => updateDelivery('courier_name', e.target.value)}
                                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
                                 placeholder="Enter courier name"
