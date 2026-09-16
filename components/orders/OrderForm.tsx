@@ -13,6 +13,7 @@ import OrderDeliverySection from './OrderDeliverySection'
 import type {
     Product,
     OrderItem,
+    Delivery,
     Store,
     OrderFormData,
     Customer,
@@ -78,7 +79,8 @@ export default function OrderForm({
 
             let maxSeq = 0
             if (orders && orders.length > 0) {
-                const regex = new RegExp(`^${prefixStr}${currentYYYYMM}(\\d{3})$`)
+                const escapedPrefix = prefixStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                const regex = new RegExp(`^${escapedPrefix}${currentYYYYMM}(\\d{3})$`)
                 for (const o of orders) {
                     const match = o.invoice_number ? o.invoice_number.match(regex) : null
                     if (match) {
@@ -187,18 +189,31 @@ export default function OrderForm({
         })
     }
 
-    const updateItem = (index: number, field: keyof OrderItem, value: number) => {
+    const updateItem = (index: number, field: keyof OrderItem, value: string | number) => {
         setFormData(prev => {
             const newItems = [...prev.items]
             const item = { ...newItems[index], [field]: value }
             if (field === 'product_id') {
-                const product = products.find(p => p.id === (value as unknown as string))
+                const product = products.find(p => p.id === value)
                 if (product) {
                     item.price = product.price
                 }
             }
             newItems[index] = item
             return { ...prev, items: newItems }
+        })
+    }
+
+    const updateDelivery = (field: keyof Delivery, value: string | number) => {
+        setFormData(prev => {
+            if (!prev.delivery) return prev
+            return {
+                ...prev,
+                delivery: {
+                    ...prev.delivery,
+                    [field]: value,
+                },
+            }
         })
     }
 
@@ -292,7 +307,7 @@ export default function OrderForm({
 
     const handleSelectProduct = (index: number, product: Product) => {
         setProductSearch(prev => ({ ...prev, [index]: product.name }))
-        updateItem(index, 'product_id', product.id as unknown as number)
+        updateItem(index, 'product_id', product.id)
         setShowProductSuggestions(prev => ({ ...prev, [index]: false }))
     }
 
@@ -464,9 +479,9 @@ export default function OrderForm({
                     hasDelivery={hasDelivery}
                     toggleDelivery={toggleDelivery}
                     delivery={formData.delivery}
-                    setFormData={setFormData}
                     shippingRates={shippingRates}
                     handleCourierChange={handleCourierChange}
+                    updateDelivery={updateDelivery}
                 />
 
                 <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-200 sticky bottom-0">

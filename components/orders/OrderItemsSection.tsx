@@ -14,7 +14,7 @@ interface OrderItemsSectionProps {
     handleSelectProduct: (index: number, product: Product) => void
     setShowProductSuggestions: React.Dispatch<React.SetStateAction<Record<number, boolean>>>
     addItem: () => void
-    updateItem: (index: number, field: keyof OrderItem, value: number) => void
+    updateItem: (index: number, field: keyof OrderItem, value: string | number) => void
     removeItem: (index: number) => void
     config: BusinessConfig
 }

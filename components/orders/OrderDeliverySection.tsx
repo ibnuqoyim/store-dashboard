@@ -1,24 +1,24 @@
 'use client'
 
 import React from 'react'
-import type { Delivery, ShippingRate, OrderFormData } from './types'
+import type { Delivery, ShippingRate } from './types'
 
 interface OrderDeliverySectionProps {
     hasDelivery: boolean
     toggleDelivery: (checked: boolean) => void
     delivery: Delivery | null
-    setFormData: React.Dispatch<React.SetStateAction<OrderFormData>>
     shippingRates: ShippingRate[]
     handleCourierChange: (e: React.ChangeEvent<HTMLSelectElement>) => void
+    updateDelivery: (field: keyof Delivery, value: string | number) => void
 }
 
 export default function OrderDeliverySection({
     hasDelivery,
     toggleDelivery,
     delivery,
-    setFormData,
     shippingRates,
     handleCourierChange,
+    updateDelivery,
 }: OrderDeliverySectionProps) {
     return (
         <div className="bg-white p-6 rounded-lg shadow">
@@ -59,12 +59,7 @@ export default function OrderDeliverySection({
                             <input
                                 type="text"
                                 value={delivery.courier_name === 'Manual' ? '' : delivery.courier_name}
-                                onChange={e =>
-                                    setFormData(prev => ({
-                                        ...prev,
-                                        delivery: { ...prev.delivery!, courier_name: e.target.value },
-                                    }))
-                                }
+                                onChange={e => updateDelivery('courier_name', e.target.value)}
                                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
                                 placeholder="Enter courier name"
                             />
@@ -76,12 +71,7 @@ export default function OrderDeliverySection({
                         <input
                             type="number"
                             value={delivery.shipping_cost}
-                            onChange={e =>
-                                setFormData(prev => ({
-                                    ...prev,
-                                    delivery: { ...prev.delivery!, shipping_cost: Number(e.target.value) },
-                                }))
-                            }
+                            onChange={e => updateDelivery('shipping_cost', Number(e.target.value))}
                             className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
                         />
                     </div>
@@ -89,12 +79,7 @@ export default function OrderDeliverySection({
                         <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
                         <textarea
                             value={delivery.address}
-                            onChange={e =>
-                                setFormData(prev => ({
-                                    ...prev,
-                                    delivery: { ...prev.delivery!, address: e.target.value },
-                                }))
-                            }
+                            onChange={e => updateDelivery('address', e.target.value)}
                             className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
                             rows={2}
                         />
@@ -103,12 +88,7 @@ export default function OrderDeliverySection({
                         <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
                         <select
                             value={delivery.status}
-                            onChange={e =>
-                                setFormData(prev => ({
-                                    ...prev,
-                                    delivery: { ...prev.delivery!, status: e.target.value },
-                                }))
-                            }
+                            onChange={e => updateDelivery('status', e.target.value)}
                             className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
                         >
                             <option value="pending">Pending</option>
