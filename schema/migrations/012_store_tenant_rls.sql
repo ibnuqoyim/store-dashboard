@@ -24,7 +24,29 @@ CREATE INDEX IF NOT EXISTS idx_store_members_user_id ON public.store_members(use
 CREATE INDEX IF NOT EXISTS idx_store_members_store_id ON public.store_members(store_id);
 
 -- ---------------------------------------------------------------------------
--- 2. Backfill existing stores and users into store_members
+-- 2. Immutability trigger for store_members (prevents moving members across stores)
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.protect_store_member_immutability()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.store_id != OLD.store_id OR NEW.user_id != OLD.user_id THEN
+    RAISE EXCEPTION 'store_id and user_id are immutable in store_members';
+  END IF;
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tr_protect_store_member_immutability ON public.store_members;
+CREATE TRIGGER tr_protect_store_member_immutability
+  BEFORE UPDATE ON public.store_members
+  FOR EACH ROW
+  EXECUTE FUNCTION public.protect_store_member_immutability();
+
+-- ---------------------------------------------------------------------------
+-- 3. Backfill existing stores and users into store_members
 -- When unambiguous (single user or single store), link existing users to avoid lockout
 -- ---------------------------------------------------------------------------
 DO $$
@@ -48,7 +70,7 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
--- 3. Helper functions for store isolation (with search_path and row_security protection)
+-- 4. Helper functions for store isolation (with search_path and row_security protection)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.is_store_member(lookup_store_id uuid)
 RETURNS boolean
@@ -97,18 +119,6 @@ AS $$
   );
 $$;
 
-CREATE OR REPLACE FUNCTION public.user_store_ids()
-RETURNS SETOF uuid
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-SET row_security = off
-STABLE
-AS $$
-  SELECT sm.store_id FROM public.store_members sm
-  WHERE sm.user_id = auth.uid();
-$$;
-
 -- Restrict RPC execution: prevent anonymous enumeration, allow authenticated & service_role
 REVOKE ALL ON FUNCTION public.is_store_member(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_store_member(uuid) TO authenticated, service_role;
@@ -119,11 +129,8 @@ GRANT EXECUTE ON FUNCTION public.is_store_admin(uuid) TO authenticated, service_
 REVOKE ALL ON FUNCTION public.is_store_owner(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_store_owner(uuid) TO authenticated, service_role;
 
-REVOKE ALL ON FUNCTION public.user_store_ids() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.user_store_ids() TO authenticated, service_role;
-
 -- ---------------------------------------------------------------------------
--- 4. Granular RLS for store_members (with role-escalation prevention)
+-- 5. Granular RLS for store_members (with role-escalation prevention)
 -- ---------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Authenticated read store_members" ON public.store_members;
 DROP POLICY IF EXISTS "Members view store_members" ON public.store_members;
@@ -162,7 +169,7 @@ CREATE POLICY "Store owners delete members" ON public.store_members
   );
 
 -- ---------------------------------------------------------------------------
--- 5. Auto-assign store creator as owner (via SECURITY DEFINER trigger)
+-- 6. Auto-assign store creator as owner (via SECURITY DEFINER trigger)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.handle_new_store_creator()
 RETURNS trigger
@@ -188,7 +195,41 @@ CREATE TRIGGER tr_new_store_creator
   EXECUTE FUNCTION public.handle_new_store_creator();
 
 -- ---------------------------------------------------------------------------
--- 6. Strict Tenant-scoped RLS policies (with single-store legacy compatibility)
+-- 7. Scoped RLS for stores table
+-- ---------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Authenticated access stores" ON public.stores;
+DROP POLICY IF EXISTS "Members view stores" ON public.stores;
+DROP POLICY IF EXISTS "Authenticated insert stores" ON public.stores;
+DROP POLICY IF EXISTS "Owners update stores" ON public.stores;
+DROP POLICY IF EXISTS "Owners delete stores" ON public.stores;
+
+CREATE POLICY "Members view stores" ON public.stores
+  FOR SELECT USING (
+    auth.role() = 'authenticated' AND (
+      public.is_store_member(id)
+      OR NOT EXISTS (SELECT 1 FROM public.store_members sm WHERE sm.store_id = stores.id)
+    )
+  );
+
+CREATE POLICY "Authenticated insert stores" ON public.stores
+  FOR INSERT WITH CHECK (
+    auth.role() = 'authenticated'
+  );
+
+CREATE POLICY "Owners update stores" ON public.stores
+  FOR UPDATE USING (
+    auth.role() = 'authenticated' AND public.is_store_owner(id)
+  ) WITH CHECK (
+    auth.role() = 'authenticated' AND public.is_store_owner(id)
+  );
+
+CREATE POLICY "Owners delete stores" ON public.stores
+  FOR DELETE USING (
+    auth.role() = 'authenticated' AND public.is_store_owner(id)
+  );
+
+-- ---------------------------------------------------------------------------
+-- 8. High-performance Tenant-scoped RLS policies (O(1) checks without nested subqueries)
 -- ---------------------------------------------------------------------------
 
 -- Orders
@@ -203,13 +244,11 @@ DROP POLICY IF EXISTS "Tenant scoped orders" ON public.orders;
 CREATE POLICY "Tenant scoped orders" ON public.orders
   FOR ALL USING (
     auth.role() = 'authenticated' AND (
-      (store_id IS NOT NULL AND public.is_store_member(store_id))
-      OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
+      store_id IS NULL OR public.is_store_member(store_id)
     )
   ) WITH CHECK (
     auth.role() = 'authenticated' AND (
-      (store_id IS NOT NULL AND public.is_store_member(store_id))
-      OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
+      store_id IS NULL OR public.is_store_member(store_id)
     )
   );
 
@@ -225,13 +264,11 @@ DROP POLICY IF EXISTS "Tenant scoped products" ON public.products;
 CREATE POLICY "Tenant scoped products" ON public.products
   FOR ALL USING (
     auth.role() = 'authenticated' AND (
-      (store_id IS NOT NULL AND public.is_store_member(store_id))
-      OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
+      store_id IS NULL OR public.is_store_member(store_id)
     )
   ) WITH CHECK (
     auth.role() = 'authenticated' AND (
-      (store_id IS NOT NULL AND public.is_store_member(store_id))
-      OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
+      store_id IS NULL OR public.is_store_member(store_id)
     )
   );
 
@@ -246,13 +283,11 @@ BEGIN
     CREATE POLICY "Tenant scoped batch_po" ON public.batch_po
       FOR ALL USING (
         auth.role() = 'authenticated' AND (
-          (store_id IS NOT NULL AND public.is_store_member(store_id))
-          OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
+          store_id IS NULL OR public.is_store_member(store_id)
         )
       ) WITH CHECK (
         auth.role() = 'authenticated' AND (
-          (store_id IS NOT NULL AND public.is_store_member(store_id))
-          OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
+          store_id IS NULL OR public.is_store_member(store_id)
         )
       );
   END IF;
@@ -261,8 +296,14 @@ END $$;
 -- ---------------------------------------------------------------------------
 -- Rollback Instructions (Down Migration reference):
 -- ---------------------------------------------------------------------------
+-- DROP TRIGGER IF EXISTS tr_protect_store_member_immutability ON public.store_members;
+-- DROP FUNCTION IF EXISTS public.protect_store_member_immutability();
 -- DROP TRIGGER IF EXISTS tr_new_store_creator ON public.stores;
 -- DROP FUNCTION IF EXISTS public.handle_new_store_creator();
+-- DROP POLICY IF EXISTS "Owners delete stores" ON public.stores;
+-- DROP POLICY IF EXISTS "Owners update stores" ON public.stores;
+-- DROP POLICY IF EXISTS "Authenticated insert stores" ON public.stores;
+-- DROP POLICY IF EXISTS "Members view stores" ON public.stores;
 -- DROP POLICY IF EXISTS "Tenant scoped orders" ON public.orders;
 -- DROP POLICY IF EXISTS "Tenant scoped products" ON public.products;
 -- DROP POLICY IF EXISTS "Tenant scoped batch_po" ON public.batch_po;
@@ -270,7 +311,6 @@ END $$;
 -- DROP POLICY IF EXISTS "Store owners update members" ON public.store_members;
 -- DROP POLICY IF EXISTS "Store owners insert members" ON public.store_members;
 -- DROP POLICY IF EXISTS "Members view store_members" ON public.store_members;
--- DROP FUNCTION IF EXISTS public.user_store_ids();
 -- DROP FUNCTION IF EXISTS public.is_store_owner(uuid);
 -- DROP FUNCTION IF EXISTS public.is_store_admin(uuid);
 -- DROP FUNCTION IF EXISTS public.is_store_member(uuid);
