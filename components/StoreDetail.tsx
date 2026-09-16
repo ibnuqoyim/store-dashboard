@@ -203,6 +203,7 @@ export default function StoreDetail({
                             <div className="flex items-center gap-3">
                                 {storeForm.logo_url && (
                                     <div className="relative w-16 h-16 flex-shrink-0">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
                                             src={storeForm.logo_url}
                                             alt="Logo"

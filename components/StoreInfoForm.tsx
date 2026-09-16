@@ -599,6 +599,7 @@ export default function StoreInfoForm() {
             <label className="block text-sm font-medium text-gray-700 mb-2">Logo Toko</label>
             <div className="flex items-center gap-3">
               {formData.logo_url ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={formData.logo_url} alt="Logo" className="h-16 w-16 rounded-full object-cover border border-gray-200" />
               ) : (
                 <div className="h-16 w-16 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs">

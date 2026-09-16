@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { PlusCircle, Download, Pencil, Settings, CheckCircle, Loader2 } from 'lucide-react'
+import { PlusCircle, Download, Pencil, Settings, CheckCircle, Loader2, MessageCircle, Truck } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import DashboardCustomizer from '@/components/DashboardCustomizer'
 import { format } from 'date-fns'
@@ -421,6 +421,56 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
         }
     }
 
+    const handleShareWhatsApp = async (order: DashboardOrder) => {
+        try {
+            await handleDownloadInvoice(order)
+
+            let phone = order.phone?.replace(/\D/g, '') || ''
+            if (phone.startsWith('0')) {
+                phone = '62' + phone.substring(1)
+            } else if (!phone.startsWith('62')) {
+                phone = '62' + phone
+            }
+
+            const defaultMessage = `Halo ${order.customer_name},\n\nBerikut adalah invoice untuk pesanan Anda:\n\nInvoice: ${order.invoice_number}\nTanggal: ${format(new Date(order.date), 'dd MMM yyyy')}\nTotal: ${fc(order.order_items.reduce((sum, item) => sum + (item.price * item.quantity), 0))}\n\nTerima kasih telah berbelanja di ${config.name}!`
+            const message = config.whatsapp_greeting_template
+                ? config.whatsapp_greeting_template
+                    .replace('{name}', order.customer_name)
+                    .replace('{invoice}', order.invoice_number)
+                    .replace('{total}', fc(order.order_items.reduce((sum, item) => sum + (item.price * item.quantity), 0)))
+                : defaultMessage
+
+            const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+            window.open(whatsappUrl, '_blank')
+        } catch (error) {
+            console.error('Error sharing to WhatsApp:', error)
+            alert('Failed to share to WhatsApp. Please try again.')
+        }
+    }
+
+    const handleCreateDelivery = async (order: DashboardOrder) => {
+        if (order.deliveries && order.deliveries.length > 0) {
+            router.push('/deliveries')
+        } else {
+            const confirmed = window.confirm(`Create delivery for Invoice #${order.invoice_number}?`)
+            if (confirmed) {
+                const { error } = await supabase.from('deliveries').insert({
+                    order_id: order.id,
+                    courier_name: 'TBD',
+                    shipping_cost: 0,
+                    status: 'pending'
+                })
+
+                if (error) {
+                    alert('Failed to create delivery: ' + error.message)
+                } else {
+                    alert('Delivery created!')
+                    router.refresh()
+                }
+            }
+        }
+    }
+
     // ─── Render ─────────────────────────────────────────────────────────────────
 
     const renderWidget = (id: WidgetId) => {
@@ -530,6 +580,30 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
                                                         >
                                                             <Download size={16} /> PDF
                                                         </button>
+                                                        <button
+                                                            onClick={() => handleShareWhatsApp(order)}
+                                                            className="text-emerald-600 hover:text-emerald-900 bg-emerald-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
+                                                            title="Share to WhatsApp"
+                                                        >
+                                                            <MessageCircle size={16} /> WA
+                                                        </button>
+                                                        {order.deliveries && order.deliveries.length > 0 ? (
+                                                            <Link
+                                                                href="/deliveries"
+                                                                className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
+                                                                title="View Delivery"
+                                                            >
+                                                                <Truck size={16} /> Delivery
+                                                            </Link>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleCreateDelivery(order)}
+                                                                className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
+                                                                title="Create Delivery"
+                                                            >
+                                                                <PlusCircle size={16} /> Delivery
+                                                            </button>
+                                                        )}
                                                         <Link href={`/orders/${order.id}`} className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded inline-flex items-center gap-1">
                                                             <Pencil size={18} /> Edit
                                                         </Link>

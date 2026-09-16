@@ -370,6 +370,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.weight || '-'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {product.image_url ? (
+                                        /* eslint-disable-next-line @next/next/no-img-element */
                                         <img 
                                             src={getResizedImageUrl(product.image_url, 40, 40) || product.image_url} 
                                             alt={product.name} 
@@ -608,6 +609,7 @@ export default function ProductList({ initialProducts, doughs }: { initialProduc
                                         </div>
                                         {formData.image_url && (
                                             <div className="mt-2">
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                                 <img 
                                                     src={getResizedImageUrl(formData.image_url, 128, 128) || formData.image_url} 
                                                     alt="Product Preview" 
