@@ -65,6 +65,8 @@ export default function InventoryAddModal({
                             <input
                                 type="number"
                                 required
+                                min="0"
+                                step="any"
                                 value={newItem.unit_cost}
                                 onChange={(e) => setNewItem({ ...newItem, unit_cost: Number(e.target.value) })}
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -77,6 +79,8 @@ export default function InventoryAddModal({
                             <input
                                 type="number"
                                 required
+                                min="0"
+                                step="any"
                                 value={newItem.current_stock}
                                 onChange={(e) => setNewItem({ ...newItem, current_stock: Number(e.target.value) })}
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -87,6 +91,8 @@ export default function InventoryAddModal({
                             <input
                                 type="number"
                                 required
+                                min="0"
+                                step="any"
                                 value={newItem.min_stock}
                                 onChange={(e) => setNewItem({ ...newItem, min_stock: Number(e.target.value) })}
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

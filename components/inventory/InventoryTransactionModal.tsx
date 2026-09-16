@@ -62,6 +62,8 @@ export default function InventoryTransactionModal({
                             <input
                                 type="number"
                                 required
+                                min="0"
+                                step="any"
                                 value={newTransaction.quantity}
                                 onChange={(e) => setNewTransaction({ ...newTransaction, quantity: Number(e.target.value) })}
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -71,6 +73,8 @@ export default function InventoryTransactionModal({
                             <label className="block text-sm font-medium text-gray-700 mb-1">Harga Satuan</label>
                             <input
                                 type="number"
+                                min="0"
+                                step="any"
                                 value={newTransaction.unit_cost}
                                 onChange={(e) => setNewTransaction({ ...newTransaction, unit_cost: Number(e.target.value) })}
                                 className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
