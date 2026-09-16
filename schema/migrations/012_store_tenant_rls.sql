@@ -46,25 +46,42 @@ CREATE TRIGGER tr_protect_store_member_immutability
   EXECUTE FUNCTION public.protect_store_member_immutability();
 
 -- ---------------------------------------------------------------------------
--- 3. Backfill existing stores and users into store_members
--- When unambiguous (single user or single store), link existing users to avoid lockout
+-- 3. Comprehensive Data Backfill (Eliminates memberless stores & NULL store_id)
 -- ---------------------------------------------------------------------------
 DO $$
 DECLARE
-  user_count int;
-  primary_user_id uuid;
+  first_store_id uuid;
+  first_user_id uuid;
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'stores') THEN
-    SELECT COUNT(*) INTO user_count FROM auth.users;
-    IF user_count = 1 THEN
-      SELECT id INTO primary_user_id FROM auth.users LIMIT 1;
+    -- Ensure at least one primary store exists for legacy single-store deployments
+    IF NOT EXISTS (SELECT 1 FROM public.stores) THEN
+      INSERT INTO public.stores (name, description, is_active)
+      VALUES ('Toko Utama', 'Default store created during multi-tenancy migration', true)
+      RETURNING id INTO first_store_id;
+    ELSE
+      SELECT id INTO first_store_id FROM public.stores ORDER BY created_at ASC LIMIT 1;
+    END IF;
+
+    -- Assign first registered user as owner of unassigned stores to prevent lockout
+    SELECT id INTO first_user_id FROM auth.users ORDER BY created_at ASC LIMIT 1;
+    IF first_user_id IS NOT NULL AND first_store_id IS NOT NULL THEN
       INSERT INTO public.store_members (store_id, user_id, role)
-      SELECT s.id, primary_user_id, 'owner'
+      SELECT s.id, first_user_id, 'owner'
       FROM public.stores s
       WHERE NOT EXISTS (
         SELECT 1 FROM public.store_members sm WHERE sm.store_id = s.id
       )
       ON CONFLICT (store_id, user_id) DO NOTHING;
+    END IF;
+
+    -- Backfill all legacy unassigned records so no NULL store_id orphans remain
+    IF first_store_id IS NOT NULL THEN
+      UPDATE public.orders SET store_id = first_store_id WHERE store_id IS NULL;
+      UPDATE public.products SET store_id = first_store_id WHERE store_id IS NULL;
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'batch_po') THEN
+        UPDATE public.batch_po SET store_id = first_store_id WHERE store_id IS NULL;
+      END IF;
     END IF;
   END IF;
 END $$;
@@ -119,6 +136,18 @@ AS $$
   );
 $$;
 
+CREATE OR REPLACE FUNCTION public.user_store_ids()
+RETURNS SETOF uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+STABLE
+AS $$
+  SELECT sm.store_id FROM public.store_members sm
+  WHERE sm.user_id = auth.uid();
+$$;
+
 -- Restrict RPC execution: prevent anonymous enumeration, allow authenticated & service_role
 REVOKE ALL ON FUNCTION public.is_store_member(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_store_member(uuid) TO authenticated, service_role;
@@ -129,8 +158,11 @@ GRANT EXECUTE ON FUNCTION public.is_store_admin(uuid) TO authenticated, service_
 REVOKE ALL ON FUNCTION public.is_store_owner(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_store_owner(uuid) TO authenticated, service_role;
 
+REVOKE ALL ON FUNCTION public.user_store_ids() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.user_store_ids() TO authenticated, service_role;
+
 -- ---------------------------------------------------------------------------
--- 5. Granular RLS for store_members (with role-escalation prevention)
+-- 5. Granular RLS for store_members (Role-based access, no privilege escalation)
 -- ---------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Authenticated read store_members" ON public.store_members;
 DROP POLICY IF EXISTS "Members view store_members" ON public.store_members;
@@ -195,7 +227,7 @@ CREATE TRIGGER tr_new_store_creator
   EXECUTE FUNCTION public.handle_new_store_creator();
 
 -- ---------------------------------------------------------------------------
--- 7. Scoped RLS for stores table
+-- 7. Scoped RLS for stores table (Strict Fail-Closed Isolation)
 -- ---------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Authenticated access stores" ON public.stores;
 DROP POLICY IF EXISTS "Members view stores" ON public.stores;
@@ -205,10 +237,7 @@ DROP POLICY IF EXISTS "Owners delete stores" ON public.stores;
 
 CREATE POLICY "Members view stores" ON public.stores
   FOR SELECT USING (
-    auth.role() = 'authenticated' AND (
-      public.is_store_member(id)
-      OR NOT EXISTS (SELECT 1 FROM public.store_members sm WHERE sm.store_id = stores.id)
-    )
+    auth.role() = 'authenticated' AND public.is_store_member(id)
   );
 
 CREATE POLICY "Authenticated insert stores" ON public.stores
@@ -229,10 +258,10 @@ CREATE POLICY "Owners delete stores" ON public.stores
   );
 
 -- ---------------------------------------------------------------------------
--- 8. High-performance Tenant-scoped RLS policies (O(1) checks without nested subqueries)
+-- 8. Strict Tenant-scoped RLS policies (Zero Bypass, O(1) Performance)
 -- ---------------------------------------------------------------------------
 
--- Orders
+-- Orders: strictly require authenticated store membership
 DROP POLICY IF EXISTS "Public Access Orders" ON public.orders;
 DROP POLICY IF EXISTS "Authenticated access orders" ON public.orders;
 DROP POLICY IF EXISTS "Enable read access for all users" ON public.orders;
@@ -243,16 +272,12 @@ DROP POLICY IF EXISTS "Tenant scoped orders" ON public.orders;
 
 CREATE POLICY "Tenant scoped orders" ON public.orders
   FOR ALL USING (
-    auth.role() = 'authenticated' AND (
-      store_id IS NULL OR public.is_store_member(store_id)
-    )
+    auth.role() = 'authenticated' AND public.is_store_member(store_id)
   ) WITH CHECK (
-    auth.role() = 'authenticated' AND (
-      store_id IS NULL OR public.is_store_member(store_id)
-    )
+    auth.role() = 'authenticated' AND public.is_store_member(store_id)
   );
 
--- Products
+-- Products: strictly require authenticated store membership
 DROP POLICY IF EXISTS "Public Access Products" ON public.products;
 DROP POLICY IF EXISTS "Authenticated access products" ON public.products;
 DROP POLICY IF EXISTS "Enable read access for all users" ON public.products;
@@ -263,16 +288,12 @@ DROP POLICY IF EXISTS "Tenant scoped products" ON public.products;
 
 CREATE POLICY "Tenant scoped products" ON public.products
   FOR ALL USING (
-    auth.role() = 'authenticated' AND (
-      store_id IS NULL OR public.is_store_member(store_id)
-    )
+    auth.role() = 'authenticated' AND public.is_store_member(store_id)
   ) WITH CHECK (
-    auth.role() = 'authenticated' AND (
-      store_id IS NULL OR public.is_store_member(store_id)
-    )
+    auth.role() = 'authenticated' AND public.is_store_member(store_id)
   );
 
--- Batch PO (if module installed)
+-- Batch PO (if module installed): strictly require authenticated store membership
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'batch_po') THEN
@@ -282,13 +303,9 @@ BEGIN
 
     CREATE POLICY "Tenant scoped batch_po" ON public.batch_po
       FOR ALL USING (
-        auth.role() = 'authenticated' AND (
-          store_id IS NULL OR public.is_store_member(store_id)
-        )
+        auth.role() = ''authenticated'' AND public.is_store_member(store_id)
       ) WITH CHECK (
-        auth.role() = 'authenticated' AND (
-          store_id IS NULL OR public.is_store_member(store_id)
-        )
+        auth.role() = ''authenticated'' AND public.is_store_member(store_id)
       );
   END IF;
 END $$;
@@ -311,6 +328,7 @@ END $$;
 -- DROP POLICY IF EXISTS "Store owners update members" ON public.store_members;
 -- DROP POLICY IF EXISTS "Store owners insert members" ON public.store_members;
 -- DROP POLICY IF EXISTS "Members view store_members" ON public.store_members;
+-- DROP FUNCTION IF EXISTS public.user_store_ids();
 -- DROP FUNCTION IF EXISTS public.is_store_owner(uuid);
 -- DROP FUNCTION IF EXISTS public.is_store_admin(uuid);
 -- DROP FUNCTION IF EXISTS public.is_store_member(uuid);
