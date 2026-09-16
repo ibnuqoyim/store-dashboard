@@ -23,12 +23,13 @@ CREATE INDEX IF NOT EXISTS idx_store_members_user_id ON public.store_members(use
 CREATE INDEX IF NOT EXISTS idx_store_members_store_id ON public.store_members(store_id);
 
 -- ---------------------------------------------------------------------------
--- 2. Helper functions for store isolation
+-- 2. Helper functions for store isolation (with search_path protection)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.is_store_member(lookup_store_id uuid)
 RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 STABLE
 AS $$
   SELECT EXISTS (
@@ -42,6 +43,7 @@ CREATE OR REPLACE FUNCTION public.user_store_ids()
 RETURNS SETOF uuid
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 STABLE
 AS $$
   SELECT sm.store_id FROM public.store_members sm
@@ -49,25 +51,62 @@ AS $$
 $$;
 
 -- ---------------------------------------------------------------------------
--- 3. RLS for store_members
+-- 3. Granular RLS for store_members (no cross-store leaks or updates)
 -- ---------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Authenticated read store_members" ON public.store_members;
-CREATE POLICY "Authenticated read store_members" ON public.store_members
-  FOR SELECT USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Members view store_members" ON public.store_members;
+CREATE POLICY "Members view store_members" ON public.store_members
+  FOR SELECT USING (
+    auth.role() = 'authenticated' AND (
+      user_id = auth.uid() OR public.is_store_member(store_id)
+    )
+  );
 
 DROP POLICY IF EXISTS "Store owners manage members" ON public.store_members;
-CREATE POLICY "Store owners manage members" ON public.store_members
-  FOR ALL USING (
-    EXISTS (
+DROP POLICY IF EXISTS "Store owners insert members" ON public.store_members;
+CREATE POLICY "Store owners insert members" ON public.store_members
+  FOR INSERT WITH CHECK (
+    auth.role() = 'authenticated' AND (
+      EXISTS (
+        SELECT 1 FROM public.store_members sm
+        WHERE sm.store_id = store_members.store_id
+          AND sm.user_id = auth.uid()
+          AND sm.role IN ('owner', 'admin')
+      )
+      OR NOT EXISTS (
+        -- Permit initial creator assignment if no members exist yet for this store
+        SELECT 1 FROM public.store_members sm
+        WHERE sm.store_id = store_members.store_id
+      )
+    )
+  );
+
+DROP POLICY IF EXISTS "Store owners update members" ON public.store_members;
+CREATE POLICY "Store owners update members" ON public.store_members
+  FOR UPDATE USING (
+    auth.role() = 'authenticated' AND EXISTS (
       SELECT 1 FROM public.store_members sm
       WHERE sm.store_id = store_members.store_id
         AND sm.user_id = auth.uid()
-        AND sm.role IN ('owner', 'admin')
+        AND sm.role = 'owner'
     )
-    OR NOT EXISTS (
-      -- If no members exist yet for this store, permit initial creator assignment
+  ) WITH CHECK (
+    auth.role() = 'authenticated' AND EXISTS (
       SELECT 1 FROM public.store_members sm
       WHERE sm.store_id = store_members.store_id
+        AND sm.user_id = auth.uid()
+        AND sm.role = 'owner'
+    )
+  );
+
+DROP POLICY IF EXISTS "Store owners delete members" ON public.store_members;
+CREATE POLICY "Store owners delete members" ON public.store_members
+  FOR DELETE USING (
+    auth.role() = 'authenticated' AND EXISTS (
+      SELECT 1 FROM public.store_members sm
+      WHERE sm.store_id = store_members.store_id
+        AND sm.user_id = auth.uid()
+        AND sm.role = 'owner'
     )
   );
 
@@ -78,6 +117,7 @@ CREATE OR REPLACE FUNCTION public.handle_new_store_creator()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   IF auth.uid() IS NOT NULL THEN
