@@ -60,5 +60,10 @@ describe('lib/modules', () => {
       const result = getEnabledModules(['products', 'batch-pos', 'orders'])
       expect(result).toEqual(['products', 'batch-pos', 'orders'])
     })
+
+    it('preserves enabled modules correctly when batch-pos is already unique', () => {
+      const result = getEnabledModules(['batch-pos', 'orders'])
+      expect(result.filter(m => m === 'batch-pos').length).toBe(1)
+    })
   })
 })

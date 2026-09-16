@@ -53,8 +53,8 @@ describe('lib/config', () => {
         locale: 'id-ID',
       }
       const formatted = formatCurrency(50000, config)
-      // Normalize non-breaking spaces
-      expect(formatted.replace(/\s+/g, ' ')).toMatch(/Rp\s*50\.000/)
+      // Normalize non-breaking spaces and verify exact match
+      expect(formatted.replace(/\s+/g, ' ').trim()).toMatch(/^Rp\s*50\.000$/)
     })
 
     it('formats IDR zero amount properly', () => {
@@ -64,7 +64,7 @@ describe('lib/config', () => {
         locale: 'id-ID',
       }
       const formatted = formatCurrency(0, config)
-      expect(formatted.replace(/\s+/g, ' ')).toMatch(/Rp\s*0/)
+      expect(formatted.replace(/\s+/g, ' ').trim()).toMatch(/^Rp\s*0$/)
     })
 
     it('formats USD currency robustly with en-US locale', () => {

@@ -127,5 +127,42 @@ describe('components/production/recipe-types', () => {
       expect(result.totalPerBatch).toBe(0)
       expect(result.hppPerUnit).toBe(0)
     })
+    it('computes HPP with decimal quantities accurately without floating point drift', () => {
+      const recipe: Recipe = {
+        id: 'rec-decimal',
+        name: 'Decimal Recipe',
+        product_id: null,
+        yield_quantity: 3,
+        yield_unit: 'box',
+        labor_cost_per_batch: 15000,
+        overhead_cost_per_batch: 5000,
+        notes: '',
+        products: null,
+        recipe_ingredients: [
+          {
+            id: 'ing-dec',
+            recipe_id: 'rec-dec',
+            inventory_id: 'inv-dec',
+            quantity: 0.15,
+            notes: '',
+            inventory: {
+              id: 'inv-dec',
+              name: 'Butter',
+              unit: 'kg',
+              unit_cost: 33000,
+              category: 'bahan_baku',
+            },
+          },
+        ],
+      }
+
+      // 0.15 * 33000 = 4950
+      // Total per batch: 4950 + 15000 + 5000 = 24950
+      // HPP per unit (yield = 3): 24950 / 3 = 8316.666...
+      const result = computeHPP(recipe)
+      expect(result.materialCost).toBe(4950)
+      expect(result.totalPerBatch).toBe(24950)
+      expect(result.hppPerUnit).toBeCloseTo(8316.67, 2)
+    })
   })
 })
