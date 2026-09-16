@@ -1,4 +1,4 @@
-import StoreInfoForm from '@/components/StoreInfoForm'
+import StoreInfoForm from '@/components/stores/StoreInfoForm'
 
 export default function StoreInfoPage() {
   return (

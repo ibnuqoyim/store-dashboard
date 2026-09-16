@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { PlusCircle, Download, Pencil, Settings, CheckCircle, Loader2, MessageCircle, Truck } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
-import DashboardCustomizer from '@/components/DashboardCustomizer'
+import DashboardCustomizer from './DashboardCustomizer'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'

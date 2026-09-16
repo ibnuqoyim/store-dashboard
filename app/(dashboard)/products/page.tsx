@@ -1,6 +1,6 @@
 
 import { createClient } from '@/utils/supabase/server'
-import ProductList from '@/components/ProductList'
+import ProductList from '@/components/products/ProductList'
 
 export const revalidate = 0
 

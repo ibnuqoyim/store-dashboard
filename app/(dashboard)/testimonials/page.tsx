@@ -1,4 +1,4 @@
-import TestimonialList from '@/components/TestimonialList'
+import TestimonialList from '@/components/settings/TestimonialList'
 
 export default function TestimonialsPage() {
   return (

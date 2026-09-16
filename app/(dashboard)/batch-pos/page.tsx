@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { createClient } from '@/utils/supabase/server';
-import BatchPosLayoutClient from '@/components/BatchPosLayoutClient';
+import BatchPosLayoutClient from '@/components/pos/BatchPosLayoutClient';
 import { mapDbOrderToBatchOrder, ORDER_ITEMS_SELECT, DbOrderRow } from '@/lib/batch-pos-data';
 
 export const metadata: Metadata = {

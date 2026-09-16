@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
-import ProductionManager from '@/components/ProductionManager'
+import ProductionManager from '@/components/production/ProductionManager'
 
 export const revalidate = 0
 

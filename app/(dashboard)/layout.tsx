@@ -1,5 +1,5 @@
 
-import Sidebar from '@/components/Sidebar'
+import Sidebar from '@/components/layout/Sidebar'
 import { createClient } from '@/utils/supabase/server'
 import { BusinessConfigProvider } from '@/lib/business-config-context'
 import { DEFAULT_CONFIG, getEnvDefaults, BusinessConfig } from '@/lib/config'
