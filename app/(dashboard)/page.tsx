@@ -1,6 +1,6 @@
 
 import { createClient } from '@/utils/supabase/server'
-import DashboardClient from '@/components/DashboardClient'
+import DashboardClient from '@/components/layout/DashboardClient'
 
 export const revalidate = 0
 

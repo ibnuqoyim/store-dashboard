@@ -6,7 +6,7 @@ import { ClipboardList, ShoppingCart, ChefHat } from 'lucide-react';
 import BatchPosHeader from './BatchPosHeader';
 import CustomerShippingForm from './CustomerShippingForm';
 import ProductPosCart from './ProductPosCart';
-import ProductModal from './ProductModal';
+import ProductModal from '@/components/products/ProductModal';
 import BatchOrdersList from './BatchOrdersList';
 import BatchDoughResume from './BatchDoughResume';
 import { createClient } from '@/utils/supabase/client';

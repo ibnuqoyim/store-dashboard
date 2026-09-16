@@ -1,4 +1,4 @@
-import InventoryForm from '@/components/InventoryForm'
+import InventoryForm from '@/components/inventory/InventoryForm'
 
 export const revalidate = 0
 

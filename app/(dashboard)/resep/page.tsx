@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
-import RecipeManager from '@/components/RecipeManager'
+import RecipeManager from '@/components/production/RecipeManager'
 
 export const revalidate = 0
 

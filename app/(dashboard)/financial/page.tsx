@@ -1,4 +1,4 @@
-import FinancialTabs from '@/components/FinancialTabs'
+import FinancialTabs from '@/components/financial/FinancialTabs'
 
 export const revalidate = 0
 

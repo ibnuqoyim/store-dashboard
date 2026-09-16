@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
-import StoreDetail from '@/components/StoreDetail'
+import StoreDetail from '@/components/stores/StoreDetail'
 
 export const revalidate = 0
 

@@ -1,4 +1,4 @@
-import ExpenseForm from '@/components/ExpenseForm'
+import ExpenseForm from '@/components/financial/ExpenseForm'
 
 export const revalidate = 0
 

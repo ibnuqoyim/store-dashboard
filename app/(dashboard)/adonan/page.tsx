@@ -1,6 +1,6 @@
 
 import { createClient } from '@/utils/supabase/server'
-import AdonanList from '@/components/AdonanList'
+import AdonanList from '@/components/production/AdonanList'
 
 export const revalidate = 0
 

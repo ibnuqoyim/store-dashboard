@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
-import POList from '@/components/POList'
+import POList from '@/components/production/POList'
 
 export const revalidate = 0
 

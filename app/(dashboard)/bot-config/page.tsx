@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
-import BotConfigForm from '@/components/BotConfigForm'
+import BotConfigForm from '@/components/settings/BotConfigForm'
 
 export const revalidate = 0
 

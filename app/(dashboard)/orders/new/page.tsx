@@ -1,6 +1,6 @@
 
 import { createClient } from '@/utils/supabase/server'
-import OrderForm from '@/components/OrderForm'
+import OrderForm from '@/components/orders/OrderForm'
 
 export const revalidate = 0
 
