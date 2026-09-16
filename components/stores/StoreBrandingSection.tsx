@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import dynamic from 'next/dynamic'
 import type { CloudinaryUploadWidgetResults } from 'next-cloudinary'
 import type { StoreInfo } from './store-types'
@@ -12,7 +12,7 @@ const CldUploadWidget = dynamic(
 
 interface StoreBrandingSectionProps {
   formData: Partial<StoreInfo>
-  setFormData: React.Dispatch<React.SetStateAction<Partial<StoreInfo>>>
+  setFormData: Dispatch<SetStateAction<Partial<StoreInfo>>>
 }
 
 export default function StoreBrandingSection({
@@ -76,17 +76,26 @@ export default function StoreBrandingSection({
               type="color"
               value={formData.primary_color || '#6366f1'}
               onChange={e => setFormData(prev => ({ ...prev, primary_color: e.target.value }))}
-              className="h-10 w-20 rounded border border-gray-300 cursor-pointer p-1"
+              className="h-10 w-16 rounded border border-gray-300 cursor-pointer p-0.5"
             />
-            <span className="text-sm font-mono text-gray-600">
-              {formData.primary_color || '#6366f1'}
-            </span>
+            <input
+              type="text"
+              value={formData.primary_color || '#6366f1'}
+              onChange={e => setFormData(prev => ({ ...prev, primary_color: e.target.value }))}
+              className="w-32 border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm font-mono"
+              placeholder="#6366f1"
+            />
+            <div
+              className="h-10 w-10 rounded-md shadow-inner"
+              style={{ backgroundColor: formData.primary_color || '#6366f1' }}
+            />
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Warna aksen utama untuk tema dashboard dan preview toko.
+          <p className="text-xs text-gray-400 mt-1">
+            Digunakan pada tombol, header tabel, dan aksen UI
           </p>
         </div>
       </div>
     </div>
   )
 }
+
