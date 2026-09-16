@@ -31,7 +31,6 @@ DECLARE
   primary_user_id uuid;
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'stores') THEN
-    -- Pick the earliest created user as the initial store owner
     SELECT id INTO primary_user_id FROM auth.users ORDER BY created_at ASC LIMIT 1;
     IF primary_user_id IS NOT NULL THEN
       INSERT INTO public.store_members (store_id, user_id, role)
@@ -81,6 +80,36 @@ AS $$
   );
 $$;
 
+CREATE OR REPLACE FUNCTION public.is_store_admin(lookup_store_id uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.store_members sm
+    WHERE sm.store_id = lookup_store_id
+      AND sm.user_id = auth.uid()
+      AND sm.role IN ('owner', 'admin')
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_store_owner(lookup_store_id uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.store_members sm
+    WHERE sm.store_id = lookup_store_id
+      AND sm.user_id = auth.uid()
+      AND sm.role = 'owner'
+  );
+$$;
+
 CREATE OR REPLACE FUNCTION public.user_store_ids()
 RETURNS SETOF uuid
 LANGUAGE sql
@@ -96,11 +125,17 @@ $$;
 REVOKE ALL ON FUNCTION public.is_store_member(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_store_member(uuid) TO authenticated;
 
+REVOKE ALL ON FUNCTION public.is_store_admin(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_store_admin(uuid) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.is_store_owner(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_store_owner(uuid) TO authenticated;
+
 REVOKE ALL ON FUNCTION public.user_store_ids() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.user_store_ids() TO authenticated;
 
 -- ---------------------------------------------------------------------------
--- 5. Granular RLS for store_members (no privilege escalation or cross-store leaks)
+-- 5. Granular RLS for store_members (evaluated via security definer helpers)
 -- ---------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Authenticated read store_members" ON public.store_members;
 DROP POLICY IF EXISTS "Members view store_members" ON public.store_members;
@@ -113,43 +148,24 @@ CREATE POLICY "Members view store_members" ON public.store_members
 
 DROP POLICY IF EXISTS "Store owners manage members" ON public.store_members;
 DROP POLICY IF EXISTS "Store owners insert members" ON public.store_members;
+-- Only store owners or admins can insert new members (evaluated via helper function)
 CREATE POLICY "Store owners insert members" ON public.store_members
   FOR INSERT WITH CHECK (
-    auth.role() = 'authenticated' AND EXISTS (
-      SELECT 1 FROM public.store_members sm
-      WHERE sm.store_id = store_members.store_id
-        AND sm.user_id = auth.uid()
-        AND sm.role IN ('owner', 'admin')
-    )
+    auth.role() = 'authenticated' AND public.is_store_admin(store_members.store_id)
   );
 
 DROP POLICY IF EXISTS "Store owners update members" ON public.store_members;
 CREATE POLICY "Store owners update members" ON public.store_members
   FOR UPDATE USING (
-    auth.role() = 'authenticated' AND EXISTS (
-      SELECT 1 FROM public.store_members sm
-      WHERE sm.store_id = store_members.store_id
-        AND sm.user_id = auth.uid()
-        AND sm.role = 'owner'
-    )
+    auth.role() = 'authenticated' AND public.is_store_owner(store_members.store_id)
   ) WITH CHECK (
-    auth.role() = 'authenticated' AND EXISTS (
-      SELECT 1 FROM public.store_members sm
-      WHERE sm.store_id = store_members.store_id
-        AND sm.user_id = auth.uid()
-        AND sm.role = 'owner'
-    )
+    auth.role() = 'authenticated' AND public.is_store_owner(store_members.store_id)
   );
 
 DROP POLICY IF EXISTS "Store owners delete members" ON public.store_members;
 CREATE POLICY "Store owners delete members" ON public.store_members
   FOR DELETE USING (
-    auth.role() = 'authenticated' AND EXISTS (
-      SELECT 1 FROM public.store_members sm
-      WHERE sm.store_id = store_members.store_id
-        AND sm.user_id = auth.uid()
-        AND sm.role = 'owner'
-    )
+    auth.role() = 'authenticated' AND public.is_store_owner(store_members.store_id)
   );
 
 -- ---------------------------------------------------------------------------
@@ -178,55 +194,49 @@ CREATE TRIGGER tr_new_store_creator
   EXECUTE FUNCTION public.handle_new_store_creator();
 
 -- ---------------------------------------------------------------------------
--- 7. Strict Tenant-scoped RLS policies
+-- 7. Strict Tenant-scoped RLS policies (Zero Bypass)
 -- ---------------------------------------------------------------------------
 
--- Orders
+-- Orders: strictly require authenticated store membership
 DROP POLICY IF EXISTS "Tenant scoped orders" ON public.orders;
 CREATE POLICY "Tenant scoped orders" ON public.orders
   FOR ALL USING (
-    auth.role() = 'authenticated' AND (
-      public.is_store_member(store_id)
-      OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
-    )
+    auth.role() = 'authenticated'
+    AND store_id IS NOT NULL
+    AND public.is_store_member(store_id)
   ) WITH CHECK (
-    auth.role() = 'authenticated' AND (
-      public.is_store_member(store_id)
-      OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
-    )
+    auth.role() = 'authenticated'
+    AND store_id IS NOT NULL
+    AND public.is_store_member(store_id)
   );
 
--- Products
+-- Products: strictly require authenticated store membership
 DROP POLICY IF EXISTS "Tenant scoped products" ON public.products;
 CREATE POLICY "Tenant scoped products" ON public.products
   FOR ALL USING (
-    auth.role() = 'authenticated' AND (
-      public.is_store_member(store_id)
-      OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
-    )
+    auth.role() = 'authenticated'
+    AND store_id IS NOT NULL
+    AND public.is_store_member(store_id)
   ) WITH CHECK (
-    auth.role() = 'authenticated' AND (
-      public.is_store_member(store_id)
-      OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
-    )
+    auth.role() = 'authenticated'
+    AND store_id IS NOT NULL
+    AND public.is_store_member(store_id)
   );
 
--- Batch PO (if module installed)
+-- Batch PO (if module installed): strictly require authenticated store membership
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'batch_po') THEN
     DROP POLICY IF EXISTS "Tenant scoped batch_po" ON public.batch_po;
     EXECUTE 'CREATE POLICY "Tenant scoped batch_po" ON public.batch_po
       FOR ALL USING (
-        auth.role() = ''authenticated'' AND (
-          public.is_store_member(store_id)
-          OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
-        )
+        auth.role() = ''authenticated''
+        AND store_id IS NOT NULL
+        AND public.is_store_member(store_id)
       ) WITH CHECK (
-        auth.role() = ''authenticated'' AND (
-          public.is_store_member(store_id)
-          OR (store_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.stores))
-        )
+        auth.role() = ''authenticated''
+        AND store_id IS NOT NULL
+        AND public.is_store_member(store_id)
       )';
   END IF;
 END $$;
@@ -244,5 +254,7 @@ END $$;
 -- DROP POLICY IF EXISTS "Store owners insert members" ON public.store_members;
 -- DROP POLICY IF EXISTS "Members view store_members" ON public.store_members;
 -- DROP FUNCTION IF EXISTS public.user_store_ids();
+-- DROP FUNCTION IF EXISTS public.is_store_owner(uuid);
+-- DROP FUNCTION IF EXISTS public.is_store_admin(uuid);
 -- DROP FUNCTION IF EXISTS public.is_store_member(uuid);
 -- DROP TABLE IF EXISTS public.store_members;
