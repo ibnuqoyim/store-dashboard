@@ -45,12 +45,9 @@ type Store = {
 }
 
 export default function OrderList({ initialOrders, batches, stores = [] }: { initialOrders: Order[], batches: { id: string; name: string }[], stores?: Store[] }) {
-    const [isLoading, setIsLoading] = useState(false)
     const [selectedBatchId, setSelectedBatchId] = useState<string>('all')
     const [searchTerm, setSearchTerm] = useState('')
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
-    const [isModalOpen, setIsModalOpen] = useState(false)
     const [statusFilter, setStatusFilter] = useState<string>('all')
     const [dateFilter, setDateFilter] = useState({ start: '', end: '' })
     const [currentPage, setCurrentPage] = useState(1)
@@ -119,9 +116,7 @@ export default function OrderList({ initialOrders, batches, stores = [] }: { ini
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this order?')) return
 
-        setIsLoading(true)
         const { error } = await supabase.from('orders').delete().eq('id', id)
-        setIsLoading(false)
 
         if (error) {
             alert('Error deleting order: ' + error.message)
@@ -131,8 +126,7 @@ export default function OrderList({ initialOrders, batches, stores = [] }: { ini
     }
 
     const handleViewInvoice = (order: Order) => {
-        setSelectedOrder(order)
-        setIsModalOpen(true)
+        router.push(`/orders/${order.id}`)
     }
 
     const handleDownloadInvoice = async (order: Order) => {

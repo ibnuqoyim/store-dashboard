@@ -125,6 +125,7 @@ export default function Sidebar() {
                 <div className="flex h-16 items-center justify-between px-4 border-b border-gray-800">
                     <div className="flex items-center gap-2 min-w-0">
                         {config.logo_url && (
+                            /* eslint-disable-next-line @next/next/no-img-element */
                             <img src={config.logo_url} alt="" className="h-8 w-8 rounded-full object-cover flex-shrink-0" />
                         )}
                         <h1 className="text-xl font-bold truncate">{config.name}</h1>

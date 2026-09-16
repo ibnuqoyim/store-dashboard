@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { Plus, Trash2, Save, Receipt, Zap, Globe, CreditCard, Building, Users } from 'lucide-react'
+import { Plus, Trash2, Receipt, Zap, Globe, Building, Users } from 'lucide-react'
 import { useBusinessConfig } from '@/lib/business-config-context'
 import { formatCurrency } from '@/lib/config'
 
@@ -54,11 +54,7 @@ export default function ExpenseForm() {
         notes: ''
     })
 
-    useEffect(() => {
-        fetchExpenses()
-    }, [dateFilter, categoryFilter])
-
-    const fetchExpenses = async () => {
+    const fetchExpenses = useCallback(async () => {
         try {
             setLoading(true)
             let query = supabase
@@ -88,7 +84,11 @@ export default function ExpenseForm() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [dateFilter, categoryFilter, supabase])
+
+    useEffect(() => {
+        fetchExpenses()
+    }, [fetchExpenses])
 
     const handleAddExpense = async (e: React.FormEvent) => {
         e.preventDefault()

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { TrendingUp, TrendingDown, DollarSign, Calendar, Download, Filter } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, Download, Filter } from 'lucide-react'
 import { format } from 'date-fns'
 import { useBusinessConfig } from '@/lib/business-config-context'
 import { formatCurrency } from '@/lib/config'
@@ -33,11 +33,7 @@ export default function FinancialReport() {
     const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
     const supabase = createClient()
 
-    useEffect(() => {
-        fetchTransactions()
-    }, [dateFilter, typeFilter])
-
-    const fetchTransactions = async () => {
+    const fetchTransactions = useCallback(async () => {
         try {
             setLoading(true)
             let query = supabase
@@ -73,7 +69,11 @@ export default function FinancialReport() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [dateFilter, typeFilter, supabase])
+
+    useEffect(() => {
+        fetchTransactions()
+    }, [fetchTransactions])
 
     const calculateTotals = () => {
         const income = transactions

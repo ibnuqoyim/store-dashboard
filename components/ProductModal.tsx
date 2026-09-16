@@ -192,6 +192,7 @@ export default function ProductModal({
             <label className="block font-semibold text-gray-600 mb-1">Foto Produk</label>
             <div className="flex items-center gap-3">
               {imageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={getResizedImageUrl(imageUrl, 64, 64) || imageUrl}
                   alt="Preview produk"

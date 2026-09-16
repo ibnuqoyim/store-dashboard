@@ -96,6 +96,7 @@ export default function ProductPosCart({
                 {/* Photo container with fixed height so it never collapses */}
                 <div className="h-24 sm:h-28 w-full bg-amber-50/80 relative overflow-hidden shrink-0 flex items-center justify-center border-b border-amber-100/60">
                   {thumb ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={thumb}
                       alt={p.name}

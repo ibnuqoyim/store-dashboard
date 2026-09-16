@@ -247,6 +247,7 @@ export default function SetupPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Logo Toko</label>
               {form.logo_url && (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={form.logo_url} alt="Logo" className="w-20 h-20 object-contain mb-2 rounded-lg border" />
               )}
               <CldUploadWidget

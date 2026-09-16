@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { PlusCircle, Download, Pencil, Settings, CheckCircle, Loader2 } from 'lucide-react'
+import { PlusCircle, Download, Pencil, Settings, CheckCircle, Loader2, MessageCircle, Truck } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import DashboardCustomizer from '@/components/DashboardCustomizer'
 import { format } from 'date-fns'
@@ -139,8 +139,6 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
         }
     }
 
-    const [selectedOrder, setSelectedOrder] = useState<DashboardOrder | null>(null)
-    const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
     const [paying, setPaying] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState<string>('')
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
@@ -240,11 +238,6 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
         } else {
             router.refresh()
         }
-    }
-
-    const handleGenerateInvoice = (order: DashboardOrder) => {
-        setSelectedOrder(order)
-        setInvoiceModalOpen(true)
     }
 
     const handleDownloadInvoice = async (order: DashboardOrder) => {
@@ -478,7 +471,7 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
         }
     }
 
-    // ─── Widget renderers ───────────────────────────────────────────────────────
+    // ─── Render ─────────────────────────────────────────────────────────────────
 
     const renderWidget = (id: WidgetId) => {
         switch (id) {
@@ -587,6 +580,30 @@ export default function DashboardClient({ storeInfoId, initialWidgetConfig, orde
                                                         >
                                                             <Download size={16} /> PDF
                                                         </button>
+                                                        <button
+                                                            onClick={() => handleShareWhatsApp(order)}
+                                                            className="text-emerald-600 hover:text-emerald-900 bg-emerald-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
+                                                            title="Share to WhatsApp"
+                                                        >
+                                                            <MessageCircle size={16} /> WA
+                                                        </button>
+                                                        {order.deliveries && order.deliveries.length > 0 ? (
+                                                            <Link
+                                                                href="/deliveries"
+                                                                className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
+                                                                title="View Delivery"
+                                                            >
+                                                                <Truck size={16} /> Delivery
+                                                            </Link>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleCreateDelivery(order)}
+                                                                className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-2 rounded flex items-center justify-center gap-1 text-xs sm:text-sm whitespace-nowrap"
+                                                                title="Create Delivery"
+                                                            >
+                                                                <PlusCircle size={16} /> Delivery
+                                                            </button>
+                                                        )}
                                                         <Link href={`/orders/${order.id}`} className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded inline-flex items-center gap-1">
                                                             <Pencil size={18} /> Edit
                                                         </Link>

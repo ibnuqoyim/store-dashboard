@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Save, ArrowLeft, Truck, Loader2 } from 'lucide-react'
+import { Plus, Trash2, Save, ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useBusinessConfig } from '@/lib/business-config-context'
 import { formatCurrency } from '@/lib/config'
@@ -200,6 +200,7 @@ export default function OrderForm({
             fetchLatestBatch()
             generateAndSetInvoiceNumber(null)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     useEffect(() => {

@@ -132,7 +132,7 @@ export default function RecipeManager({
             .order('name')
         setRecipes((data as Recipe[]) ?? [])
         setLoading(false)
-    }, [])
+    }, [supabase])
 
     useEffect(() => { fetchRecipes() }, [fetchRecipes])
 

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import {
     TrendingUp, TrendingDown, AlertTriangle, Download,
-    ChevronDown, Package, Wallet, BarChart3
+    Package, Wallet, BarChart3
 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
@@ -167,7 +167,7 @@ export default function ProfitLossReport() {
         } finally {
             setLoading(false)
         }
-    }, [preset, customRange])
+    }, [preset, customRange, supabase])
 
     useEffect(() => {
         fetchPL()

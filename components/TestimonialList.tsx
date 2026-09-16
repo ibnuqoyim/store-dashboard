@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Trash2, Edit2, Star } from 'lucide-react'
 import TestimonialModal from './TestimonialModal'
@@ -21,11 +21,7 @@ export default function TestimonialList() {
   const [showModal, setShowModal] = useState(false)
   const [selectedTestimonial, setSelectedTestimonial] = useState<Testimonial | null>(null)
 
-  useEffect(() => {
-    fetchTestimonials()
-  }, [])
-
-  const fetchTestimonials = async () => {
+  const fetchTestimonials = useCallback(async () => {
     try {
       setIsLoading(true)
       const { data, error } = await supabase
@@ -40,7 +36,11 @@ export default function TestimonialList() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    fetchTestimonials()
+  }, [fetchTestimonials])
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this testimonial?')) return
