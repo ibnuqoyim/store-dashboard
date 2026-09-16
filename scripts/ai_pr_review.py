@@ -9,7 +9,20 @@ def run(cmd): return subprocess.run(cmd, capture_output=True, text=True, check=T
 
 
 def get_pr_diff(pr_number):
-    diff = run(["gh", "pr", "diff", pr_number])
+    raw_diff = run(["gh", "pr", "diff", pr_number])
+    # Filter out bulky lock files from diff to prevent context truncation of actual source code
+    sections = raw_diff.split("diff --git ")
+    clean_sections = []
+    for sec in sections:
+        if not sec.strip():
+            continue
+        header = sec.split("\n", 1)[0]
+        if any(lock in header for lock in ["package-lock.json", "pnpm-lock.yaml", "yarn.lock"]):
+            clean_sections.append(f"{header}\n[lockfile diff omitted for brevity]\n")
+        else:
+            clean_sections.append(sec)
+
+    diff = "diff --git " + "diff --git ".join(clean_sections) if clean_sections else raw_diff
     if len(diff) > MAX_DIFF_CHARS:
         diff = diff[:MAX_DIFF_CHARS] + "\n\n... [diff truncated for length] ..."
     return diff

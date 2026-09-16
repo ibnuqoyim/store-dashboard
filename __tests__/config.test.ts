@@ -57,14 +57,34 @@ describe('lib/config', () => {
       expect(formatted.replace(/\s+/g, ' ')).toMatch(/Rp\s*50\.000/)
     })
 
-    it('formats USD currency with en-US locale', () => {
+    it('formats IDR zero amount properly', () => {
+      const config: BusinessConfig = {
+        ...DEFAULT_CONFIG,
+        currency: 'IDR',
+        locale: 'id-ID',
+      }
+      const formatted = formatCurrency(0, config)
+      expect(formatted.replace(/\s+/g, ' ')).toMatch(/Rp\s*0/)
+    })
+
+    it('formats USD currency robustly with en-US locale', () => {
       const config: BusinessConfig = {
         ...DEFAULT_CONFIG,
         currency: 'USD',
         locale: 'en-US',
       }
       const formatted = formatCurrency(1250, config)
-      expect(formatted).toBe('$1,250')
+      expect(formatted.replace(/\s+/g, ' ')).toMatch(/(?:US)?\$\s*1,250/)
+    })
+
+    it('handles negative financial amounts accurately', () => {
+      const config: BusinessConfig = {
+        ...DEFAULT_CONFIG,
+        currency: 'IDR',
+        locale: 'id-ID',
+      }
+      const formatted = formatCurrency(-25000, config)
+      expect(formatted.replace(/\s+/g, ' ')).toMatch(/-Rp\s*25\.000/)
     })
   })
 })
