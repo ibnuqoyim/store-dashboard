@@ -23,7 +23,41 @@ CREATE INDEX IF NOT EXISTS idx_store_members_user_id ON public.store_members(use
 CREATE INDEX IF NOT EXISTS idx_store_members_store_id ON public.store_members(store_id);
 
 -- ---------------------------------------------------------------------------
--- 2. Helper functions for store isolation (with search_path protection)
+-- 2. Backfill existing stores and users into store_members
+-- Prevents lockout for existing deployments upon migration
+-- ---------------------------------------------------------------------------
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'stores') THEN
+    INSERT INTO public.store_members (store_id, user_id, role)
+    SELECT s.id, u.id, 'owner'
+    FROM public.stores s
+    CROSS JOIN auth.users u
+    ON CONFLICT (store_id, user_id) DO NOTHING;
+  END IF;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- 3. Backfill legacy NULL store_id when deployment has single store
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE
+  store_count int;
+  single_store_id uuid;
+BEGIN
+  SELECT COUNT(*), MIN(id) INTO store_count, single_store_id FROM public.stores;
+  -- If there is exactly one store, orphan records unambiguously belong to it
+  IF store_count = 1 THEN
+    UPDATE public.orders SET store_id = single_store_id WHERE store_id IS NULL;
+    UPDATE public.products SET store_id = single_store_id WHERE store_id IS NULL;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'batch_po') THEN
+      UPDATE public.batch_po SET store_id = single_store_id WHERE store_id IS NULL;
+    END IF;
+  END IF;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- 4. Helper functions for store isolation (with search_path protection)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.is_store_member(lookup_store_id uuid)
 RETURNS boolean
@@ -50,8 +84,15 @@ AS $$
   WHERE sm.user_id = auth.uid();
 $$;
 
+-- Explicitly revoke public execution and grant only to authenticated role
+REVOKE ALL ON FUNCTION public.is_store_member(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_store_member(uuid) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.user_store_ids() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.user_store_ids() TO authenticated;
+
 -- ---------------------------------------------------------------------------
--- 3. Granular RLS for store_members (no privilege escalation or cross-store leaks)
+-- 5. Granular RLS for store_members (no privilege escalation or cross-store leaks)
 -- ---------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Authenticated read store_members" ON public.store_members;
 DROP POLICY IF EXISTS "Members view store_members" ON public.store_members;
@@ -64,7 +105,6 @@ CREATE POLICY "Members view store_members" ON public.store_members
 
 DROP POLICY IF EXISTS "Store owners manage members" ON public.store_members;
 DROP POLICY IF EXISTS "Store owners insert members" ON public.store_members;
--- Only existing store owner/admin can insert new members (initial ownership handled by SECURITY DEFINER trigger)
 CREATE POLICY "Store owners insert members" ON public.store_members
   FOR INSERT WITH CHECK (
     auth.role() = 'authenticated' AND EXISTS (
@@ -105,7 +145,7 @@ CREATE POLICY "Store owners delete members" ON public.store_members
   );
 
 -- ---------------------------------------------------------------------------
--- 4. Auto-assign store creator as owner
+-- 6. Auto-assign store creator as owner
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.handle_new_store_creator()
 RETURNS trigger
@@ -130,27 +170,10 @@ CREATE TRIGGER tr_new_store_creator
   EXECUTE FUNCTION public.handle_new_store_creator();
 
 -- ---------------------------------------------------------------------------
--- 5. Backfill legacy NULL store_id to default store if exists
--- ---------------------------------------------------------------------------
-DO $$
-DECLARE
-  default_store_id uuid;
-BEGIN
-  SELECT id INTO default_store_id FROM public.stores ORDER BY created_at ASC LIMIT 1;
-  IF default_store_id IS NOT NULL THEN
-    UPDATE public.orders SET store_id = default_store_id WHERE store_id IS NULL;
-    UPDATE public.products SET store_id = default_store_id WHERE store_id IS NULL;
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'batch_po') THEN
-      UPDATE public.batch_po SET store_id = default_store_id WHERE store_id IS NULL;
-    END IF;
-  END IF;
-END $$;
-
--- ---------------------------------------------------------------------------
--- 6. Strict Tenant-scoped RLS policies (Strict Isolation)
+-- 7. Strict Tenant-scoped RLS policies
 -- ---------------------------------------------------------------------------
 
--- Orders: strictly require store membership (or NULL only if no stores configured yet)
+-- Orders
 DROP POLICY IF EXISTS "Tenant scoped orders" ON public.orders;
 CREATE POLICY "Tenant scoped orders" ON public.orders
   FOR ALL USING (
@@ -165,7 +188,7 @@ CREATE POLICY "Tenant scoped orders" ON public.orders
     )
   );
 
--- Products: strictly require store membership (or NULL only if no stores configured yet)
+-- Products
 DROP POLICY IF EXISTS "Tenant scoped products" ON public.products;
 CREATE POLICY "Tenant scoped products" ON public.products
   FOR ALL USING (
@@ -180,7 +203,7 @@ CREATE POLICY "Tenant scoped products" ON public.products
     )
   );
 
--- Batch PO: strictly require store membership (or NULL only if no stores configured yet)
+-- Batch PO (if module installed)
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'batch_po') THEN
@@ -199,3 +222,19 @@ BEGIN
       )';
   END IF;
 END $$;
+
+-- ---------------------------------------------------------------------------
+-- Rollback Instructions (Down Migration reference):
+-- ---------------------------------------------------------------------------
+-- DROP TRIGGER IF EXISTS tr_new_store_creator ON public.stores;
+-- DROP FUNCTION IF EXISTS public.handle_new_store_creator();
+-- DROP POLICY IF EXISTS "Tenant scoped orders" ON public.orders;
+-- DROP POLICY IF EXISTS "Tenant scoped products" ON public.products;
+-- DROP POLICY IF EXISTS "Tenant scoped batch_po" ON public.batch_po;
+-- DROP POLICY IF EXISTS "Store owners delete members" ON public.store_members;
+-- DROP POLICY IF EXISTS "Store owners update members" ON public.store_members;
+-- DROP POLICY IF EXISTS "Store owners insert members" ON public.store_members;
+-- DROP POLICY IF EXISTS "Members view store_members" ON public.store_members;
+-- DROP FUNCTION IF EXISTS public.user_store_ids();
+-- DROP FUNCTION IF EXISTS public.is_store_member(uuid);
+-- DROP TABLE IF EXISTS public.store_members;
