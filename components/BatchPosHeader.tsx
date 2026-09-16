@@ -57,22 +57,23 @@ export default function BatchPosHeader({
 
   const percentage = Math.min(Math.round((currentCapacity / maxCapacity) * 100), 100);
 
-  const filteredBatches = useMemo(() => {
+  const { filteredBatches, exactMatch, showCreateOption } = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return batchList;
-    return batchList.filter((b) => b.name.toLowerCase().includes(q));
+    const trimmed = query.trim();
+    const filtered = q ? batchList.filter((b) => b.name.toLowerCase().includes(q)) : batchList;
+    const exact = trimmed
+      ? batchList.find(
+          (b) =>
+            b.name.toLowerCase() === q ||
+            b.name.toLowerCase() === `#${q}`
+        )
+      : null;
+    return {
+      filteredBatches: filtered,
+      exactMatch: exact,
+      showCreateOption: trimmed.length > 0 && !exact,
+    };
   }, [batchList, query]);
-
-  const trimmedQuery = query.trim();
-  const exactMatch = useMemo(() => {
-    if (!trimmedQuery) return null;
-    return batchList.find(
-      (b) => b.name.toLowerCase() === trimmedQuery.toLowerCase() ||
-             b.name.toLowerCase() === (`#${trimmedQuery.toLowerCase()}`)
-    );
-  }, [batchList, trimmedQuery]);
-
-  const showCreateOption = trimmedQuery.length > 0 && !exactMatch;
 
   const handleSelectBatch = (batchId: string) => {
     onBatchChange(batchId);
@@ -81,11 +82,12 @@ export default function BatchPosHeader({
 
   const handleCreateBatch = async (batchNameToCreate: string) => {
     const raw = batchNameToCreate.trim();
-    if (!raw) return;
+    if (!raw || isSaving) return;
     const formattedName = raw.startsWith('#') ? raw : `#${raw}`;
     setIsSaving(true);
     try {
       await onCreateNewBatch(formattedName);
+      setQuery(formattedName);
       setIsOpen(false);
     } finally {
       setIsSaving(false);
@@ -93,6 +95,7 @@ export default function BatchPosHeader({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isSaving) return;
     if (e.key === 'Enter') {
       e.preventDefault();
       if (exactMatch) {
@@ -100,7 +103,7 @@ export default function BatchPosHeader({
       } else if (filteredBatches.length > 0) {
         handleSelectBatch(filteredBatches[0].id);
       } else if (showCreateOption) {
-        handleCreateBatch(trimmedQuery);
+        handleCreateBatch(query);
       }
     } else if (e.key === 'Escape') {
       setIsOpen(false);
@@ -167,6 +170,12 @@ export default function BatchPosHeader({
                   <input
                     ref={inputRef}
                     type="text"
+                    role="combobox"
+                    aria-expanded={isOpen}
+                    aria-autocomplete="list"
+                    aria-haspopup="listbox"
+                    aria-controls="batch-pos-listbox"
+                    disabled={isSaving}
                     value={query}
                     onChange={(e) => {
                       setQuery(e.target.value);
@@ -174,21 +183,21 @@ export default function BatchPosHeader({
                     }}
                     onFocus={() => {
                       setIsOpen(true);
-                      // Select input text for quick replacement
                       inputRef.current?.select();
                     }}
                     onKeyDown={handleKeyDown}
                     placeholder="Ketik cari atau nama batch baru..."
-                    className="w-full bg-amber-950/80 text-white font-bold text-xs pl-2.5 pr-7 py-1.5 rounded-lg border border-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-amber-950 placeholder:text-amber-300/50 truncate"
+                    className="w-full bg-amber-950/80 text-white font-bold text-xs pl-2.5 pr-7 py-1.5 rounded-lg border border-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-amber-950 placeholder:text-amber-300/50 truncate disabled:opacity-60"
                   />
                   <button
                     type="button"
                     tabIndex={-1}
+                    disabled={isSaving}
                     onClick={() => {
                       setIsOpen((prev) => !prev);
                       if (!isOpen) inputRef.current?.focus();
                     }}
-                    className="absolute right-1 text-amber-300 hover:text-amber-100 p-1 cursor-pointer"
+                    className="absolute right-1 text-amber-300 hover:text-amber-100 p-1 cursor-pointer disabled:opacity-50"
                   >
                     {isSaving ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -200,13 +209,19 @@ export default function BatchPosHeader({
 
                 {/* Autocomplete Dropdown List */}
                 {isOpen && (
-                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white text-gray-900 rounded-xl shadow-xl border border-amber-200 py-1.5 z-50 max-h-60 overflow-y-auto">
+                  <div
+                    id="batch-pos-listbox"
+                    role="listbox"
+                    className="absolute left-0 right-0 top-full mt-1.5 bg-white text-gray-900 rounded-xl shadow-xl border border-amber-200 py-1.5 z-50 max-h-60 overflow-y-auto"
+                  >
                     {/* Option to create new batch if typed text not found */}
                     {showCreateOption && (
                       <button
                         type="button"
+                        role="option"
+                        aria-selected={false}
                         disabled={isSaving}
-                        onClick={() => handleCreateBatch(trimmedQuery)}
+                        onClick={() => handleCreateBatch(query)}
                         className="w-full px-3 py-2 text-left text-xs bg-amber-50 hover:bg-amber-100 text-amber-900 font-semibold flex items-center justify-between gap-2 border-b border-amber-100 cursor-pointer transition"
                       >
                         <div className="flex items-center gap-1.5 min-w-0">
@@ -214,7 +229,7 @@ export default function BatchPosHeader({
                           <span className="truncate">
                             Buat Batch Baru:{' '}
                             <span className="font-bold text-amber-800">
-                              {trimmedQuery.startsWith('#') ? trimmedQuery : `#${trimmedQuery}`}
+                              {query.trim().startsWith('#') ? query.trim() : `#${query.trim()}`}
                             </span>
                           </span>
                         </div>
@@ -232,6 +247,8 @@ export default function BatchPosHeader({
                           <button
                             key={b.id}
                             type="button"
+                            role="option"
+                            aria-selected={isSelected}
                             onClick={() => handleSelectBatch(b.id)}
                             className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between gap-2 transition cursor-pointer ${
                               isSelected
