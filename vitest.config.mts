@@ -15,6 +15,9 @@ export default defineConfig({
         'lib/config.ts',
         'lib/modules.ts',
         'lib/batch-dough-calculator.ts',
+        'lib/cloudinary-image.ts',
+        'lib/batch-pos-data.ts',
+        'lib/widgetRegistry.ts',
         'components/production/recipe-types.ts',
       ],
       thresholds: {
