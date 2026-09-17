@@ -43,7 +43,7 @@ test.describe('Auth & Route Protection Smoke Tests', () => {
     await page.goto('/login')
 
     // Mock Supabase signInWithPassword endpoint to return invalid credentials error
-    await page.route('**/auth/v1/token?grant_type=password', async route => {
+    await page.route('**/auth/v1/token**', async route => {
       await route.fulfill({
         status: 400,
         contentType: 'application/json',
