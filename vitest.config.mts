@@ -18,6 +18,7 @@ export default defineConfig({
         'lib/cloudinary-image.ts',
         'lib/batch-pos-data.ts',
         'lib/widgetRegistry.ts',
+        'lib/invoice-pdf.ts',
         'components/production/recipe-types.ts',
       ],
       thresholds: {
