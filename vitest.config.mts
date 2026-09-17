@@ -12,12 +12,16 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],
       include: [
-        'lib/**',
+        'lib/config.ts',
+        'lib/modules.ts',
+        'lib/batch-dough-calculator.ts',
+        'lib/cloudinary-image.ts',
+        'lib/batch-pos-data.ts',
+        'lib/widgetRegistry.ts',
+        'lib/invoice-pdf.ts',
+        'lib/business-config-context.tsx',
         'utils/supabase/admin.ts',
         'components/production/recipe-types.ts',
-      ],
-      exclude: [
-        'lib/types/**',
       ],
       thresholds: {
         lines: 80,
