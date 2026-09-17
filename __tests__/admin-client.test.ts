@@ -32,14 +32,14 @@ describe('utils/supabase/admin', () => {
   })
 
   it('creates and returns admin Supabase client with non-persisted session options when service role key is provided', () => {
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'secret-service-role-key'
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key-for-testing-only'
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://custom-project.supabase.co'
 
     const client = createAdminClient()
 
     expect(createClient).toHaveBeenCalledWith(
       'https://custom-project.supabase.co',
-      'secret-service-role-key',
+      'test-service-role-key-for-testing-only',
       {
         auth: {
           persistSession: false,
