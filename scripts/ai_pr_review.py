@@ -46,7 +46,17 @@ def build_messages(agents_md, diff, repo, pr_number):
         "## ⚠️ Peringatan & Saran (Warnings & Suggestions)\n"
         "## ✅ Hal yang Sudah Baik (Looks Good)\n\n"
         "Jika ada bagian yang kosong, tulis 'Tidak ada isu.'.")
-    user = f"REPO: {repo}\nPR: #{pr_number}\n\n=== AGENTS.md ===\n{agents_md}\n\n=== PR DIFF ===\n{diff}"
+    user = (
+        f"REPO: {repo}\nPR: #{pr_number}\n\n=== AGENTS.md ===\n{agents_md}\n\n=== PR DIFF ===\n{diff}\n\n"
+        "=== INSTRUKSI BAHASA WAJIB ===\n"
+        "Tulis SELURUH output review kamu di atas HANYA dalam BAHASA INDONESIA.\n"
+        "DILARANG KERAS menggunakan Bahasa Inggris untuk analisis, judul, ringkasan, maupun saran.\n"
+        "Gunakan format heading persis:\n"
+        "## 📋 Ringkasan Review\n"
+        "## 🚨 Isu Kritis (Critical)\n"
+        "## ⚠️ Peringatan & Saran (Warnings & Suggestions)\n"
+        "## ✅ Hal yang Sudah Baik (Looks Good)"
+    )
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
