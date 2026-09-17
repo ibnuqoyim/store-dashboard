@@ -1,4 +1,4 @@
-.PHONY: all lint typecheck test verify build
+.PHONY: all lint typecheck test test-e2e verify build
 
 all: verify
 
@@ -11,6 +11,9 @@ typecheck:
 test:
 	npm run test:coverage
 	npm run test:scripts
+
+test-e2e:
+	npm run test:e2e
 
 build:
 	npm run build
