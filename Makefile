@@ -10,6 +10,7 @@ typecheck:
 
 test:
 	npm run test:coverage
+	npm run test:scripts
 
 build:
 	npm run build
