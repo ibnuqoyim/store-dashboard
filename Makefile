@@ -16,7 +16,7 @@ test-e2e:
 	npm run test:e2e
 
 build:
-	npm run build
+	NEXT_PUBLIC_SUPABASE_URL=$${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54321} NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-test-anon-key} npm run build
 
 verify: lint typecheck test build
 	@echo "=== All quality gate checks passed successfully! ==="

@@ -150,6 +150,10 @@ Data leakage risiko tinggi pada endpoint orders.
         self.assertIn("AGENTS_MOCK_CONTENT", messages[1]["content"])
         self.assertIn("DIFF_MOCK_CONTENT", messages[1]["content"])
         self.assertIn("INSTRUKSI BAHASA WAJIB", messages[1]["content"])
+        self.assertIn("## 📋 Ringkasan Review", messages[1]["content"])
+        self.assertIn("## 🚨 Isu Kritis", messages[1]["content"])
+        self.assertIn("## ⚠️ Peringatan & Saran", messages[1]["content"])
+        self.assertIn("## ✅ Hal yang Sudah Baik", messages[1]["content"])
 
     def test_get_agents_md(self):
         content = get_agents_md()

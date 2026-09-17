@@ -133,9 +133,9 @@ test.describe('Batch POS & Checkout User Journey', () => {
     // Add item to cart
     await page.locator('h4', { hasText: 'Sourdough Country Loaf' }).click()
 
-    // Expect confirmation alert on order submit
+    // Expect confirmation alert on order submit using once listener before clicking
     let dialogAppeared = false
-    page.on('dialog', async dialog => {
+    page.once('dialog', async dialog => {
       dialogAppeared = true
       expect(dialog.message()).toMatch(/berhasil/i)
       await dialog.accept()
