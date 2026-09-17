@@ -5,6 +5,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    include: ['__tests__/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
     alias: {
       '@': path.resolve(import.meta.dirname, './'),
     },
