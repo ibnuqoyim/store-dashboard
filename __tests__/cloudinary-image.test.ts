@@ -68,5 +68,13 @@ describe('lib/cloudinary-image', () => {
         'https://res.cloudinary.com/demo/image/upload/w_200,h_150,c_fill,q_auto,f_auto/v12345/sample.jpg'
       )
     })
+
+    it('injects transformation parameters even if path already contains previous parameters', () => {
+      const previousTransformed = 'https://res.cloudinary.com/demo/image/upload/w_100,h_100/v12345/sample.jpg'
+      const resized = getResizedImageUrl(previousTransformed, 80, 80)
+      expect(resized).toBe(
+        'https://res.cloudinary.com/demo/image/upload/w_80,h_80,c_fill,q_auto,f_auto/w_100,h_100/v12345/sample.jpg'
+      )
+    })
   })
 })
