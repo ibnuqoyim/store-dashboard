@@ -50,6 +50,8 @@ test.describe('Auth & Route Protection Smoke Tests', () => {
         body: JSON.stringify({
           error: 'invalid_grant',
           error_description: 'Invalid login credentials',
+          message: 'Invalid login credentials',
+          msg: 'Invalid login credentials',
         }),
       })
     })
