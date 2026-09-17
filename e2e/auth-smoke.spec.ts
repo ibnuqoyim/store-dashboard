@@ -24,8 +24,8 @@ test.describe('Auth & Route Protection Smoke Tests', () => {
     await expect(page.getByText(/sign in to manage your orders/i)).toBeVisible()
 
     // Form inputs
-    const emailInput = page.getByPlaceholder('you@example.com')
-    const passwordInput = page.getByPlaceholder('••••••••')
+    const emailInput = page.locator('input[type="email"]')
+    const passwordInput = page.locator('input[type="password"]')
     const signInButton = page.getByRole('button', { name: /sign in/i })
     const googleButton = page.getByRole('button', { name: /google/i })
 
@@ -54,8 +54,8 @@ test.describe('Auth & Route Protection Smoke Tests', () => {
       })
     })
 
-    await page.getByPlaceholder('you@example.com').fill('wronguser@example.com')
-    await page.getByPlaceholder('••••••••').fill('wrongpassword123')
+    await page.locator('input[type="email"]').fill('wronguser@example.com')
+    await page.locator('input[type="password"]').fill('wrongpassword123')
     await page.getByRole('button', { name: /sign in/i }).click()
 
     // Error banner should appear

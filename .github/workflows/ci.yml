@@ -10,6 +10,9 @@ jobs:
   verify:
     name: Verify & Build
     runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "placeholder"
 
     steps:
       - name: Checkout code
@@ -37,9 +40,6 @@ jobs:
 
       - name: Build Next.js
         run: npm run build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "placeholder"
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
@@ -48,5 +48,3 @@ jobs:
         run: npm run test:e2e
         env:
           CI: true
-          NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "placeholder"
