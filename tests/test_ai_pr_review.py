@@ -52,6 +52,20 @@ Nihil.
         self.assertFalse(has_crit)
         self.assertEqual(detail, "")
 
+    def test_check_critical_issues_ignores_kritis_in_other_sections(self):
+        review_with_incidental_kritis = """
+## 📋 Ringkasan Review
+Tidak ada perubahan arsitektur kritis pada PR ini.
+
+## 🚨 Isu Kritis (Critical)
+Tidak ada isu.
+
+## ⚠️ Peringatan & Saran (Warnings & Suggestions)
+Perlu diperhatikan bahwa modul ini sebelumnya pernah mengalami bug kritis pada query.
+        """
+        has_crit, detail = check_critical_issues(review_with_incidental_kritis)
+        self.assertFalse(has_crit)
+
     def test_check_critical_issues_detects_real_critical_findings(self):
         critical_reviews = [
             """
