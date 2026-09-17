@@ -7,8 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run",
+    "test": "vitest run && python3 -m unittest discover -s tests -p 'test_*.py'",
     "test:coverage": "vitest run --coverage",
+    "test:scripts": "python3 -m unittest discover -s tests -p 'test_*.py'",
     "test:watch": "vitest"
   },
   "dependencies": {

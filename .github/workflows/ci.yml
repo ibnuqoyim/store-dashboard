@@ -31,7 +31,9 @@ jobs:
         run: npx tsc --noEmit
 
       - name: "Run Unit Tests & Coverage Gate"
-        run: npm run test:coverage
+        run: |
+          npm run test:coverage
+          python3 -m unittest discover -s tests -p "test_*.py"
 
       - name: Build Next.js
         run: npm run build

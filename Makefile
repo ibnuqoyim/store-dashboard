@@ -10,6 +10,7 @@ typecheck:
 
 test:
 	npm run test:coverage
+	python3 -m unittest discover -s tests -p "test_*.py"
 
 build:
 	npm run build
