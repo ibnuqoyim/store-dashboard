@@ -11,8 +11,8 @@ jobs:
     name: Verify & Build
     runs-on: ubuntu-latest
     env:
-      NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "placeholder"
+      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321"
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "test-anon-key"
 
     steps:
       - name: Checkout code
