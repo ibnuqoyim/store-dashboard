@@ -19,6 +19,7 @@ export default defineConfig({
         'lib/batch-pos-data.ts',
         'lib/widgetRegistry.ts',
         'lib/invoice-pdf.ts',
+        'lib/business-config-context.tsx',
         'utils/supabase/admin.ts',
         'components/production/recipe-types.ts',
       ],
