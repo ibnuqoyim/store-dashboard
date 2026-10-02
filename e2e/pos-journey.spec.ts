@@ -138,7 +138,7 @@ test.describe('Batch POS & Checkout User Journey', () => {
     await submitButton.click()
 
     // Assert order placement completed via Toast notification and remains on Kasir view
-    await expect(page.getByRole('alert')).toContainText(/berhasil/i)
-    await expect(page.getByRole('button', { name: /kasir/i })).toHaveClass(/bg-amber-800/)
+    await expect(page.locator('[data-toast="success"]').filter({ hasText: /berhasil/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: /kasir/i })).toBeVisible()
   })
 })

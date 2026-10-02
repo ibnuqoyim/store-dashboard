@@ -41,7 +41,7 @@ export function ToastItemComponent({
       onDismiss(toast.id);
     }, duration);
     return () => clearTimeout(timer);
-  }, [toast.id, duration, onDismiss]);
+  }, [toast.id, toast.message, duration, onDismiss]);
 
   const icons = {
     success: <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />,
@@ -58,6 +58,7 @@ export function ToastItemComponent({
   return (
     <div
       role="alert"
+      data-toast={toast.type}
       className={`flex items-start gap-3 p-3.5 rounded-xl border max-w-sm w-full transition-all duration-300 pointer-events-auto ${borderStyles[toast.type]}`}
     >
       {icons[toast.type]}
@@ -110,7 +111,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const showToast = useCallback((message: string, type: ToastType = 'info', title?: string) => {
-    const id = Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+    const id =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
     setToasts((prev) => [...prev, { id, type, title, message }]);
   }, []);
 

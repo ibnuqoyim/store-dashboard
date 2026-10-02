@@ -4,12 +4,12 @@ import React, { useMemo } from 'react';
 import { ChefHat, Wheat, Droplets, Sparkles, Cookie, AlertCircle } from 'lucide-react';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
 import { BatchOrder } from '@/lib/types/batch';
-import { BatchDoughCalculatorService, OrderCreatePayload, ProductRecipeRatio, RecipeMap } from '@/lib/batch-dough-calculator';
+import { BatchDoughCalculatorService, OrderCreatePayload, RecipeOverrides } from '@/lib/batch-dough-calculator';
 
 interface BatchDoughResumeProps {
   orders: BatchOrder[];
   activeBatchName: string;
-  customRecipeMap?: Record<string, Partial<ProductRecipeRatio>> | RecipeMap;
+  customRecipeMap?: RecipeOverrides;
 }
 
 // Move formatCurrency helper to module scope to avoid re-allocation on every render

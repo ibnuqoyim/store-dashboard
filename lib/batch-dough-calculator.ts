@@ -48,32 +48,33 @@ export interface ProductRecipeRatio {
 }
 
 export type RecipeMap = Record<string, ProductRecipeRatio>;
+export type RecipeOverrides = Record<string, Partial<ProductRecipeRatio>>;
 
 // Master Recipe Multipliers per Product Category
-export const DEFAULT_PRODUCT_RECIPE_MAP: RecipeMap = {
-  'Milk Bread': { flourPerUnitGrams: 120, waterRatio: 0.65, levainRatio: 0.20, saltRatio: 0.02 },
-  'Earl Grey CC Mini': { flourPerUnitGrams: 50, waterRatio: 0.60, levainRatio: 0.15, saltRatio: 0.018, fillingType: 'creamCheese', fillingGrams: 30 },
-  'Chocobanana': { flourPerUnitGrams: 100, waterRatio: 0.62, levainRatio: 0.18, saltRatio: 0.02, fillingType: 'chocoChips', fillingGrams: 25 },
-  'Burger Bun (Pack)': { flourPerUnitGrams: 250, waterRatio: 0.65, levainRatio: 0.20, saltRatio: 0.02 },
-  'Paket Mini Isi 4': { flourPerUnitGrams: 200, waterRatio: 0.60, levainRatio: 0.15, saltRatio: 0.018, fillingType: 'creamCheese', fillingGrams: 40 },
-  'Paket Mini Isi 8': { flourPerUnitGrams: 400, waterRatio: 0.60, levainRatio: 0.15, saltRatio: 0.018, fillingType: 'creamCheese', fillingGrams: 80 },
-};
+export const DEFAULT_PRODUCT_RECIPE_MAP: RecipeMap = Object.freeze({
+  'Milk Bread': Object.freeze({ flourPerUnitGrams: 120, waterRatio: 0.65, levainRatio: 0.20, saltRatio: 0.02 }),
+  'Earl Grey CC Mini': Object.freeze({ flourPerUnitGrams: 50, waterRatio: 0.60, levainRatio: 0.15, saltRatio: 0.018, fillingType: 'creamCheese', fillingGrams: 30 }),
+  'Chocobanana': Object.freeze({ flourPerUnitGrams: 100, waterRatio: 0.62, levainRatio: 0.18, saltRatio: 0.02, fillingType: 'chocoChips', fillingGrams: 25 }),
+  'Burger Bun (Pack)': Object.freeze({ flourPerUnitGrams: 250, waterRatio: 0.65, levainRatio: 0.20, saltRatio: 0.02 }),
+  'Paket Mini Isi 4': Object.freeze({ flourPerUnitGrams: 200, waterRatio: 0.60, levainRatio: 0.15, saltRatio: 0.018, fillingType: 'creamCheese', fillingGrams: 40 }),
+  'Paket Mini Isi 8': Object.freeze({ flourPerUnitGrams: 400, waterRatio: 0.60, levainRatio: 0.15, saltRatio: 0.018, fillingType: 'creamCheese', fillingGrams: 80 }),
+});
 
-export const PRODUCT_RECIPE_MAP: RecipeMap = DEFAULT_PRODUCT_RECIPE_MAP;
+export const PRODUCT_RECIPE_MAP: Readonly<RecipeMap> = Object.freeze({ ...DEFAULT_PRODUCT_RECIPE_MAP });
 
-export const DEFAULT_FALLBACK_RECIPE: ProductRecipeRatio = {
+export const DEFAULT_FALLBACK_RECIPE: ProductRecipeRatio = Object.freeze({
   flourPerUnitGrams: 100,
   waterRatio: 0.65,
   levainRatio: 0.20,
   saltRatio: 0.02,
-};
+});
 
 export class BatchDoughCalculatorService {
-  private customRecipeMap?: Record<string, Partial<ProductRecipeRatio>> | RecipeMap;
+  private customRecipeMap?: RecipeOverrides;
   private fallbackRecipe?: Partial<ProductRecipeRatio>;
 
   constructor(
-    customRecipeMap?: Record<string, Partial<ProductRecipeRatio>> | RecipeMap,
+    customRecipeMap?: RecipeOverrides,
     fallbackRecipe?: Partial<ProductRecipeRatio>
   ) {
     this.customRecipeMap = customRecipeMap;
@@ -96,7 +97,7 @@ export class BatchDoughCalculatorService {
    */
   static getRecipeForProduct(
     productName: string,
-    customRecipeMap?: Record<string, Partial<ProductRecipeRatio>> | RecipeMap,
+    customRecipeMap?: RecipeOverrides,
     fallbackRecipe?: Partial<ProductRecipeRatio>
   ): ProductRecipeRatio {
     const baseFallback: ProductRecipeRatio = {
@@ -123,7 +124,7 @@ export class BatchDoughCalculatorService {
    */
   static calculateBatchRequirements(
     orders: OrderCreatePayload[],
-    customRecipeMap?: Record<string, Partial<ProductRecipeRatio>> | RecipeMap,
+    customRecipeMap?: RecipeOverrides,
     fallbackRecipe?: Partial<ProductRecipeRatio>
   ): DoughRecipeRequirement {
     let totalFlourGrams = 0;
