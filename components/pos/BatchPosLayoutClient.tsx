@@ -177,8 +177,8 @@ export default function BatchPosLayoutClient({
       customerId: undefined,
       customerName: '',
       customerPhone: '',
-      shippingMethod: DEFAULT_SHIPPING_METHOD,
-      shippingFee: DEFAULT_SHIPPING_FEE,
+      shippingMethod: 'COD',
+      shippingFee: 0,
     });
   };
 

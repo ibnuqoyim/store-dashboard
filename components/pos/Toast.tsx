@@ -183,14 +183,14 @@ export function useToast(): ToastContextValue {
   if (!ctx) {
     console.error('[useToast] useToast called outside ToastProvider; fallback log active');
     return {
-      showToast: (msg, type, title) => console.warn(`[Toast ${type || 'info'}]:`, title, msg),
-      success: (msg, title) => console.warn('[Toast success]:', title, msg),
-      error: (msg, title) => console.error('[Toast error]:', title, msg),
-      info: (msg, title) => console.info('[Toast info]:', title, msg),
+      showToast: (msg, type, title, action) => console.warn(`[Toast ${type || 'info'}]:`, title, msg, action),
+      success: (msg, title, action) => console.warn('[Toast success]:', title, msg, action),
+      error: (msg, title, action) => console.error('[Toast error]:', title, msg, action),
+      info: (msg, title, action) => console.info('[Toast info]:', title, msg, action),
       toast: {
-        success: (msg, title) => console.warn('[Toast success]:', title, msg),
-        error: (msg, title) => console.error('[Toast error]:', title, msg),
-        info: (msg, title) => console.info('[Toast info]:', title, msg),
+        success: (msg, title, action) => console.warn('[Toast success]:', title, msg, action),
+        error: (msg, title, action) => console.error('[Toast error]:', title, msg, action),
+        info: (msg, title, action) => console.info('[Toast info]:', title, msg, action),
       },
     };
   }
