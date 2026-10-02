@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ClipboardList, ShoppingCart, ChefHat } from 'lucide-react';
 import BatchPosHeader from './BatchPosHeader';
-import CustomerShippingForm from './CustomerShippingForm';
+import CustomerShippingForm, { DEFAULT_COURIER_FEES } from './CustomerShippingForm';
 import ProductPosCart from './ProductPosCart';
 import ProductModal from '@/components/products/ProductModal';
 import BatchOrdersList from './BatchOrdersList';
@@ -12,7 +12,7 @@ import BatchDoughResume from './BatchDoughResume';
 import { createClient } from '@/utils/supabase/client';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
 import { mapDbOrderToBatchOrder, ORDER_ITEMS_SELECT, DbOrderRow } from '@/lib/batch-pos-data';
-import { ToastProvider, useToast } from './Toast';
+import { useToast } from './Toast';
 import {
   CatalogProduct,
   CartItem,
@@ -23,9 +23,13 @@ import {
   BatchPO,
   Customer,
   Dough,
+  ShippingMethod,
 } from '@/lib/types/batch';
 
 type PosTab = 'pos' | 'orders' | 'resume';
+
+const DEFAULT_SHIPPING_METHOD: ShippingMethod = 'COD';
+const DEFAULT_SHIPPING_FEE = DEFAULT_COURIER_FEES[DEFAULT_SHIPPING_METHOD];
 
 interface BatchPosLayoutClientProps {
   initialBatchList: BatchPO[];
@@ -36,7 +40,7 @@ interface BatchPosLayoutClientProps {
   doughs: Dough[];
 }
 
-function BatchPosLayoutInner({
+export default function BatchPosLayoutClient({
   initialBatchList,
   initialActiveBatchId,
   initialCustomers,
@@ -65,8 +69,8 @@ function BatchPosLayoutInner({
   const [customerShipping, setCustomerShipping] = useState<CustomerShippingData>({
     customerName: '',
     customerPhone: '',
-    shippingMethod: 'COD',
-    shippingFee: 0,
+    shippingMethod: DEFAULT_SHIPPING_METHOD,
+    shippingFee: DEFAULT_SHIPPING_FEE,
   });
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -170,8 +174,8 @@ function BatchPosLayoutInner({
       customerId: undefined,
       customerName: '',
       customerPhone: '',
-      shippingMethod: 'COD',
-      shippingFee: 0,
+      shippingMethod: DEFAULT_SHIPPING_METHOD,
+      shippingFee: DEFAULT_SHIPPING_FEE,
     });
   };
 
@@ -490,13 +494,5 @@ function BatchPosLayoutInner({
         productToEdit={editingProduct}
       />
     </div>
-  );
-}
-
-export default function BatchPosLayoutClient(props: BatchPosLayoutClientProps) {
-  return (
-    <ToastProvider>
-      <BatchPosLayoutInner {...props} />
-    </ToastProvider>
   );
 }

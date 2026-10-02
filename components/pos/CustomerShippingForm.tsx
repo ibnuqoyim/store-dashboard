@@ -42,19 +42,13 @@ export default function CustomerShippingForm({
 
   const handleSelectCustomer = (cust: Customer) => {
     const courier = (cust.default_courier as ShippingMethod) || data.shippingMethod;
-    const fee =
-      courier === 'COD' || courier === 'Ambil Sendiri'
-        ? 0
-        : data.shippingFee > 0
-        ? data.shippingFee
-        : DEFAULT_COURIER_FEES[courier] ?? 15000;
     onChange({
       ...data,
       customerId: cust.id,
       customerName: cust.name,
       customerPhone: cust.phone || data.customerPhone,
       shippingMethod: courier,
-      shippingFee: fee,
+      shippingFee: DEFAULT_COURIER_FEES[courier] ?? 0,
     });
     setIsOpenSuggestions(false);
   };
@@ -139,16 +133,10 @@ export default function CustomerShippingForm({
             value={data.shippingMethod}
             onChange={(e) => {
               const selectedMethod = e.target.value as ShippingMethod;
-              const autoFee =
-                selectedMethod === 'COD' || selectedMethod === 'Ambil Sendiri'
-                  ? 0
-                  : data.shippingFee > 0
-                  ? data.shippingFee
-                  : DEFAULT_COURIER_FEES[selectedMethod] ?? 15000;
               onChange({
                 ...data,
                 shippingMethod: selectedMethod,
-                shippingFee: autoFee,
+                shippingFee: DEFAULT_COURIER_FEES[selectedMethod] ?? 0,
               });
             }}
             className="w-full bg-white border border-amber-300 text-gray-800 font-bold text-xs rounded-lg p-2.5 xl:p-1.5 focus:ring-2 focus:ring-amber-500 focus:outline-none"
