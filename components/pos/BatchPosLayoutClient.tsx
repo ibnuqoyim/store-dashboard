@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ClipboardList, ShoppingCart, ChefHat } from 'lucide-react';
 import BatchPosHeader from './BatchPosHeader';
-import CustomerShippingForm, { DEFAULT_COURIER_FEES } from './CustomerShippingForm';
+import CustomerShippingForm from './CustomerShippingForm';
 import ProductPosCart from './ProductPosCart';
 import ProductModal from '@/components/products/ProductModal';
 import BatchOrdersList from './BatchOrdersList';
@@ -24,10 +24,13 @@ import {
   Customer,
   Dough,
   ShippingMethod,
+  DEFAULT_COURIER_FEES,
 } from '@/lib/types/batch';
 
 type PosTab = 'pos' | 'orders' | 'resume';
 
+// Business Requirement: Default shipping method is set to 'COD' with Rp 0 fee for fast in-store
+// order entry. When another courier is chosen (e.g. Ahsan/TIKI), default fee from DEFAULT_COURIER_FEES applies.
 const DEFAULT_SHIPPING_METHOD: ShippingMethod = 'COD';
 const DEFAULT_SHIPPING_FEE = DEFAULT_COURIER_FEES[DEFAULT_SHIPPING_METHOD];
 

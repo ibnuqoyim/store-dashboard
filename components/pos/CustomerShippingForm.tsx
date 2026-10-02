@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { UserCheck, Search } from 'lucide-react';
-import { CustomerShippingData, ShippingMethod, Customer } from '@/lib/types/batch';
+import { CustomerShippingData, ShippingMethod, Customer, DEFAULT_COURIER_FEES } from '@/lib/types/batch';
 
 interface CustomerShippingFormProps {
   data: CustomerShippingData;
@@ -10,13 +10,6 @@ interface CustomerShippingFormProps {
   onChange: (updated: CustomerShippingData) => void;
   onAddNewCustomer?: (name: string, phone: string, courier?: ShippingMethod) => void;
 }
-
-export const DEFAULT_COURIER_FEES: Record<ShippingMethod, number> = {
-  COD: 0,
-  'Ambil Sendiri': 0,
-  Ahsan: 15000,
-  TIKI: 20000,
-};
 
 export default function CustomerShippingForm({
   data,

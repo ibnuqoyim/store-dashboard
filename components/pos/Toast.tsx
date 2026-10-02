@@ -158,13 +158,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
   if (!ctx) {
+    if (process.env.NODE_ENV !== 'production') {
+      throw new Error('useToast must be used within a ToastProvider');
+    }
+    console.warn('[useToast] Missing ToastProvider in component tree');
     return {
-      showToast: (msg, type, title) => console.log(`[Toast ${type || 'info'}]:`, title, msg),
-      success: (msg, title) => console.log('[Toast success]:', title, msg),
+      showToast: (msg, type, title) => console.warn(`[Toast ${type || 'info'}]:`, title, msg),
+      success: (msg, title) => console.warn('[Toast success]:', title, msg),
       error: (msg, title) => console.error('[Toast error]:', title, msg),
       info: (msg, title) => console.info('[Toast info]:', title, msg),
       toast: {
-        success: (msg, title) => console.log('[Toast success]:', title, msg),
+        success: (msg, title) => console.warn('[Toast success]:', title, msg),
         error: (msg, title) => console.error('[Toast error]:', title, msg),
         info: (msg, title) => console.info('[Toast info]:', title, msg),
       },
