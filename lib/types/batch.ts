@@ -3,6 +3,13 @@ export type PayMethod = 'QRIS' | 'Transfer BCA' | 'Cash';
 export type OrderStatus = 'PENDING' | 'IN PREP' | 'READY';
 export type ShippingMethod = 'Ahsan' | 'TIKI' | 'COD' | 'Ambil Sendiri';
 
+export const DEFAULT_COURIER_FEES: Record<ShippingMethod, number> = Object.freeze({
+  COD: 0,
+  'Ambil Sendiri': 0,
+  Ahsan: 15000,
+  TIKI: 20000,
+});
+
 export interface CatalogProduct {
   id: string;
   name: string;

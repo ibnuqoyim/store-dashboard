@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { UserCheck, Search } from 'lucide-react';
-import { CustomerShippingData, ShippingMethod, Customer } from '@/lib/types/batch';
+import { CustomerShippingData, ShippingMethod, Customer, DEFAULT_COURIER_FEES } from '@/lib/types/batch';
 
 interface CustomerShippingFormProps {
   data: CustomerShippingData;
@@ -33,13 +33,22 @@ export default function CustomerShippingForm({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const resolveCourierFee = (newMethod: ShippingMethod, currentFee: number): number => {
+    // If fee is 0 or matches any standard default fee, adopt the new courier's standard fee.
+    // If cashier entered a custom fee (e.g. negotiated rate), preserve it across courier selection.
+    const isStandardFee = currentFee === 0 || Object.values(DEFAULT_COURIER_FEES).includes(currentFee);
+    return isStandardFee ? (DEFAULT_COURIER_FEES[newMethod] ?? 0) : currentFee;
+  };
+
   const handleSelectCustomer = (cust: Customer) => {
+    const courier = (cust.default_courier as ShippingMethod) || data.shippingMethod;
     onChange({
       ...data,
       customerId: cust.id,
       customerName: cust.name,
       customerPhone: cust.phone || data.customerPhone,
-      shippingMethod: (cust.default_courier as ShippingMethod) || data.shippingMethod,
+      shippingMethod: courier,
+      shippingFee: resolveCourierFee(courier, data.shippingFee),
     });
     setIsOpenSuggestions(false);
   };
@@ -122,7 +131,14 @@ export default function CustomerShippingForm({
           <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Kurir / Pengiriman *</label>
           <select
             value={data.shippingMethod}
-            onChange={(e) => onChange({ ...data, shippingMethod: e.target.value as ShippingMethod })}
+            onChange={(e) => {
+              const selectedMethod = e.target.value as ShippingMethod;
+              onChange({
+                ...data,
+                shippingMethod: selectedMethod,
+                shippingFee: resolveCourierFee(selectedMethod, data.shippingFee),
+              });
+            }}
             className="w-full bg-white border border-amber-300 text-gray-800 font-bold text-xs rounded-lg p-2.5 xl:p-1.5 focus:ring-2 focus:ring-amber-500 focus:outline-none"
           >
             <option value="Ahsan">Ahsan Express (Kurir)</option>
@@ -142,6 +158,9 @@ export default function CustomerShippingForm({
           />
         </div>
       </div>
+      <p className="text-[10px] text-amber-800/80 italic">
+        * Default kurir COD (Rp 0). Mengganti kurir otomatis memuat tarif standar, atau ketik langsung nominal ongkir di atas.
+      </p>
     </div>
   );
 }

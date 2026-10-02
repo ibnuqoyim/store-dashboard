@@ -4,17 +4,22 @@ import React, { useMemo } from 'react';
 import { ChefHat, Wheat, Droplets, Sparkles, Cookie, AlertCircle } from 'lucide-react';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
 import { BatchOrder } from '@/lib/types/batch';
-import { BatchDoughCalculatorService, OrderCreatePayload } from '@/lib/batch-dough-calculator';
+import { BatchDoughCalculatorService, OrderCreatePayload, RecipeOverrides } from '@/lib/batch-dough-calculator';
 
 interface BatchDoughResumeProps {
   orders: BatchOrder[];
   activeBatchName: string;
+  customRecipeMap?: RecipeOverrides;
 }
 
 // Move formatCurrency helper to module scope to avoid re-allocation on every render
 const fc = (amount: number) => formatCurrency(amount, DEFAULT_CONFIG);
 
-export default function BatchDoughResume({ orders, activeBatchName }: BatchDoughResumeProps) {
+export default function BatchDoughResume({
+  orders,
+  activeBatchName,
+  customRecipeMap,
+}: BatchDoughResumeProps) {
   // Transform BatchOrder array to OrderCreatePayload for BatchDoughCalculatorService
   const reqSummary = useMemo(() => {
     const payloadOrders: OrderCreatePayload[] = orders.map((o) => ({
@@ -34,8 +39,8 @@ export default function BatchDoughResume({ orders, activeBatchName }: BatchDough
       })),
     }));
 
-    return BatchDoughCalculatorService.calculateBatchRequirements(payloadOrders);
-  }, [orders, activeBatchName]);
+    return BatchDoughCalculatorService.calculateBatchRequirements(payloadOrders, customRecipeMap);
+  }, [orders, activeBatchName, customRecipeMap]);
 
   // Summarize Product Item Totals aggregated by productId for accuracy
   const productSummary = useMemo(() => {

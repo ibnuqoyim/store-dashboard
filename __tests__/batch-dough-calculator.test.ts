@@ -107,4 +107,119 @@ describe('lib/batch-dough-calculator', () => {
     const result = BatchDoughCalculatorService.calculateBatchRequirements(orders)
     expect(result.ingredients.flourKg).toBe(0.2)
   })
+
+  it('supports dynamic recipe ratio overrides via customRecipeMap', () => {
+    const orders: OrderCreatePayload[] = [
+      {
+        batchId: 'batch-custom',
+        customerName: 'Dewi',
+        shippingMethod: 'COD',
+        shippingFee: 0,
+        payStatus: 'PAID',
+        payMethod: 'Cash',
+        items: [
+          {
+            productId: 'prod-mb',
+            productName: 'Milk Bread',
+            qty: 10,
+            unitPrice: 25000,
+          },
+        ],
+      },
+    ]
+
+    // Override Milk Bread flour to 150g and water to 0.60
+    const customRecipeMap = {
+      'Milk Bread': {
+        flourPerUnitGrams: 150,
+        waterRatio: 0.60,
+      },
+    }
+
+    // 10 * 150g = 1500g = 1.5kg flour
+    // water: 1500 * 0.60 = 900g = 0.9L
+    const result = BatchDoughCalculatorService.calculateBatchRequirements(orders, customRecipeMap)
+    expect(result.ingredients.flourKg).toBe(1.5)
+    expect(result.ingredients.waterLiter).toBe(0.9)
+  })
+
+  it('supports injecting new recipes for unmapped products and instance-based calculate', () => {
+    const orders: OrderCreatePayload[] = [
+      {
+        batchId: 'batch-instance',
+        customerName: 'Rian',
+        shippingMethod: 'COD',
+        shippingFee: 0,
+        payStatus: 'PAID',
+        payMethod: 'Cash',
+        items: [
+          {
+            productId: 'prod-brioche',
+            productName: 'Brioche Bun',
+            qty: 5,
+            unitPrice: 35000,
+          },
+        ],
+      },
+    ]
+
+    const customMap = {
+      'Brioche Bun': {
+        flourPerUnitGrams: 200,
+        waterRatio: 0.5,
+        levainRatio: 0.1,
+        saltRatio: 0.02,
+      },
+    }
+
+    const service = new BatchDoughCalculatorService(customMap)
+    const result = service.calculate(orders)
+
+    // 5 * 200g = 1000g = 1kg flour
+    // water: 1000 * 0.5 = 500g = 0.5L
+    // levain: 1000 * 0.1 = 100g = 0.1kg
+    // salt: 1000 * 0.02 = 20g
+    expect(result.ingredients.flourKg).toBe(1.0)
+    expect(result.ingredients.waterLiter).toBe(0.5)
+    expect(result.ingredients.levainActiveKg).toBe(0.1)
+    expect(result.ingredients.saltGrams).toBe(20)
+    expect(result.totalWeightKg).toBe(1.6)
+  })
+
+  it('sanitizes and clamps negative or out-of-bounds ratios safely', () => {
+    const orders: OrderCreatePayload[] = [
+      {
+        batchId: 'batch-sanitize',
+        customerName: 'Maya',
+        shippingMethod: 'COD',
+        shippingFee: 0,
+        payStatus: 'PAID',
+        payMethod: 'Cash',
+        items: [
+          {
+            productId: 'prod-sanitize',
+            productName: 'Extreme Loaf',
+            qty: 1,
+            unitPrice: 20000,
+          },
+        ],
+      },
+    ]
+
+    const customMap = {
+      'Extreme Loaf': {
+        flourPerUnitGrams: -100, // Should clamp to 0
+        waterRatio: -0.5,        // Should clamp to 0
+        levainRatio: -0.2,       // Should clamp to 0
+        saltRatio: -0.01,        // Should clamp to 0
+      },
+    }
+
+    const result = BatchDoughCalculatorService.calculateBatchRequirements(orders, customMap)
+    expect(result.ingredients.flourKg).toBe(0)
+    expect(result.ingredients.waterLiter).toBe(0)
+    expect(result.ingredients.levainActiveKg).toBe(0)
+    expect(result.ingredients.saltGrams).toBe(0)
+    expect(result.totalWeightKg).toBe(0)
+  })
 })

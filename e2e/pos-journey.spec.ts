@@ -133,19 +133,12 @@ test.describe('Batch POS & Checkout User Journey', () => {
     // Add item to cart
     await page.locator('h4', { hasText: 'Sourdough Country Loaf' }).click()
 
-    // Expect confirmation alert on order submit using once listener before clicking
-    let dialogAppeared = false
-    page.once('dialog', async dialog => {
-      dialogAppeared = true
-      expect(dialog.message()).toMatch(/berhasil/i)
-      await dialog.accept()
-    })
-
     // Submit order
     const submitButton = page.getByRole('button', { name: /simpan order/i })
     await submitButton.click()
 
-    // Assert order placement completed
-    await expect.poll(() => dialogAppeared, { timeout: 10000 }).toBe(true)
+    // Assert order placement completed via Toast notification and remains on Kasir view
+    await expect(page.locator('[data-toast="success"]').filter({ hasText: /berhasil/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: /kasir/i })).toBeVisible()
   })
 })

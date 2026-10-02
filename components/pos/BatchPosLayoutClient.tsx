@@ -12,6 +12,7 @@ import BatchDoughResume from './BatchDoughResume';
 import { createClient } from '@/utils/supabase/client';
 import { DEFAULT_CONFIG, formatCurrency } from '@/lib/config';
 import { mapDbOrderToBatchOrder, ORDER_ITEMS_SELECT, DbOrderRow } from '@/lib/batch-pos-data';
+import { useToast } from './Toast';
 import {
   CatalogProduct,
   CartItem,
@@ -22,9 +23,16 @@ import {
   BatchPO,
   Customer,
   Dough,
+  ShippingMethod,
+  DEFAULT_COURIER_FEES,
 } from '@/lib/types/batch';
 
 type PosTab = 'pos' | 'orders' | 'resume';
+
+// Business Requirement: Default shipping method is set to 'COD' with Rp 0 fee for fast in-store
+// order entry. When another courier is chosen (e.g. Ahsan/TIKI), default fee from DEFAULT_COURIER_FEES applies.
+const DEFAULT_SHIPPING_METHOD: ShippingMethod = 'COD';
+const DEFAULT_SHIPPING_FEE = DEFAULT_COURIER_FEES[DEFAULT_SHIPPING_METHOD];
 
 interface BatchPosLayoutClientProps {
   initialBatchList: BatchPO[];
@@ -45,6 +53,7 @@ export default function BatchPosLayoutClient({
 }: BatchPosLayoutClientProps) {
   const router = useRouter();
   const supabase = createClient();
+  const { toast } = useToast();
 
   const [batchList, setBatchList] = useState<BatchPO[]>(initialBatchList);
   const [activeBatchId, setActiveBatchId] = useState<string | null>(initialActiveBatchId);
@@ -59,12 +68,12 @@ export default function BatchPosLayoutClient({
 
   const activeBatch = batchList.find((b) => b.id === activeBatchId);
 
-  // Form & Cart States
+  // Form & Cart States — COD is default with 0 shipping fee
   const [customerShipping, setCustomerShipping] = useState<CustomerShippingData>({
     customerName: '',
     customerPhone: '',
-    shippingMethod: 'Ahsan',
-    shippingFee: 15000,
+    shippingMethod: DEFAULT_SHIPPING_METHOD,
+    shippingFee: DEFAULT_SHIPPING_FEE,
   });
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -81,7 +90,7 @@ export default function BatchPosLayoutClient({
     setIsLoadingOrders(false);
 
     if (error) {
-      alert('Gagal memuat order batch: ' + error.message);
+      toast.error('Gagal memuat order batch: ' + error.message, 'Gagal Memuat');
       return;
     }
     setBatchOrders(((data || []) as unknown as DbOrderRow[]).map(mapDbOrderToBatchOrder));
@@ -93,7 +102,7 @@ export default function BatchPosLayoutClient({
 
     const exists = batchList.some((b) => b.name.toLowerCase() === trimmed.toLowerCase());
     if (exists) {
-      alert(`Batch PO "${trimmed}" sudah ada! Harap gunakan nama lain.`);
+      toast.error(`Batch PO "${trimmed}" sudah ada! Harap gunakan nama lain.`, 'Batch Sudah Ada');
       return;
     }
 
@@ -104,13 +113,14 @@ export default function BatchPosLayoutClient({
       .single();
 
     if (error || !data) {
-      alert('Gagal membuat Batch PO: ' + (error?.message ?? 'unknown error'));
+      toast.error('Gagal membuat Batch PO: ' + (error?.message ?? 'unknown error'), 'Gagal Membuat Batch');
       return;
     }
 
     setBatchList((prev) => [data, ...prev]);
     setActiveBatchId(data.id);
     setBatchOrders([]);
+    toast.success(`Batch PO "${data.name}" berhasil dibuat!`, 'Batch Dibuat');
     router.refresh();
   };
 
@@ -164,9 +174,10 @@ export default function BatchPosLayoutClient({
   const handleClearCart = () => {
     setCart([]);
     setCustomerShipping({
+      customerId: undefined,
       customerName: '',
       customerPhone: '',
-      shippingMethod: 'Ahsan',
+      shippingMethod: 'COD',
       shippingFee: 0,
     });
   };
@@ -207,15 +218,19 @@ export default function BatchPosLayoutClient({
     const trimmedCustomerName = customerShipping.customerName.trim();
 
     if (!trimmedCustomerName) {
-      alert('Harap isi Nama Pembeli terlebih dahulu!');
+      toast.error('Harap isi Nama Pembeli terlebih dahulu!', 'Validasi Gagal');
+      return;
+    }
+    if (!customerShipping.shippingMethod) {
+      toast.error('Harap tentukan metode kurir / pengiriman terlebih dahulu!', 'Validasi Gagal');
       return;
     }
     if (cart.length === 0) {
-      alert('Keranjang masih kosong!');
+      toast.error('Keranjang masih kosong! Pilih minimal satu produk.', 'Validasi Gagal');
       return;
     }
     if (!activeBatchId) {
-      alert('Pilih atau buat Batch PO terlebih dahulu!');
+      toast.error('Pilih atau buat Batch PO terlebih dahulu!', 'Validasi Gagal');
       return;
     }
 
@@ -314,11 +329,19 @@ export default function BatchPosLayoutClient({
       await fetchOrdersForBatch(activeBatchId);
       handleClearCart();
       router.refresh();
-      setActiveTab('orders');
-      alert(`Order ${invoiceNumber} berhasil ditambahkan ke ${activeBatch?.name ?? 'batch ini'}!\nTotal: ${fc(subtotal + customerShipping.shippingFee)}`);
+      // Tetap di tab kasir ('pos') agar kasir bisa langsung input order berikutnya,
+      // dengan tombol aksi di toast jika ingin berpindah ke tab Order Batch.
+      toast.success(
+        `Order ${invoiceNumber} berhasil ditambahkan ke ${activeBatch?.name ?? 'batch ini'}!\nTotal: ${fc(subtotal + customerShipping.shippingFee)}`,
+        'Order Berhasil Dibuat',
+        {
+          label: 'Lihat Order di Batch →',
+          onClick: () => setActiveTab('orders'),
+        }
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Terjadi kesalahan tidak dikenal';
-      alert('Gagal menyimpan order: ' + message);
+      toast.error('Gagal menyimpan order: ' + message, 'Gagal Menyimpan Order');
     } finally {
       setIsSubmitting(false);
     }
@@ -332,7 +355,9 @@ export default function BatchPosLayoutClient({
     const { error } = await supabase.from('orders').update({ order_status: newStatus }).eq('id', orderId);
     if (error) {
       setBatchOrders(previous);
-      alert('Gagal mengubah status order: ' + error.message);
+      toast.error('Gagal mengubah status order: ' + error.message, 'Gagal Update Status');
+    } else {
+      toast.success(`Status order diubah ke ${newStatus}`, 'Status Diperbarui');
     }
   };
 
@@ -357,7 +382,9 @@ export default function BatchPosLayoutClient({
     const { error } = await supabase.from('orders').update(updatePayload).eq('id', orderId);
     if (error) {
       setBatchOrders(previous);
-      alert('Gagal mengubah status pembayaran: ' + error.message);
+      toast.error('Gagal mengubah status pembayaran: ' + error.message, 'Gagal Update Pembayaran');
+    } else {
+      toast.success(`Status pembayaran diubah ke ${newPayStatus}`, 'Pembayaran Diperbarui');
     }
   };
 

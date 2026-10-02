@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PackageSearch, Search, Plus, ShoppingBag, Trash2, CheckCircle2, Loader2, ImageOff, Pencil } from 'lucide-react';
+import { PackageSearch, Search, Plus, ShoppingBag, Trash2, CheckCircle2, Loader2, ImageOff, Pencil, X } from 'lucide-react';
 import { formatCurrency } from '@/lib/config';
 import { useBusinessConfig } from '@/lib/business-config-context';
 import { getResizedImageUrl } from '@/lib/cloudinary-image';
@@ -56,15 +56,26 @@ export default function ProductPosCart({
 
       {/* Product Search & Category Filters */}
       <div className="space-y-1.5">
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+        <div className="relative flex items-center">
+          <Search className="w-4 h-4 absolute left-3 text-gray-400 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari produk..."
-            className="w-full pl-9 pr-4 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-amber-500 focus:bg-white transition"
+            className="w-full pl-9 pr-8 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-amber-500 focus:bg-white transition"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-200 transition cursor-pointer"
+              title="Hapus pencarian"
+              aria-label="Hapus pencarian"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
