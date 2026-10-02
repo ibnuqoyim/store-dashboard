@@ -5,23 +5,29 @@ import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info';
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface ToastItem {
   id: string;
   type: ToastType;
   title?: string;
   message: string;
   duration?: number;
+  action?: ToastAction;
 }
 
 export interface ToastContextValue {
-  showToast: (message: string, type?: ToastType, title?: string) => void;
-  success: (message: string, title?: string) => void;
-  error: (message: string, title?: string) => void;
-  info: (message: string, title?: string) => void;
+  showToast: (message: string, type?: ToastType, title?: string, action?: ToastAction) => void;
+  success: (message: string, title?: string, action?: ToastAction) => void;
+  error: (message: string, title?: string, action?: ToastAction) => void;
+  info: (message: string, title?: string, action?: ToastAction) => void;
   toast: {
-    success: (message: string, title?: string) => void;
-    error: (message: string, title?: string) => void;
-    info: (message: string, title?: string) => void;
+    success: (message: string, title?: string, action?: ToastAction) => void;
+    error: (message: string, title?: string, action?: ToastAction) => void;
+    info: (message: string, title?: string, action?: ToastAction) => void;
   };
 }
 
@@ -35,13 +41,18 @@ export function ToastItemComponent({
   onDismiss: (id: string) => void;
 }) {
   const duration = toast.duration ?? 4000;
+  const onDismissRef = React.useRef(onDismiss);
+
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      onDismiss(toast.id);
+      onDismissRef.current(toast.id);
     }, duration);
     return () => clearTimeout(timer);
-  }, [toast.id, toast.message, duration, onDismiss]);
+  }, [toast.id, duration]);
 
   const icons = {
     success: <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />,
@@ -69,6 +80,18 @@ export function ToastItemComponent({
         <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-line break-words">
           {toast.message}
         </p>
+        {toast.action && (
+          <button
+            type="button"
+            onClick={() => {
+              toast.action?.onClick();
+              onDismiss(toast.id);
+            }}
+            className="mt-2 text-[11px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-md transition inline-flex items-center cursor-pointer"
+          >
+            {toast.action.label}
+          </button>
+        )}
       </div>
       <button
         type="button"
@@ -110,31 +133,31 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const showToast = useCallback((message: string, type: ToastType = 'info', title?: string) => {
+  const showToast = useCallback((message: string, type: ToastType = 'info', title?: string, action?: ToastAction) => {
     const id =
       typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
         ? crypto.randomUUID()
         : Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
-    setToasts((prev) => [...prev, { id, type, title, message }]);
+    setToasts((prev) => [...prev, { id, type, title, message, action }]);
   }, []);
 
   const success = useCallback(
-    (message: string, title?: string) => {
-      showToast(message, 'success', title);
+    (message: string, title?: string, action?: ToastAction) => {
+      showToast(message, 'success', title, action);
     },
     [showToast]
   );
 
   const error = useCallback(
-    (message: string, title?: string) => {
-      showToast(message, 'error', title);
+    (message: string, title?: string, action?: ToastAction) => {
+      showToast(message, 'error', title, action);
     },
     [showToast]
   );
 
   const info = useCallback(
-    (message: string, title?: string) => {
-      showToast(message, 'info', title);
+    (message: string, title?: string, action?: ToastAction) => {
+      showToast(message, 'info', title, action);
     },
     [showToast]
   );

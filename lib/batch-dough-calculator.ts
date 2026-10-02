@@ -106,13 +106,16 @@ export class BatchDoughCalculatorService {
     const baseRecipe = PRODUCT_RECIPE_MAP[productName] || baseFallback;
     const customRatio = customRecipeMap?.[productName];
 
-    if (!customRatio) {
-      return baseRecipe;
-    }
+    const merged = customRatio ? { ...baseRecipe, ...customRatio } : baseRecipe;
 
+    // Sanitize and validate ratio bounds to protect production calculations
     return {
-      ...baseRecipe,
-      ...customRatio,
+      flourPerUnitGrams: Math.max(0, merged.flourPerUnitGrams ?? 100),
+      waterRatio: Math.max(0, Math.min(2, merged.waterRatio ?? 0.65)),
+      levainRatio: Math.max(0, Math.min(1, merged.levainRatio ?? 0.20)),
+      saltRatio: Math.max(0, Math.min(0.1, merged.saltRatio ?? 0.02)),
+      fillingType: merged.fillingType,
+      fillingGrams: merged.fillingGrams !== undefined ? Math.max(0, merged.fillingGrams) : undefined,
     };
   }
 

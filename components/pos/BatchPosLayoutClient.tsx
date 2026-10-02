@@ -329,10 +329,15 @@ export default function BatchPosLayoutClient({
       await fetchOrdersForBatch(activeBatchId);
       handleClearCart();
       router.refresh();
-      // Tetap di tab kasir ('pos') agar kasir bisa langsung input order berikutnya
+      // Tetap di tab kasir ('pos') agar kasir bisa langsung input order berikutnya,
+      // dengan tombol aksi di toast jika ingin berpindah ke tab Order Batch.
       toast.success(
         `Order ${invoiceNumber} berhasil ditambahkan ke ${activeBatch?.name ?? 'batch ini'}!\nTotal: ${fc(subtotal + customerShipping.shippingFee)}`,
-        'Order Berhasil Dibuat'
+        'Order Berhasil Dibuat',
+        {
+          label: 'Lihat Order di Batch →',
+          onClick: () => setActiveTab('orders'),
+        }
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Terjadi kesalahan tidak dikenal';

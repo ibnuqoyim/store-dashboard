@@ -185,4 +185,41 @@ describe('lib/batch-dough-calculator', () => {
     expect(result.ingredients.saltGrams).toBe(20)
     expect(result.totalWeightKg).toBe(1.6)
   })
+
+  it('sanitizes and clamps negative or out-of-bounds ratios safely', () => {
+    const orders: OrderCreatePayload[] = [
+      {
+        batchId: 'batch-sanitize',
+        customerName: 'Maya',
+        shippingMethod: 'COD',
+        shippingFee: 0,
+        payStatus: 'PAID',
+        payMethod: 'Cash',
+        items: [
+          {
+            productId: 'prod-sanitize',
+            productName: 'Extreme Loaf',
+            qty: 1,
+            unitPrice: 20000,
+          },
+        ],
+      },
+    ]
+
+    const customMap = {
+      'Extreme Loaf': {
+        flourPerUnitGrams: -100, // Should clamp to 0
+        waterRatio: -0.5,        // Should clamp to 0
+        levainRatio: -0.2,       // Should clamp to 0
+        saltRatio: -0.01,        // Should clamp to 0
+      },
+    }
+
+    const result = BatchDoughCalculatorService.calculateBatchRequirements(orders, customMap)
+    expect(result.ingredients.flourKg).toBe(0)
+    expect(result.ingredients.waterLiter).toBe(0)
+    expect(result.ingredients.levainActiveKg).toBe(0)
+    expect(result.ingredients.saltGrams).toBe(0)
+    expect(result.totalWeightKg).toBe(0)
+  })
 })
