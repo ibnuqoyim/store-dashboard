@@ -151,6 +151,9 @@ export default function CustomerShippingForm({
           />
         </div>
       </div>
+      <p className="text-[10px] text-amber-800/80 italic">
+        * Default kurir COD (Rp 0). Mengganti kurir otomatis memuat tarif standar, atau ketik langsung nominal ongkir di atas.
+      </p>
     </div>
   );
 }

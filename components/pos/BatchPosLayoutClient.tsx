@@ -221,6 +221,10 @@ export default function BatchPosLayoutClient({
       toast.error('Harap isi Nama Pembeli terlebih dahulu!', 'Validasi Gagal');
       return;
     }
+    if (!customerShipping.shippingMethod) {
+      toast.error('Harap tentukan metode kurir / pengiriman terlebih dahulu!', 'Validasi Gagal');
+      return;
+    }
     if (cart.length === 0) {
       toast.error('Keranjang masih kosong! Pilih minimal satu produk.', 'Validasi Gagal');
       return;

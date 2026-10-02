@@ -158,10 +158,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
   if (!ctx) {
-    if (process.env.NODE_ENV !== 'production') {
-      throw new Error('useToast must be used within a ToastProvider');
-    }
-    console.warn('[useToast] Missing ToastProvider in component tree');
+    console.error('[useToast] useToast called outside ToastProvider; fallback log active');
     return {
       showToast: (msg, type, title) => console.warn(`[Toast ${type || 'info'}]:`, title, msg),
       success: (msg, title) => console.warn('[Toast success]:', title, msg),
