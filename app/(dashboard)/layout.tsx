@@ -3,6 +3,7 @@ import Sidebar from '@/components/layout/Sidebar'
 import { createClient } from '@/utils/supabase/server'
 import { BusinessConfigProvider } from '@/lib/business-config-context'
 import { DEFAULT_CONFIG, getEnvDefaults, BusinessConfig } from '@/lib/config'
+import { ToastProvider } from '@/components/pos/Toast'
 import { redirect } from 'next/navigation'
 
 export default async function DashboardLayout({
@@ -39,15 +40,17 @@ export default async function DashboardLayout({
 
     return (
         <BusinessConfigProvider config={config}>
-            <style>{`:root { --color-primary: ${config.primary_color}; }`}</style>
-            <div className="flex h-screen bg-gray-100">
-                <Sidebar />
-                <div className="flex-1 flex flex-col overflow-hidden w-full lg:w-auto">
-                    <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 sm:p-6 lg:p-8">
-                        {children}
-                    </main>
+            <ToastProvider>
+                <style>{`:root { --color-primary: ${config.primary_color}; }`}</style>
+                <div className="flex h-screen bg-gray-100">
+                    <Sidebar />
+                    <div className="flex-1 flex flex-col overflow-hidden w-full lg:w-auto">
+                        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 sm:p-6 lg:p-8">
+                            {children}
+                        </main>
+                    </div>
                 </div>
-            </div>
+            </ToastProvider>
         </BusinessConfigProvider>
     )
 }

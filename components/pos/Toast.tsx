@@ -40,19 +40,21 @@ export function ToastItemComponent({
   toast: ToastItem;
   onDismiss: (id: string) => void;
 }) {
-  const duration = toast.duration ?? 4000;
+  const duration = toast.duration ?? (toast.action ? 6000 : 4000);
   const onDismissRef = React.useRef(onDismiss);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     onDismissRef.current = onDismiss;
   }, [onDismiss]);
 
   useEffect(() => {
+    if (isPaused) return;
     const timer = setTimeout(() => {
       onDismissRef.current(toast.id);
     }, duration);
     return () => clearTimeout(timer);
-  }, [toast.id, duration]);
+  }, [toast.id, duration, isPaused]);
 
   const icons = {
     success: <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />,
@@ -70,6 +72,8 @@ export function ToastItemComponent({
     <div
       role="alert"
       data-toast={toast.type}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
       className={`flex items-start gap-3 p-3.5 rounded-xl border max-w-sm w-full transition-all duration-300 pointer-events-auto ${borderStyles[toast.type]}`}
     >
       {icons[toast.type]}
@@ -181,16 +185,23 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
   if (!ctx) {
-    console.error('[useToast] useToast called outside ToastProvider; fallback log active');
+    console.warn('[useToast] useToast called outside ToastProvider; fallback alert active');
+    const fallbackAlert = (msg: string) => {
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(msg);
+      } else {
+        console.warn('[Toast fallback alert]:', msg);
+      }
+    };
     return {
-      showToast: (msg, type, title, action) => console.warn(`[Toast ${type || 'info'}]:`, title, msg, action),
-      success: (msg, title, action) => console.warn('[Toast success]:', title, msg, action),
-      error: (msg, title, action) => console.error('[Toast error]:', title, msg, action),
-      info: (msg, title, action) => console.info('[Toast info]:', title, msg, action),
+      showToast: (msg) => fallbackAlert(msg),
+      success: (msg) => fallbackAlert(msg),
+      error: (msg) => fallbackAlert(msg),
+      info: (msg) => fallbackAlert(msg),
       toast: {
-        success: (msg, title, action) => console.warn('[Toast success]:', title, msg, action),
-        error: (msg, title, action) => console.error('[Toast error]:', title, msg, action),
-        info: (msg, title, action) => console.info('[Toast info]:', title, msg, action),
+        success: (msg) => fallbackAlert(msg),
+        error: (msg) => fallbackAlert(msg),
+        info: (msg) => fallbackAlert(msg),
       },
     };
   }
