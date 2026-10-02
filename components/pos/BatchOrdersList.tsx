@@ -6,6 +6,7 @@ import { formatCurrency } from '@/lib/config';
 import { useBusinessConfig } from '@/lib/business-config-context';
 import { generateInvoicePdf, mapBatchOrderToInvoicePdfOrder } from '@/lib/invoice-pdf';
 import { BatchOrder, OrderStatus, PayStatus, ShippingMethod } from '@/lib/types/batch';
+import { useToast } from './Toast';
 
 interface BatchOrdersListProps {
   orders: BatchOrder[];
@@ -33,14 +34,16 @@ export default function BatchOrdersList({
 
   const config = useBusinessConfig();
   const fc = (amount: number) => formatCurrency(amount, config);
+  const { toast } = useToast();
 
   const handleDownloadStruk = async (order: BatchOrder) => {
     try {
       setDownloadingId(order.id);
       await generateInvoicePdf(mapBatchOrderToInvoicePdfOrder(order), config);
+      toast.success(`Invoice PDF ${order.invoiceNumber} berhasil diunduh.`, 'Download Berhasil');
     } catch (err) {
       console.error('Error generating PDF struk:', err);
-      alert('Gagal mengunduh invoice PDF. Silakan coba lagi.');
+      toast.error('Gagal mengunduh invoice PDF. Silakan coba lagi.', 'Download Gagal');
     } finally {
       setDownloadingId(null);
     }

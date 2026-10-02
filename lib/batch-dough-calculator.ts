@@ -34,24 +34,98 @@ export interface DoughRecipeRequirement {
   fillings: {
     creamCheeseKg?: number;
     chocoChipsKg?: number;
+    [key: string]: number | undefined;
   };
 }
 
+export interface ProductRecipeRatio {
+  flourPerUnitGrams: number;
+  waterRatio: number;
+  levainRatio: number;
+  saltRatio: number;
+  fillingType?: string;
+  fillingGrams?: number;
+}
+
+export type RecipeMap = Record<string, ProductRecipeRatio>;
+
 // Master Recipe Multipliers per Product Category
-const PRODUCT_RECIPE_MAP: Record<string, { flourPerUnitGrams: number; waterRatio: number; levainRatio: number; saltRatio: number; fillingType?: string; fillingGrams?: number }> = {
+export const DEFAULT_PRODUCT_RECIPE_MAP: RecipeMap = {
   'Milk Bread': { flourPerUnitGrams: 120, waterRatio: 0.65, levainRatio: 0.20, saltRatio: 0.02 },
   'Earl Grey CC Mini': { flourPerUnitGrams: 50, waterRatio: 0.60, levainRatio: 0.15, saltRatio: 0.018, fillingType: 'creamCheese', fillingGrams: 30 },
   'Chocobanana': { flourPerUnitGrams: 100, waterRatio: 0.62, levainRatio: 0.18, saltRatio: 0.02, fillingType: 'chocoChips', fillingGrams: 25 },
   'Burger Bun (Pack)': { flourPerUnitGrams: 250, waterRatio: 0.65, levainRatio: 0.20, saltRatio: 0.02 },
   'Paket Mini Isi 4': { flourPerUnitGrams: 200, waterRatio: 0.60, levainRatio: 0.15, saltRatio: 0.018, fillingType: 'creamCheese', fillingGrams: 40 },
-  'Paket Mini Isi 8': { flourPerUnitGrams: 400, waterRatio: 0.60, levainRatio: 0.15, saltRatio: 0.018, fillingType: 'creamCheese', fillingGrams: 80 }
+  'Paket Mini Isi 8': { flourPerUnitGrams: 400, waterRatio: 0.60, levainRatio: 0.15, saltRatio: 0.018, fillingType: 'creamCheese', fillingGrams: 80 },
+};
+
+export const PRODUCT_RECIPE_MAP: RecipeMap = DEFAULT_PRODUCT_RECIPE_MAP;
+
+export const DEFAULT_FALLBACK_RECIPE: ProductRecipeRatio = {
+  flourPerUnitGrams: 100,
+  waterRatio: 0.65,
+  levainRatio: 0.20,
+  saltRatio: 0.02,
 };
 
 export class BatchDoughCalculatorService {
+  private customRecipeMap?: Record<string, Partial<ProductRecipeRatio>> | RecipeMap;
+  private fallbackRecipe?: Partial<ProductRecipeRatio>;
+
+  constructor(
+    customRecipeMap?: Record<string, Partial<ProductRecipeRatio>> | RecipeMap,
+    fallbackRecipe?: Partial<ProductRecipeRatio>
+  ) {
+    this.customRecipeMap = customRecipeMap;
+    this.fallbackRecipe = fallbackRecipe;
+  }
+
   /**
-   * Calculates automatic kitchen ingredient requirements for a batch
+   * Instance-based calculation
    */
-  static calculateBatchRequirements(orders: OrderCreatePayload[]): DoughRecipeRequirement {
+  calculate(orders: OrderCreatePayload[]): DoughRecipeRequirement {
+    return BatchDoughCalculatorService.calculateBatchRequirements(
+      orders,
+      this.customRecipeMap,
+      this.fallbackRecipe
+    );
+  }
+
+  /**
+   * Resolves recipe ratio for a product by checking customRecipeMap, PRODUCT_RECIPE_MAP, or fallback
+   */
+  static getRecipeForProduct(
+    productName: string,
+    customRecipeMap?: Record<string, Partial<ProductRecipeRatio>> | RecipeMap,
+    fallbackRecipe?: Partial<ProductRecipeRatio>
+  ): ProductRecipeRatio {
+    const baseFallback: ProductRecipeRatio = {
+      ...DEFAULT_FALLBACK_RECIPE,
+      ...(fallbackRecipe || {}),
+    };
+
+    const baseRecipe = PRODUCT_RECIPE_MAP[productName] || baseFallback;
+    const customRatio = customRecipeMap?.[productName];
+
+    if (!customRatio) {
+      return baseRecipe;
+    }
+
+    return {
+      ...baseRecipe,
+      ...customRatio,
+    };
+  }
+
+  /**
+   * Calculates automatic kitchen ingredient requirements for a batch.
+   * Supports dynamic recipe ratios / custom recipe map injection while keeping full backward compatibility.
+   */
+  static calculateBatchRequirements(
+    orders: OrderCreatePayload[],
+    customRecipeMap?: Record<string, Partial<ProductRecipeRatio>> | RecipeMap,
+    fallbackRecipe?: Partial<ProductRecipeRatio>
+  ): DoughRecipeRequirement {
     let totalFlourGrams = 0;
     let totalWaterGrams = 0;
     let totalLevainGrams = 0;
@@ -59,9 +133,13 @@ export class BatchDoughCalculatorService {
     let totalCreamCheeseGrams = 0;
     let totalChocoChipsGrams = 0;
 
-    orders.forEach(order => {
-      order.items.forEach(item => {
-        const recipe = PRODUCT_RECIPE_MAP[item.productName] || { flourPerUnitGrams: 100, waterRatio: 0.65, levainRatio: 0.20, saltRatio: 0.02 };
+    orders.forEach((order) => {
+      order.items.forEach((item) => {
+        const recipe = BatchDoughCalculatorService.getRecipeForProduct(
+          item.productName,
+          customRecipeMap,
+          fallbackRecipe
+        );
         const itemFlour = recipe.flourPerUnitGrams * item.qty;
 
         totalFlourGrams += itemFlour;
@@ -89,12 +167,12 @@ export class BatchDoughCalculatorService {
         flourKg: totalFlourKg,
         waterLiter: totalWaterL,
         levainActiveKg: totalLevainKg,
-        saltGrams: Math.round(totalSaltGrams)
+        saltGrams: Math.round(totalSaltGrams),
       },
       fillings: {
         creamCheeseKg: totalCreamCheeseGrams > 0 ? Number((totalCreamCheeseGrams / 1000).toFixed(2)) : 0,
-        chocoChipsKg: totalChocoChipsGrams > 0 ? Number((totalChocoChipsGrams / 1000).toFixed(2)) : 0
-      }
+        chocoChipsKg: totalChocoChipsGrams > 0 ? Number((totalChocoChipsGrams / 1000).toFixed(2)) : 0,
+      },
     };
   }
 }
